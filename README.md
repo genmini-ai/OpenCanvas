@@ -4,7 +4,7 @@ OpenCanvas transforms your ideas into stunning posters and slides with a single 
 ## 🚀 Features
 
 - **Intelligent Knowledge Assessment**: Automatically determines if additional research is needed for a given topic / text
-- **Deep Research Integration**: Performs targeted deep web searches via Brave Search API when necessary
+- **Deep Search Integration**: Performs targeted deep web searches via Brave Search API when necessary
 - **HTML Slide and Poster Generation**: Converts content into responsive, browser-based presentations / posters
 - **Multiple Design Themes**: Supports various visual themes for different presentation purposes
 - **Auto Evaluation**: Includes tools to assess presentation quality across multiple dimensions
@@ -112,11 +112,15 @@ OpenCanvas supports various presentation types including:
   - playwright (for evaluation)
 
 ## 🔄 Planned Improvements
+`Higher priority` for full text / paper input
 - Better support for figures / diagrams
 - Better support for layout optimization
 - Support for editing
 - Support for exporting to PowerPoint/Google Slides
 - More visual themes and layouts
+
+`Lower priority` for topic input
+- Upgrade search to deep search
 
 
 ## 🙏 Acknowledgements
