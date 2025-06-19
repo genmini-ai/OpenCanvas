@@ -1,5 +1,5 @@
 import os
-from slide_generator import SlideGenerator
+from generation.slide_generator import SlideGenerator
 
 # Get API keys from environment or replace with your actual keys
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')

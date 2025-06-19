@@ -1,5 +1,5 @@
 import os
-from slide_generator import SlideGenerator
+from generation.slide_generator import SlideGenerator
 
 def main():
     # Get API key from environment variable
