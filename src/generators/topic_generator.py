@@ -9,10 +9,16 @@ from bs4 import BeautifulSoup
 import time
 import re
 from urllib.parse import urljoin, urlparse
+import logging
 
-class SlideGenerator:
+from .base import BaseGenerator
+
+logger = logging.getLogger(__name__)
+
+class TopicGenerator(BaseGenerator):
     def __init__(self, api_key, brave_api_key=None):
-        """Initialize the slide generator with Anthropic API key and optional Brave API key"""
+        """Initialize the topic-based slide generator with Anthropic API key and optional Brave API key"""
+        super().__init__(api_key)
         self.client = Anthropic(api_key=api_key)
         self.brave_api_key = brave_api_key or os.getenv('BRAVE_API_KEY')
         
@@ -44,7 +50,7 @@ Your response should be exactly one word: either "SUFFICIENT" or "INSUFFICIENT"
             )
             return response.content[0].text.strip().upper()
         except Exception as e:
-            print(f"Error assessing knowledge: {e}")
+            logger.error(f"Error assessing knowledge: {e}")
             return "SUFFICIENT"  # Default to sufficient if error occurs
     
     def generate_search_query(self, user_text):
@@ -70,17 +76,17 @@ Note that there might be typos in the user input; please decide based on context
             )
             return response.content[0].text.strip()
         except Exception as e:
-            print(f"Error generating search query: {e}")
+            logger.error(f"Error generating search query: {e}")
             return user_text  # Fallback to original text
     
     def web_search(self, query, brave_api_key=None):
         """Perform web search using Brave Search API"""
         if not brave_api_key:
-            print("⚠️  Brave API key not provided. Set BRAVE_API_KEY environment variable or pass it as parameter.")
+            logger.warning("⚠️  Brave API key not provided. Set BRAVE_API_KEY environment variable or pass it as parameter.")
             return []
         
         try:
-            print(f"🔍 Searching with Brave API: {query}")
+            logger.info(f"🔍 Searching with Brave API: {query}")
             
             url = "https://api.search.brave.com/res/v1/web/search"
             
@@ -110,10 +116,10 @@ Note that there might be typos in the user input; please decide based on context
             web_results = data.get("web", {}).get("results", [])
             
             if not web_results:
-                print("❌ No search results found")
+                logger.warning("❌ No search results found")
                 return []
             
-            print(f"✅ Found {len(web_results)} search results")
+            logger.info(f"✅ Found {len(web_results)} search results")
             
             # Convert to a standard format
             formatted_results = []
@@ -131,10 +137,10 @@ Note that there might be typos in the user input; please decide based on context
             return formatted_results
             
         except requests.exceptions.RequestException as e:
-            print(f"❌ Network error during search: {e}")
+            logger.error(f"❌ Network error during search: {e}")
             return []
         except Exception as e:
-            print(f"❌ Error performing search: {e}")
+            logger.error(f"❌ Error performing search: {e}")
             return []
     
     def assess_source_credibility(self, search_results):
@@ -197,7 +203,7 @@ Respond with ONLY two numbers separated by a comma (e.g., "2,4") representing th
             return selected_sources
                 
         except Exception as e:
-            print(f"Error assessing credibility: {e}")
+            logger.error(f"Error assessing credibility: {e}")
             return search_results[:2] if len(search_results) >= 2 else search_results
     
     def scrape_web_content(self, url):
@@ -207,7 +213,7 @@ Respond with ONLY two numbers separated by a comma (e.g., "2,4") representing th
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
             
-            print(f"🌐 Scraping content from: {url}")
+            logger.info(f"🌐 Scraping content from: {url}")
             response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             
@@ -246,7 +252,7 @@ Respond with ONLY two numbers separated by a comma (e.g., "2,4") representing th
             return content_text
             
         except Exception as e:
-            print(f"Error scraping content: {e}")
+            logger.error(f"Error scraping content: {e}")
             return None
     
     def generate_blog(self, user_text, additional_context=None):
@@ -304,9 +310,9 @@ Please write a complete educational blog post that stays focused on the user's t
             )
             return response.content[0].text
         except Exception as e:
-            print(f"Error generating blog: {e}")
+            logger.error(f"Error generating blog: {e}")
             return None
-    
+
     def generate_slides_html(self, blog_content, purpose, theme):
         """Generate HTML slide deck from blog content"""
         slide_prompt = f"""Create a beautiful HTML presentation based on this content:
@@ -342,46 +348,39 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
         try:
             response = self.client.messages.create(
                 model="claude-3-7-sonnet-20250219",
-                max_tokens=12000,
+                max_tokens=15000,
                 temperature=0.5,
                 messages=[{"role": "user", "content": slide_prompt}]
             )
-            return response.content[0].text
+            html_content = response.content[0].text
+            
+            # Clean up HTML if wrapped in code blocks
+            return self.clean_html_content(html_content)
         except Exception as e:
-            print(f"Error generating slides: {e}")
+            logger.error(f"Error generating slides: {e}")
             return None
     
-    def save_html_file(self, html_content, filename="slides.html"):
-        """Save HTML content to file"""
-        try:
-            with open(filename, 'w', encoding='utf-8') as f:
-                f.write(html_content)
-            return filename
-        except Exception as e:
-            print(f"Error saving HTML file: {e}")
-            return None
-    
-    def generate_complete_presentation(self, user_text, purpose, theme="professional blue"):
-        """Complete pipeline: text -> knowledge check -> research (if needed) -> blog -> slides -> HTML"""
-        print(f"🚀 Starting presentation generation...")
-        print(f"📝 User text: {user_text}")
-        print(f"🎯 Purpose: {purpose}")
-        print(f"🎨 Theme: {theme}")
+    def generate_from_topic(self, user_text, purpose, theme="professional blue"):
+        """Generate presentation from a topic/text"""
+        logger.info(f"🚀 Starting topic-based presentation generation...")
+        logger.info(f"📝 User text: {user_text}")
+        logger.info(f"🎯 Purpose: {purpose}")
+        logger.info(f"🎨 Theme: {theme}")
         
         # Step 1: Assess knowledge depth
-        print("\n🧠 Assessing knowledge depth...")
+        logger.info("\n🧠 Assessing knowledge depth...")
         knowledge_assessment = self.assess_knowledge_depth(user_text)
-        print(f"📊 Knowledge assessment: {knowledge_assessment}")
+        logger.info(f"📊 Knowledge assessment: {knowledge_assessment}")
         
         additional_context = None
         
         # Step 2: If insufficient knowledge, perform web research
         if knowledge_assessment == "INSUFFICIENT":
-            print("\n🔍 Insufficient knowledge detected. Initiating web research...")
+            logger.info("\n🔍 Insufficient knowledge detected. Initiating web research...")
             
             # Generate search query
             search_query = self.generate_search_query(user_text)
-            print(f"🔎 Search query: {search_query}")
+            logger.info(f"🔎 Search query: {search_query}")
             
             # Perform web search
             search_results = self.web_search(search_query, self.brave_api_key)
@@ -394,57 +393,57 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
                     additional_context_parts = []
                     
                     for i, source in enumerate(best_sources[:2]):  # Ensure we only process 2 sources
-                        print(f"🏆 Selected source {i+1}: {source.get('title', 'N/A')}")
-                        print(f"🔗 URL: {source.get('link', 'N/A')}")
+                        logger.info(f"🏆 Selected source {i+1}: {source.get('title', 'N/A')}")
+                        logger.info(f"🔗 URL: {source.get('link', 'N/A')}")
                         
                         # Scrape content from each source
                         scraped_content = self.scrape_web_content(source.get('link'))
                         
                         if scraped_content:
                             additional_context_parts.append(f"Source {i+1} - {source.get('title', 'Unknown')}:\n{scraped_content}")
-                            print(f"✅ Successfully gathered content from source {i+1} ({len(scraped_content)} characters)")
+                            logger.info(f"✅ Successfully gathered content from source {i+1} ({len(scraped_content)} characters)")
                         else:
-                            print(f"❌ Failed to scrape content from source {i+1}")
+                            logger.warning(f"❌ Failed to scrape content from source {i+1}")
                     
                     if additional_context_parts:
                         additional_context = "\n\n" + "="*50 + "\n\n".join(additional_context_parts)
-                        print(f"✅ Combined additional context from {len(additional_context_parts)} sources")
+                        logger.info(f"✅ Combined additional context from {len(additional_context_parts)} sources")
                     else:
-                        print("❌ Failed to gather content from any selected sources")
+                        logger.warning("❌ Failed to gather content from any selected sources")
                 else:
-                    print("❌ No suitable sources found for research")
+                    logger.warning("❌ No suitable sources found for research")
             else:
-                print("❌ Web search returned no results")
+                logger.warning("❌ Web search returned no results")
         else:
-            print("✅ Sufficient knowledge available. Proceeding without additional research.")
+            logger.info("✅ Sufficient knowledge available. Proceeding without additional research.")
         
         # Step 3: Generate blog content
-        print("\n📖 Generating educational blog content...")
+        logger.info("\n📖 Generating educational blog content...")
         blog_content = self.generate_blog(user_text, additional_context)
         if not blog_content:
-            print("❌ Failed to generate blog content")
+            logger.error("❌ Failed to generate blog content")
             return None
         
         # Step 4: Generate HTML slides
-        print("🎭 Creating HTML slide deck...")
+        logger.info("🎭 Creating HTML slide deck...")
         html_content = self.generate_slides_html(blog_content, purpose, theme)
         if not html_content:
-            print("❌ Failed to generate slides")
+            logger.error("❌ Failed to generate slides")
             return None
         
         # Step 5: Save HTML file
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         html_filename = f"slides_{timestamp}.html"
         
-        print(f"💾 Saving HTML file as {html_filename}...")
+        logger.info(f"💾 Saving HTML file as {html_filename}...")
         saved_html = self.save_html_file(html_content, html_filename)
         if not saved_html:
-            print("❌ Failed to save HTML file")
+            logger.error("❌ Failed to save HTML file")
             return None
         
         # Step 6: Open in browser
-        print(f"🌐 Opening slides in browser...")
-        webbrowser.open(f"file://{Path(html_filename).absolute()}")
+        logger.info(f"🌐 Opening slides in browser...")
+        self.open_in_browser(html_filename)
         
         results = {
             'knowledge_assessment': knowledge_assessment,
@@ -455,11 +454,12 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
             'timestamp': timestamp
         }
         
-        print(f"\n✅ Presentation generation complete!")
-        print(f"🧠 Knowledge assessment: {knowledge_assessment}")
+        logger.info(f"\n✅ Presentation generation complete!")
+        logger.info(f"🧠 Knowledge assessment: {knowledge_assessment}")
         if knowledge_assessment == "INSUFFICIENT":
-            print(f"🔍 Web research was performed")
-        print(f"📁 HTML file: {html_filename}")
-        print(f"🌐 Slides opened in your default browser")
+            logger.info(f"🔍 Web research was performed")
+        logger.info(f"📁 HTML file: {html_filename}")
+        logger.info(f"🌐 Slides opened in your default browser")
         
         return results
+        
