@@ -22,7 +22,7 @@ class GenerationRouter:
         
         # Check if it's a URL ending in .pdf
         if input_source.startswith(('http://', 'https://')):
-            if input_source.lower().endswith('.pdf'):
+            if 'pdf' in input_source.lower():
                 is_valid, msg = InputValidator.validate_pdf_url(input_source)
                 if is_valid:
                     logger.info(f"Detected PDF URL: {input_source}")

@@ -75,6 +75,7 @@ Instructions:
 5. Optimize typography for readability
 6. Target ~100 words per slide maximum - avoid dense text blocks
 7. Use the navigation button to switch pages
+8. Avoid embedding base64-encoded content in the HTML file. Do not use base64 for images—instead, use external icons, diagrams, or vector graphics.
 
 ## Academic Math & Diagrams Integration:
 

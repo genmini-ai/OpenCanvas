@@ -8,11 +8,11 @@ import sys
 from pathlib import Path
 import logging
 
-from config import Config
-from utils.logging import setup_logging
-from generators.router import GenerationRouter
-from conversion.html_to_pdf import PresentationConverter
-from evaluation.evaluator import PresentationEvaluator
+from .config import Config
+from .utils.logging import setup_logging
+from .generators.router import GenerationRouter
+from .conversion.html_to_pdf import PresentationConverter
+from .evaluation.evaluator import PresentationEvaluator
 
 def main():
     """Main CLI entry point"""
