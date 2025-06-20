@@ -7,6 +7,8 @@ OpenCanvas is a comprehensive presentation generation and evaluation system that
     - [ ] fix full pipeline run
     - [ ] try self evolution
 - [ ] add GPT model for eval
+- [ ] improve visual layout and component (image, diagram, etc.)
+- [ ] improve template design taste
 
 ## Features
 
