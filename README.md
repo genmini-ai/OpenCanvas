@@ -2,6 +2,12 @@
 
 OpenCanvas is a comprehensive presentation generation and evaluation system that creates HTML slide decks from topics or PDF documents, converts them to PDF format, and evaluates their quality using AI.
 
+## TODO
+- [ ] add source saving while generating, to streamline eval {pdf: paper.pdf, topic: blog.txt}
+    - [ ] fix full pipeline run
+    - [ ] try self evolution
+- [ ] add GPT model for eval
+
 ## Features
 
 🎨 **Dual Input Support**: Generate presentations from either text topics or PDF documents  
