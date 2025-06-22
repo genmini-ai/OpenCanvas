@@ -36,7 +36,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import asyncio
 from playwright.async_api import async_playwright
 
-from ..utils.validation import InputValidator
+from utils.validation import InputValidator
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,11 @@ class PresentationConverter:
         self.method = method
         self.zoom_factor = zoom_factor
         self.temp_images = []
+        
+        # Debug logging
+        logger.info(f"Initializing converter with HTML file: {self.html_file}")
+        logger.info(f"HTML file exists: {self.html_file.exists()}")
+        logger.info(f"HTML file absolute path: {self.html_file.absolute()}")
         
         # Validate inputs
         is_valid, msg = InputValidator.validate_html_file(str(self.html_file))
@@ -78,9 +83,11 @@ class PresentationConverter:
         try:
             # Open HTML file
             file_url = f"file://{self.html_file.absolute()}"
+            logger.info(f"Opening URL: {file_url}")
             driver.get(file_url)
             
             # Wait for page to load
+            logger.info("Waiting for slides to load...")
             WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.CLASS_NAME, "slide"))
             )
@@ -104,12 +111,16 @@ class PresentationConverter:
             total_slides = len(slides)
             logger.info(f"Found {total_slides} slides")
             
+            if total_slides == 0:
+                raise ValueError("No slides found in the HTML presentation")
+            
             # Capture each slide
             for slide_num in range(1, total_slides + 1):
                 logger.info(f"Capturing slide {slide_num}/{total_slides}")
                 
                 # Take screenshot - use raw PNG without cropping
                 screenshot_path = self.output_dir / f"slide_{slide_num:02d}.png"
+                logger.info(f"Saving screenshot to: {screenshot_path}")
                 driver.save_screenshot(str(screenshot_path))
                 
                 # Use the original screenshot directly
@@ -250,5 +261,13 @@ class PresentationConverter:
             logger.info(f"Conversion completed successfully: {pdf_path}")
             return pdf_path
             
+        except AttributeError as e:
+            if "'NoneType' object has no attribute 'encode'" in str(e):
+                logger.error("HTML file path is None or invalid. Please check the HTML file path.")
+                raise ValueError("Invalid HTML file path - file may not exist or path is None") from e
+            else:
+                logger.error(f"Attribute error during conversion: {e}")
+                raise
         except Exception as e:
             logger.error(f"Conversion failed: {e}")
+            raise

@@ -16,6 +16,7 @@ setup(
         "pillow>=10.0.0",
         "opencv-python>=4.8.0",
         "python-dotenv>=1.0.0",
+        "openai==1.88.0",
     ],
     python_requires=">=3.8",
     entry_points={
