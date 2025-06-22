@@ -52,6 +52,7 @@ coverage.xml
 
 # macOS
 .DS_Store
+src/.DS_Store
 
 # PyCharm
 .idea/
