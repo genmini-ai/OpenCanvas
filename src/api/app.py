@@ -17,7 +17,7 @@ from fastapi.openapi.utils import get_openapi
 
 from .routes import router
 from .models import ErrorResponse
-from ..utils.logging import setup_logging
+from opencanvas.utils.logging import setup_logging
 
 # Setup logging
 setup_logging()

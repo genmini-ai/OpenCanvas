@@ -14,8 +14,8 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from src.api.app import app
-from src.config import Config
+from api.app import app
+from opencanvas.config import Config
 
 
 def main():

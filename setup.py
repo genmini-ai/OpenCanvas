@@ -22,6 +22,7 @@ setup(
     entry_points={
         "console_scripts": [
             "presentation-toolkit=main:main",
+            "opencanvas=opencanvas.main:main",
         ],
     },
 )

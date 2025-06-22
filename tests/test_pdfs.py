@@ -3,8 +3,8 @@ import pytest
 import tempfile
 from pathlib import Path
 
-from src.generators.pdf_generator import PDFGenerator
-from src.config import Config
+from opencanvas.generators.pdf_generator import PDFGenerator
+from opencanvas.config import Config
 
 # Test cases for PDF generation using arXiv papers
 PDF_TEST_CASES = [

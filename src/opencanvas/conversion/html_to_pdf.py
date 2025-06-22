@@ -36,7 +36,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import asyncio
 from playwright.async_api import async_playwright
 
-from utils.validation import InputValidator
+from opencanvas.utils.validation import InputValidator
 
 logger = logging.getLogger(__name__)
 

@@ -10,8 +10,8 @@ from urllib.parse import urlparse
 import mimetypes
 import logging
 
-from generators.base import BaseGenerator
-from utils.validation import InputValidator
+from .base import BaseGenerator
+from opencanvas.utils.validation import InputValidator
 
 logger = logging.getLogger(__name__)
 
