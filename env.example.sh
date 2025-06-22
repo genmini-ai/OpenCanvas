@@ -1,6 +1,7 @@
 # API Keys
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 BRAVE_API_KEY=your_brave_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
 
 # Optional Configuration
 DEFAULT_THEME=professional blue
