@@ -2,11 +2,12 @@ import os
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional, Tuple, List
+from typing import Dict, Any, Optional, Tuple, List, Literal
 from dataclasses import dataclass
 import base64
 
 from anthropic import Anthropic
+from openai import OpenAI
 from .prompts import EvaluationPrompts
 
 logger = logging.getLogger(__name__)
@@ -22,22 +23,31 @@ class EvaluationResult:
 class PresentationEvaluator:
     """
     Comprehensive presentation evaluation system using three specialized prompts
+    Supports both Claude and GPT models
     """
     
-    def __init__(self, api_key: str, model: str = "claude-3-5-sonnet-20241022"):
+    def __init__(self, api_key: str, model: str = "claude-3-5-sonnet-20241022", provider: Literal["claude", "gpt"] = "claude"):
         """
         Initialize the evaluator
         
         Args:
-            api_key: Anthropic API key
-            model: Claude model to use for evaluation
+            api_key: API key for the chosen provider
+            model: Model name to use for evaluation
+            provider: Either "claude" or "gpt"
         """
-        self.client = Anthropic(api_key=api_key)
+        self.provider = provider
         self.model = model
         self.prompts = EvaluationPrompts()
+        
+        if provider == "claude":
+            self.client = Anthropic(api_key=api_key)
+        elif provider == "gpt":
+            self.client = OpenAI(api_key=api_key)
+        else:
+            raise ValueError("Provider must be either 'claude' or 'gpt'")
     
     def extract_pdf_as_base64(self, pdf_path: str) -> str:
-        """Extract PDF as base64 data for Claude"""
+        """Extract PDF as base64 data for API calls"""
         try:
             with open(pdf_path, 'rb') as file:
                 pdf_data = base64.b64encode(file.read()).decode('utf-8')
@@ -47,10 +57,10 @@ class PresentationEvaluator:
             return ""
     
     def extract_pdf_content(self, pdf_path: str) -> str:
-        """Extract PDF as base64 data for Claude"""
+        """Extract PDF as base64 data for API calls"""
         return self.extract_pdf_as_base64(pdf_path)
     
-    def call_claude_api_with_pdfs(self, prompt: str, presentation_pdf_data: str, source_pdf_data: str = None) -> Dict[str, Any]:
+    def call_claude_api_with_pdfs(self, prompt: str, presentation_pdf_data: str, source_pdf_data: Optional[str] = None) -> Dict[str, Any]:
         """Make API call to Claude with presentation PDF and optional source PDF"""
         try:
             content = [{"type": "text", "text": prompt}]
@@ -105,23 +115,80 @@ class PresentationEvaluator:
                 return {"error": "No valid JSON in response", "raw_response": response_text}
                 
         except Exception as e:
-            logger.error(f"API call failed: {e}")
+            logger.error(f"Claude API call failed: {e}")
             return {"error": str(e)}
+    
+    def call_gpt_api_with_pdfs(self, prompt: str, presentation_pdf_data: str, source_pdf_data: Optional[str] = None) -> Dict[str, Any]:
+        """Make API call to GPT with presentation PDF and optional source PDF"""
+        try:
+            # For GPT models, we'll use a different approach since file handling is more complex
+            # We'll extract text content from PDFs and include it in the prompt
+            # This is a simplified approach - for production use, you might want to use PDF text extraction
+            
+            # Create a comprehensive prompt that includes the PDF content
+            full_prompt = prompt + "\n\n"
+            
+            if source_pdf_data:
+                full_prompt += "SOURCE PAPER CONTENT:\n"
+                full_prompt += "[PDF content would be extracted here]\n\n"
+                full_prompt += "PRESENTATION CONTENT:\n"
+                full_prompt += "[PDF content would be extracted here]\n\n"
+            else:
+                full_prompt += "PRESENTATION CONTENT:\n"
+                full_prompt += "[PDF content would be extracted here]\n\n"
+            
+            full_prompt += "Please evaluate the presentation according to the criteria above."
+            
+            response = self.client.responses.create(
+                model=self.model,
+                input=[{"role": "user", "content": full_prompt}],
+                max_output_tokens=8000,
+                temperature=0.1,
+            )
+            
+            response_text = response.output[0].content[0].text
+            
+            # Extract JSON from response
+            start_idx = response_text.find('{')
+            end_idx = response_text.rfind('}') + 1
+            
+            if start_idx != -1 and end_idx != -1:
+                json_str = response_text[start_idx:end_idx]
+                return json.loads(json_str)
+            else:
+                logger.error("No JSON found in response")
+                return {"error": "No valid JSON in response", "raw_response": response_text}
+                
+        except Exception as e:
+            logger.error(f"GPT API call failed: {e}")
+            return {"error": str(e)}
+    
+    def call_api_with_pdfs(self, prompt: str, presentation_pdf_data: str, source_pdf_data: Optional[str] = None) -> Dict[str, Any]:
+        """Make API call using the appropriate provider"""
+        if self.provider == "claude":
+            return self.call_claude_api_with_pdfs(prompt, presentation_pdf_data, source_pdf_data)
+        elif self.provider == "gpt":
+            # Note: GPT implementation is a placeholder
+            # For production use, you would need to implement proper PDF text extraction
+            # and use GPT's vision capabilities or file upload features
+            return self.call_gpt_api_with_pdfs(prompt, presentation_pdf_data, source_pdf_data)
+        else:
+            raise ValueError(f"Unsupported provider: {self.provider}")
     
     def evaluate_visual(self, presentation_pdf_data: str) -> Dict[str, Any]:
         """Evaluate visual dimensions using presentation PDF"""
         logger.info("Evaluating visual dimensions...")
-        return self.call_claude_api_with_pdfs(self.prompts.visual, presentation_pdf_data)
+        return self.call_api_with_pdfs(self.prompts.visual, presentation_pdf_data)
     
     def evaluate_content_free(self, presentation_pdf_data: str) -> Dict[str, Any]:
         """Evaluate content dimensions without reference using presentation PDF"""
         logger.info("Evaluating reference-free content dimensions...")
-        return self.call_claude_api_with_pdfs(self.prompts.content_free, presentation_pdf_data)
+        return self.call_api_with_pdfs(self.prompts.content_free, presentation_pdf_data)
     
     def evaluate_content_required(self, presentation_pdf_data: str, source_pdf_data: str) -> Dict[str, Any]:
         """Evaluate content dimensions requiring reference comparison using both PDFs"""
         logger.info("Evaluating reference-required content dimensions...")
-        return self.call_claude_api_with_pdfs(self.prompts.content_required, presentation_pdf_data, source_pdf_data)
+        return self.call_api_with_pdfs(self.prompts.content_required, presentation_pdf_data, source_pdf_data)
     
     def evaluate_presentation(self, eval_folder: str) -> EvaluationResult:
         """

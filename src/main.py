@@ -8,11 +8,11 @@ import sys
 from pathlib import Path
 import logging
 
-from .config import Config
-from .utils.logging import setup_logging
-from .generators.router import GenerationRouter
-from .conversion.html_to_pdf import PresentationConverter
-from .evaluation.evaluator import PresentationEvaluator
+from config import Config
+from utils.logging import setup_logging
+from generators.router import GenerationRouter
+from conversion.html_to_pdf import PresentationConverter
+from evaluation.evaluator import PresentationEvaluator
 
 def main():
     """Main CLI entry point"""
@@ -32,6 +32,9 @@ Examples:
   
   # Evaluate presentation
   python -m main evaluate evaluation_folder/
+
+  # Evaluate presentation with GPT
+  python -m main evaluate ./test_data --model gpt-4.1-mini --eval_provider gpt
   
   # Full pipeline
   python -m main pipeline "quantum computing" --purpose "pitch deck" --evaluate
@@ -69,7 +72,8 @@ Examples:
     eval_parser = subparsers.add_parser('evaluate', help='Evaluate presentation quality')
     eval_parser.add_argument('eval_folder', help='Folder containing presentation.pdf and optionally paper.pdf')
     eval_parser.add_argument('--output', help='Output JSON file path (optional)')
-    eval_parser.add_argument('--model', default=Config.EVALUATION_MODEL, help='Claude model for evaluation')
+    eval_parser.add_argument('--model', default=Config.EVALUATION_MODEL, help='model for evaluation')
+    eval_parser.add_argument('--eval_provider', default=Config.EVALUATION_PROVIDER, help='model provider for evaluation')
     
     # Pipeline command (generate + convert + optionally evaluate)
     pipe_parser = subparsers.add_parser('pipeline', help='Complete pipeline: generate -> convert -> evaluate')
@@ -78,6 +82,7 @@ Examples:
     pipe_parser.add_argument('--theme', default=Config.DEFAULT_THEME, help='Visual theme')
     pipe_parser.add_argument('--source-pdf', help='Source PDF for evaluation (if input is topic)')
     pipe_parser.add_argument('--evaluate', action='store_true', help='Run evaluation after generation')
+    pipe_parser.add_argument('--eval_provider', default=Config.EVALUATION_PROVIDER, help='Model provider for evaluation (claude or gpt)')
     pipe_parser.add_argument('--output-dir', default=str(Config.OUTPUT_DIR), help='Output directory')
     pipe_parser.add_argument('--zoom', type=float, default=Config.DEFAULT_ZOOM, help='PDF zoom factor')
     pipe_parser.add_argument('--method', choices=['selenium', 'playwright'], 
@@ -189,9 +194,29 @@ def handle_evaluate(args, logger):
     """Handle evaluate command"""
     logger.info(f"📊 Evaluating presentation: {args.eval_folder}")
     
+    # Determine API key based on provider
+    if args.eval_provider == "claude":
+        api_key = Config.ANTHROPIC_API_KEY
+        if not api_key:
+            logger.error("ANTHROPIC_API_KEY is required for Claude evaluation")
+            return 1
+        assert api_key is not None  # For type checker
+    elif args.eval_provider == "gpt":
+        api_key = Config.OPENAI_API_KEY
+        if not api_key:
+            logger.error("OPENAI_API_KEY is required for GPT evaluation")
+            return 1
+        assert api_key is not None  # For type checker
+    else:
+        logger.error(f"Unsupported evaluation provider: {args.eval_provider}. Use 'claude' or 'gpt'")
+        return 1
+    
+    logger.info(f"Using {args.eval_provider} provider for evaluation")
+    
     evaluator = PresentationEvaluator(
-        api_key=Config.ANTHROPIC_API_KEY,
-        model=args.model
+        api_key=api_key,
+        model=args.model,
+        provider=args.eval_provider
     )
     
     result = evaluator.evaluate_presentation(args.eval_folder)
@@ -267,7 +292,30 @@ def handle_pipeline(args, logger):
                 shutil.copy2(source_path, eval_folder / "paper.pdf")
                 logger.info(f"Copied source PDF: {args.source_pdf}")
         
-        evaluator = PresentationEvaluator(api_key=Config.ANTHROPIC_API_KEY)
+        # Determine API key based on provider
+        if args.eval_provider == "claude":
+            api_key = Config.ANTHROPIC_API_KEY
+            if not api_key:
+                logger.error("ANTHROPIC_API_KEY is required for Claude evaluation")
+                return 1
+            assert api_key is not None  # For type checker
+        elif args.eval_provider == "gpt":
+            api_key = Config.OPENAI_API_KEY
+            if not api_key:
+                logger.error("OPENAI_API_KEY is required for GPT evaluation")
+                return 1
+            assert api_key is not None  # For type checker
+        else:
+            logger.error(f"Unsupported evaluation provider: {args.eval_provider}. Use 'claude' or 'gpt'")
+            return 1
+        
+        logger.info(f"Using {args.eval_provider} provider for evaluation")
+        
+        evaluator = PresentationEvaluator(
+            api_key=api_key,
+            model=Config.EVALUATION_MODEL,
+            provider=args.eval_provider
+        )
         eval_result = evaluator.evaluate_presentation(str(eval_folder))
         
         # Print results

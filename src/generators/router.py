@@ -2,9 +2,9 @@ from pathlib import Path
 from urllib.parse import urlparse
 import logging
 
-from .topic_generator import TopicGenerator
-from .pdf_generator import PDFGenerator
-from ..utils.validation import InputValidator
+from generators.topic_generator import TopicGenerator
+from generators.pdf_generator import PDFGenerator
+from utils.validation import InputValidator
 
 logger = logging.getLogger(__name__)
 

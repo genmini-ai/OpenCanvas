@@ -11,6 +11,7 @@ class Config:
     # API Keys
     ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
     BRAVE_API_KEY = os.getenv('BRAVE_API_KEY')
+    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     
     # Default settings
     DEFAULT_THEME = os.getenv('DEFAULT_THEME', 'professional blue')
@@ -27,6 +28,7 @@ class Config:
     
     # Evaluation settings
     EVALUATION_MODEL = os.getenv('EVALUATION_MODEL', 'claude-3-5-sonnet-20241022')
+    EVALUATION_PROVIDER = os.getenv('EVALUATION_PROVIDER', 'claude')
     
     @classmethod
     def validate(cls):

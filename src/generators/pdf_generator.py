@@ -10,8 +10,8 @@ from urllib.parse import urlparse
 import mimetypes
 import logging
 
-from .base import BaseGenerator
-from ..utils.validation import InputValidator
+from generators.base import BaseGenerator
+from utils.validation import InputValidator
 
 logger = logging.getLogger(__name__)
 

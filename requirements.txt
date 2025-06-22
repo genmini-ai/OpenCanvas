@@ -7,3 +7,4 @@ reportlab>=4.0.0
 pillow>=10.0.0
 opencv-python>=4.8.0
 python-dotenv>=1.0.0
+openai==1.88.0
