@@ -35,6 +35,9 @@ Examples:
   
   # Full pipeline
   python -m main pipeline "quantum computing" --purpose "pitch deck" --evaluate
+  
+  # Start API server
+  python -m main api --host 0.0.0.0 --port 8000 --reload
         """
     )
     
@@ -80,6 +83,15 @@ Examples:
     pipe_parser.add_argument('--method', choices=['selenium', 'playwright'], 
                            default=Config.DEFAULT_CONVERSION_METHOD, help='Conversion method')
     
+    # API command
+    api_parser = subparsers.add_parser('api', help='Start the REST API server')
+    api_parser.add_argument('--host', default='127.0.0.1', help='Host to bind to (default: 127.0.0.1)')
+    api_parser.add_argument('--port', type=int, default=8000, help='Port to bind to (default: 8000)')
+    api_parser.add_argument('--reload', action='store_true', help='Enable auto-reload for development')
+    api_parser.add_argument('--log-level', default='info', choices=['debug', 'info', 'warning', 'error'],
+                           help='Log level (default: info)')
+    api_parser.add_argument('--workers', type=int, default=1, help='Number of worker processes (default: 1)')
+    
     args = parser.parse_args()
     
     # Setup logging
@@ -103,6 +115,8 @@ Examples:
             return handle_evaluate(args, logger)
         elif args.command == 'pipeline':
             return handle_pipeline(args, logger)
+        elif args.command == 'api':
+            return handle_api(args, logger)
         else:
             parser.print_help()
             return 1
@@ -267,6 +281,48 @@ def handle_pipeline(args, logger):
     
     print(f"\n🎉 Pipeline completed successfully!")
     print(f"📁 Output directory: {args.output_dir}")
+    
+    return 0
+
+def handle_api(args, logger):
+    """Handle API command - start the REST API server"""
+    logger.info(f"🚀 Starting OpenCanvas API Server")
+    logger.info(f"📍 Host: {args.host}")
+    logger.info(f"🔌 Port: {args.port}")
+    logger.info(f"🔄 Reload: {args.reload}")
+    logger.info(f"📝 Log Level: {args.log_level}")
+    logger.info(f"👥 Workers: {args.workers}")
+    
+    print(f"🚀 Starting OpenCanvas API Server")
+    print(f"📍 Host: {args.host}")
+    print(f"🔌 Port: {args.port}")
+    print(f"🔄 Reload: {args.reload}")
+    print(f"📝 Log Level: {args.log_level}")
+    print(f"👥 Workers: {args.workers}")
+    print(f"📚 API Docs: http://{args.host}:{args.port}/docs")
+    print(f"🔍 ReDoc: http://{args.host}:{args.port}/redoc")
+    print(f"❤️  Health: http://{args.host}:{args.port}/api/v1/health")
+    print("-" * 50)
+    
+    try:
+        import uvicorn
+        uvicorn.run(
+            "src.api.app:app",
+            host=args.host,
+            port=args.port,
+            reload=args.reload,
+            log_level=args.log_level,
+            workers=args.workers if args.workers > 1 else None,
+            access_log=True
+        )
+    except ImportError:
+        logger.error("FastAPI dependencies not installed. Please install with: pip install fastapi uvicorn")
+        print("❌ FastAPI dependencies not installed. Please install with: pip install fastapi uvicorn")
+        return 1
+    except Exception as e:
+        logger.error(f"Failed to start API server: {e}")
+        print(f"❌ Failed to start API server: {e}")
+        return 1
     
     return 0
 
