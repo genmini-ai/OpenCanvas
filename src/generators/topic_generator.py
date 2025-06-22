@@ -315,34 +315,80 @@ Please write a complete educational blog post that stays focused on the user's t
 
     def generate_slides_html(self, blog_content, purpose, theme):
         """Generate HTML slide deck from blog content"""
-        slide_prompt = f"""Create a beautiful HTML presentation based on this content:
+        slide_prompt = f"""<presentation_task>
+Create a stunning, visually captivating HTML presentation that makes viewers stop and say "wow" based on this content:
 
 {blog_content}
 
 Purpose of presentation: {purpose}
 Visual theme: {theme}
+</presentation_task>
 
-Instructions:
+<design_philosophy>
+CREATE EMOTIONAL IMPACT:
+- Prioritize the "wow factor" over conventional design
+- Make every slide feel alive and dynamic with subtle animations
+- Choose bold, vibrant colors over muted, safe options
+- Use cutting-edge web design trends (glassmorphism, gradient overlays, micro-animations)
+- Push the boundaries of what's possible with modern CSS and JavaScript
+- Create a premium, cutting-edge experience that feels expensive
+</design_philosophy>
+
+<visual_requirements>
 1. Create a self-contained HTML file with embedded CSS and JavaScript
-2. Use Reveal.js style (without requiring the actual library)
-3. Include elegant transitions between slides
-4. Use a color scheme appropriate for the "{theme}" theme
-5. Optimize typography for readability
-6. Include a title slide and section dividers
-7. Use bullet points and concise text (not paragraphs)
-8. Create approximately 10-15 slides in total
-9. Do not include large blocks of text - break content into concise bullet points
-10. Make the slides visually appealing and professional
+2. Use Reveal.js style (without requiring the actual library) with modern slide transitions and physics-based animations
+3. Implement a sophisticated color scheme with gradients and depth for the "{theme}" theme
+4. Include micro-interactions: hover effects, animated reveals, parallax scrolling
+5. Use expressive, modern typography with varied font weights and sizes
+6. Add glassmorphism effects, subtle shadows, and layered visual depth
+7. Include elegant transitions between slides (avoid basic fades)
+8. Create approximately 10-15 slides with dynamic, non-static layouts
+9. Use animated bullet points that reveal progressively - break content into concise bullet points, not paragraphs
+10. Include a stunning title slide with animated elements and section dividers with visual flair
+11. Optimize for 1280px × 720px with responsive scaling
+12. Add subtle background animations or patterns that enhance without distracting
+13. HEIGHT-AWARE LAYOUT: Ensure all content fit within the 720px height by adjusting complexity
+14. Do not include large blocks of text - keep slides visually appealing and professional
+15. BALANCED VISUAL LAYOUT: Prioritize visual balance over text density - use images from https://images.unsplash.com/ (only when certain about photo ID), tables, charts, and visual elements to break up text and create engaging slide compositions
+</visual_requirements>
 
-CONTENT-SPECIFIC VISUAL ENHANCEMENTS:
-- For data analysis content: Include interactive charts, graphs, bar charts, line charts, pie charts, and other data visualizations using Chart.js or D3.js (embedded)
-- For travel-related content: Add relevant travel images, maps, destination photos, icons (planes, hotels, landmarks), and geographic visualizations
-- For workshop content: Include relevant workshop imagery, icons for activities, process diagrams, interactive elements, and engagement visuals
+<content_presentation>
+- Transform text into visually engaging elements with icons, graphics, and spacing
+- Use concise bullet points with animated reveals (maximum ~100 words per slide)
+- Create visual hierarchy through size, color, and positioning
+- Include progress indicators and slide counters with elegant styling
+- Break up content with visual elements: images, tables, charts, and graphics instead of text blocks
+- Leverage visual storytelling with appropriate imagery and data visualizations
+</content_presentation>
 
-IMPORTANT: The HTML must be a complete, self-contained file that can be opened directly in a browser.
-Do not include any explanations, just output the complete HTML code.
-        
+<content_enhancements>
+- For data analysis: Create beautiful, animated charts with smooth transitions using Chart.js or D3.js
+- For travel content: Add immersive imagery, interactive maps, destination animations, and travel icons
+- For workshops: Include engaging process diagrams, interactive elements, and activity visualizations
+- For general content: Use relevant, high-quality images from Unsplash when photo IDs are known with certainty
+</content_enhancements>
+
+<technical_excellence>
+- Use advanced CSS features: backdrop-filter, clip-path, CSS Grid, Flexbox, custom properties
+- Implement smooth JavaScript animations with requestAnimationFrame
+- Add keyboard navigation with visual feedback
+- Include preloaders and smooth state transitions
+- Ensure the presentation feels responsive and premium
+</technical_excellence>
+
+<motion_design>
+- Everything should have subtle movement and life
+- Use staggered animations for lists and elements
+- Implement smooth cursor tracking effects
+- Add entrance animations for each slide element
+- Create seamless transitions that maintain visual flow
+</motion_design>
+
+<output_requirements>
+IMPORTANT: The HTML must be a complete, self-contained file that opens directly in a browser and immediately impresses with its visual sophistication.
+
 IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and end with </html>. No explanations, no markdown formatting around the code.
+</output_requirements>
 """
         
         try:
