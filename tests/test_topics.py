@@ -3,8 +3,8 @@ import pytest
 import tempfile
 from pathlib import Path
 
-from src.generators.topic_generator import TopicGenerator
-from src.config import Config
+from opencanvas.generators.topic_generator import TopicGenerator
+from opencanvas.config import Config
 
 # Test cases for topic generation
 TOPIC_TEST_CASES = [

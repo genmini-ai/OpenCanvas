@@ -8,11 +8,11 @@ import sys
 from pathlib import Path
 import logging
 
-from config import Config
-from utils.logging import setup_logging
-from generators.router import GenerationRouter
-from conversion.html_to_pdf import PresentationConverter
-from evaluation.evaluator import PresentationEvaluator
+from .config import Config
+from .utils.logging import setup_logging
+from .generators.router import GenerationRouter
+from .conversion.html_to_pdf import PresentationConverter
+from .evaluation.evaluator import PresentationEvaluator
 
 def main():
     """Main CLI entry point"""
@@ -22,25 +22,25 @@ def main():
         epilog="""
 Examples:
   # Generate from topic
-  python -m main generate "AI in healthcare" --purpose "academic presentation" --theme "clean minimalist"
+  opencanvas generate "AI in healthcare" --purpose "academic presentation" --theme "clean minimalist"
   
   # Generate from PDF
-  python -m main generate "path/to/paper.pdf" --purpose "conference presentation"
+  opencanvas generate "path/to/paper.pdf" --purpose "conference presentation"
   
   # Convert HTML to PDF
-  python -m main convert output/slides.html --output presentation.pdf --zoom 1.5
+  opencanvas convert output/slides.html --output presentation.pdf --zoom 1.5
   
   # Evaluate presentation
-  python -m main evaluate evaluation_folder/
+  opencanvas evaluate evaluation_folder/
 
   # Evaluate presentation with GPT
-  python -m main evaluate ./test_data --model gpt-4.1-mini --eval_provider gpt
+  opencanvas evaluate ./test_data --model gpt-4.1-mini --eval_provider gpt
   
   # Full pipeline
-  python -m main pipeline "quantum computing" --purpose "pitch deck" --evaluate
+  opencanvas pipeline "quantum computing" --purpose "pitch deck" --evaluate
   
   # Start API server
-  python -m main api --host 0.0.0.0 --port 8000 --reload
+  opencanvas api --host 0.0.0.0 --port 8000 --reload
         """
     )
     

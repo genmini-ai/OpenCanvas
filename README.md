@@ -33,22 +33,27 @@ cd OpenCanvas
 
 Choose one of the following installation options:
 
-**Option A: Complete installation (CLI + API)**
+**Option A (recommended): directly install this package (CLI)**
+```
+pip install -e .
+```
+
+**Option B: Complete installation (CLI + API)**
 ```bash
 pip install -r requirements-all.txt
 ```
 
-**Option B: Core functionality only (CLI)**
+**Option C: Core functionality only (CLI)**
 ```bash
 pip install -r requirements.txt
 ```
 
-**Option C: API only (for microservices)**
+**Option D: API only (for microservices)**
 ```bash
 pip install -r requirements-api.txt
 ```
 
-**Option D: Install separately**
+**Option E: Install separately**
 ```bash
 # Install core dependencies
 pip install -r requirements.txt
@@ -82,27 +87,27 @@ Required API keys:
 
 #### Generate from Topic
 ```bash
-python -m src.main generate "AI in healthcare applications" --purpose "academic presentation" --theme "clean minimalist"
+opencanvas generate "AI in healthcare applications" --purpose "academic presentation" --theme "clean minimalist"
 ```
 
 #### Generate from PDF
 ```bash
-python -m src.main generate "https://arxiv.org/pdf/2505.20286" --purpose "research seminar"
+opencanvas generate "https://arxiv.org/pdf/2505.20286" --purpose "research seminar"
 ```
 
 #### Convert HTML to PDF
 ```bash
-python -m src.main convert output/slides.html --output presentation.pdf --zoom 1.5
+opencanvas convert output/slides.html --output presentation.pdf --zoom 1.5
 ```
 
 #### Evaluate Presentation
 ```bash
-python -m src.main evaluate evaluation_folder/
+opencanvas evaluate evaluation_folder/
 ```
 
 #### Full Pipeline
 ```bash
-python -m src.main pipeline "quantum computing" --purpose "conference talk" --evaluate --zoom 1.3
+opencanvas pipeline "quantum computing" --purpose "conference talk" --evaluate --zoom 1.3
 ```
 
 ### API Usage
@@ -113,7 +118,7 @@ python -m src.main pipeline "quantum computing" --purpose "conference talk" --ev
 python server.py
 
 # Or using the main CLI
-python -m src.main api
+opencanvas api
 
 # Or with custom settings
 python server.py --host 0.0.0.0 --port 8080 --reload
@@ -174,7 +179,7 @@ Generate presentation from topic or PDF source.
 
 **Example:**
 ```bash
-python -m src.main generate "sustainable energy solutions" --purpose "corporate presentation" --theme "natural earth"
+opencanvas generate "sustainable energy solutions" --purpose "corporate presentation" --theme "natural earth"
 ```
 
 #### `convert`
@@ -190,7 +195,7 @@ Convert HTML presentation to PDF.
 
 **Example:**
 ```bash
-python -m src.main convert slides.html --output final_presentation.pdf --zoom 1.8 --method playwright
+opencanvas convert slides.html --output final_presentation.pdf --zoom 1.8 --method playwright
 ```
 
 #### `evaluate`
@@ -203,7 +208,7 @@ Evaluate presentation quality using AI.
 
 **Example:**
 ```bash
-python -m src.main evaluate my_presentation_folder/ --output results.json
+opencanvas evaluate my_presentation_folder/ --output results.json
 ```
 
 #### `pipeline`
@@ -221,7 +226,7 @@ Complete workflow: generate → convert → evaluate.
 
 **Example:**
 ```bash
-python -m src.main pipeline "machine learning ethics" --purpose "academic seminar" --theme "modern contemporary" --evaluate --source-pdf ethics_paper.pdf
+opencanvas pipeline "machine learning ethics" --purpose "academic seminar" --theme "modern contemporary" --evaluate --source-pdf ethics_paper.pdf
 ```
 
 #### `api`
@@ -236,7 +241,7 @@ Start the REST API server.
 
 **Example:**
 ```bash
-python -m src.main api --host 0.0.0.0 --port 8080 --reload
+opencanvas api --host 0.0.0.0 --port 8080 --reload
 ```
 
 ### API Endpoints
@@ -488,7 +493,7 @@ CMD ["python", "server.py", "--host", "0.0.0.0", "--port", "8000"]
 Enable verbose logging:
 ```bash
 # CLI
-python -m src.main --verbose generate "your topic"
+opencanvas --verbose generate "your topic"
 
 # API
 python server.py --log-level debug --reload

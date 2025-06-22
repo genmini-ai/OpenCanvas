@@ -3,8 +3,8 @@ import pytest
 import tempfile
 from pathlib import Path
 
-from src.conversion.html_to_pdf import PresentationConverter
-from src.config import Config
+from opencanvas.conversion.html_to_pdf import PresentationConverter
+from opencanvas.config import Config
 
 # Sample HTML content for testing
 SAMPLE_HTML = """<!DOCTYPE html>
