@@ -1,0 +1,27 @@
+# OpenCanvas API Dependencies
+# This file contains only the dependencies needed for the REST API
+
+# Core API framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# Data validation and serialization
+pydantic>=2.5.0
+
+# File handling
+python-multipart>=0.0.6
+aiofiles>=23.2.0
+
+# Security and authentication (optional)
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# Development and testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+httpx>=0.25.0
+
+# Note: Core OpenCanvas dependencies (anthropic, selenium, etc.) 
+# are not included here as they should be installed separately
+# or the API can be deployed as a separate service that calls
+# the core OpenCanvas functionality via inter-process communication 

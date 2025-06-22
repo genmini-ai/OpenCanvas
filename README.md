@@ -18,6 +18,8 @@ OpenCanvas is a comprehensive presentation generation and evaluation system that
 🎯 **Smart Research**: Automatic web research for insufficient knowledge topics  
 🎨 **Multiple Themes**: Professional themes for different presentation contexts  
 🔧 **Complete Pipeline**: End-to-end workflow from input to evaluation  
+🚀 **REST API**: Full RESTful API for programmatic access  
+📚 **Interactive Docs**: Auto-generated API documentation  
 
 ## Installation
 
@@ -28,8 +30,31 @@ cd OpenCanvas
 ```
 
 2. **Install dependencies**
+
+Choose one of the following installation options:
+
+**Option A: Complete installation (CLI + API)**
+```bash
+pip install -r requirements-all.txt
+```
+
+**Option B: Core functionality only (CLI)**
 ```bash
 pip install -r requirements.txt
+```
+
+**Option C: API only (for microservices)**
+```bash
+pip install -r requirements-api.txt
+```
+
+**Option D: Install separately**
+```bash
+# Install core dependencies
+pip install -r requirements.txt
+
+# Install API dependencies (if needed)
+pip install -r requirements-api.txt
 ```
 
 3. **Install browser drivers** (for HTML to PDF conversion)
@@ -53,34 +78,92 @@ Required API keys:
 
 ## Quick Start
 
-### Generate from Topic
+### CLI Usage
+
+#### Generate from Topic
 ```bash
 python -m src.main generate "AI in healthcare applications" --purpose "academic presentation" --theme "clean minimalist"
 ```
 
-### Generate from PDF
+#### Generate from PDF
 ```bash
 python -m src.main generate "https://arxiv.org/pdf/2505.20286" --purpose "research seminar"
 ```
 
-### Convert HTML to PDF
+#### Convert HTML to PDF
 ```bash
 python -m src.main convert output/slides.html --output presentation.pdf --zoom 1.5
 ```
 
-### Evaluate Presentation
+#### Evaluate Presentation
 ```bash
 python -m src.main evaluate evaluation_folder/
 ```
 
-### Full Pipeline
+#### Full Pipeline
 ```bash
 python -m src.main pipeline "quantum computing" --purpose "conference talk" --evaluate --zoom 1.3
 ```
 
+### API Usage
+
+#### Start the API Server
+```bash
+# Using the standalone server script
+python server.py
+
+# Or using the main CLI
+python -m src.main api
+
+# Or with custom settings
+python server.py --host 0.0.0.0 --port 8080 --reload
+```
+
+#### Access API Documentation
+- **Interactive Docs**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+- **Health Check**: http://localhost:8000/api/v1/health
+
+#### Example API Calls
+
+**Generate a presentation:**
+```bash
+curl -X POST "http://localhost:8000/api/v1/generate" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "input_source": "Machine learning in healthcare",
+       "purpose": "academic presentation",
+       "theme": "professional blue"
+     }'
+```
+
+**Convert to PDF:**
+```bash
+curl -X POST "http://localhost:8000/api/v1/convert" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "html_file": "output/presentation.html",
+       "zoom_factor": 1.2
+     }'
+```
+
+**Run complete pipeline:**
+```bash
+curl -X POST "http://localhost:8000/api/v1/pipeline" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "input_source": "Quantum computing applications",
+       "evaluate": true
+     }'
+```
+
+For complete API documentation, see [API_README.md](API_README.md).
+
 ## Available Commands
 
-### `generate`
+### CLI Commands
+
+#### `generate`
 Generate presentation from topic or PDF source.
 
 **Arguments:**
@@ -94,7 +177,7 @@ Generate presentation from topic or PDF source.
 python -m src.main generate "sustainable energy solutions" --purpose "corporate presentation" --theme "natural earth"
 ```
 
-### `convert`
+#### `convert`
 Convert HTML presentation to PDF.
 
 **Arguments:**
@@ -110,7 +193,7 @@ Convert HTML presentation to PDF.
 python -m src.main convert slides.html --output final_presentation.pdf --zoom 1.8 --method playwright
 ```
 
-### `evaluate`
+#### `evaluate`
 Evaluate presentation quality using AI.
 
 **Arguments:**
@@ -123,7 +206,7 @@ Evaluate presentation quality using AI.
 python -m src.main evaluate my_presentation_folder/ --output results.json
 ```
 
-### `pipeline`
+#### `pipeline`
 Complete workflow: generate → convert → evaluate.
 
 **Arguments:**
@@ -140,6 +223,40 @@ Complete workflow: generate → convert → evaluate.
 ```bash
 python -m src.main pipeline "machine learning ethics" --purpose "academic seminar" --theme "modern contemporary" --evaluate --source-pdf ethics_paper.pdf
 ```
+
+#### `api`
+Start the REST API server.
+
+**Arguments:**
+- `--host`: Host to bind to (default: 127.0.0.1)
+- `--port`: Port to bind to (default: 8000)
+- `--reload`: Enable auto-reload for development
+- `--log-level`: Log level (default: info)
+- `--workers`: Number of worker processes (default: 1)
+
+**Example:**
+```bash
+python -m src.main api --host 0.0.0.0 --port 8080 --reload
+```
+
+### API Endpoints
+
+#### Core Endpoints
+- `POST /api/v1/generate` - Generate presentation from topic or PDF
+- `POST /api/v1/convert` - Convert HTML to PDF
+- `POST /api/v1/evaluate` - Evaluate presentation quality
+- `POST /api/v1/pipeline` - Run complete pipeline workflow
+
+#### Configuration Endpoints
+- `GET /api/v1/themes` - Get available themes
+- `GET /api/v1/purposes` - Get available purposes
+- `GET /api/v1/conversion-methods` - Get conversion methods
+
+#### System Endpoints
+- `GET /api/v1/health` - Health check
+- `GET /api/v1/files/{file_path}` - Download generated files
+
+For detailed API documentation, see [API_README.md](API_README.md).
 
 ## Available Themes
 
@@ -159,13 +276,24 @@ python -m src.main pipeline "machine learning ethics" --purpose "academic semina
 ```
 OpenCanvas/
 ├── README.md                      # Project documentation
-├── requirements.txt               # Python dependencies
+├── API_README.md                  # API documentation
+├── requirements.txt               # Core dependencies only
+├── requirements-api.txt           # API dependencies only
+├── requirements-all.txt           # All dependencies
 ├── setup.py                      # Package setup configuration
+├── server.py                     # Standalone API server
+├── test_api.py                   # API test script
 ├── .env.example                  # Environment variables template
 ├── .gitignore                    # Git ignore rules
 ├── src/
 │   ├── main.py                    # Main CLI interface
 │   ├── config.py                  # Configuration management
+│   ├── api/                       # API package
+│   │   ├── __init__.py            # API package init
+│   │   ├── app.py                 # FastAPI application
+│   │   ├── models.py              # Pydantic models
+│   │   ├── routes.py              # API route handlers
+│   │   └── services.py            # Service layer
 │   ├── generators/
 │   │   ├── router.py              # Generation routing
 │   │   ├── topic_generator.py     # Topic-based generation
@@ -216,8 +344,16 @@ OpenCanvas/
 - **Reference Comparison**: Accuracy against source materials
 - **Comprehensive Scoring**: 1-5 scale with detailed reasoning
 
+### REST API
+- **Full CRUD Operations**: All functionality available via HTTP
+- **Async Processing**: Non-blocking operations for better performance
+- **Comprehensive Documentation**: Auto-generated OpenAPI/Swagger docs
+- **Error Handling**: Consistent error responses and status codes
+- **File Management**: Download generated files via API
+
 ## Testing
 
+### CLI Testing
 Run the test suites:
 
 ```bash
@@ -232,6 +368,17 @@ python tests/test_conversion.py
 
 # All tests with pytest
 pytest tests/
+```
+
+### API Testing
+Test the API functionality:
+
+```bash
+# Start the API server
+python server.py
+
+# In another terminal, run the test suite
+python test_api.py
 ```
 
 ## Configuration
@@ -249,6 +396,60 @@ DEFAULT_PURPOSE=general presentation
 OUTPUT_DIR=output
 DEFAULT_ZOOM=1.2
 DEFAULT_CONVERSION_METHOD=selenium
+EVALUATION_MODEL=claude-3-5-sonnet-20241022
+```
+
+## Production Deployment
+
+### API Server Deployment
+
+#### Using Gunicorn
+```bash
+pip install gunicorn
+gunicorn src.api.app:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+```
+
+#### Using Docker
+```dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements-all.txt .
+RUN pip install -r requirements-all.txt
+COPY . .
+EXPOSE 8000
+CMD ["python", "server.py", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+#### Using Docker Compose
+```yaml
+version: '3.8'
+services:
+  opencanvas-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - BRAVE_API_KEY=${BRAVE_API_KEY}
+    volumes:
+      - ./output:/app/output
+```
+
+### Microservices Deployment
+
+For microservices architecture, you can deploy the API separately:
+
+```dockerfile
+# API-only Dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements-api.txt .
+RUN pip install -r requirements-api.txt
+COPY src/api/ ./src/api/
+COPY src/config.py ./src/config.py
+COPY src/utils/ ./src/utils/
+EXPOSE 8000
+CMD ["python", "server.py", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 ## Troubleshooting
@@ -272,11 +473,25 @@ DEFAULT_CONVERSION_METHOD=selenium
    - Place `presentation.pdf` and `paper.pdf` in eval folder
    - Reference-required evaluation needs source material
 
+5. **API not starting**
+   - Check if FastAPI dependencies are installed: `pip install -r requirements-api.txt`
+   - Verify environment variables are set
+   - Check if port is already in use
+
+6. **Missing dependencies**
+   - For CLI only: `pip install -r requirements.txt`
+   - For API only: `pip install -r requirements-api.txt`
+   - For everything: `pip install -r requirements-all.txt`
+
 ### Debug Mode
 
 Enable verbose logging:
 ```bash
+# CLI
 python -m src.main --verbose generate "your topic"
+
+# API
+python server.py --log-level debug --reload
 ```
 
 ## Examples
@@ -294,3 +509,7 @@ See the `examples/` directory for:
 3. Add tests for new functionality
 4. Ensure all tests pass
 5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
