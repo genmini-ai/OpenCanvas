@@ -12,10 +12,10 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from generators.router import GenerationRouter
-from conversion.html_to_pdf import PresentationConverter
-from evaluation.evaluator import PresentationEvaluator
-from config import Config
+from opencanvas.generators.router import GenerationRouter
+from opencanvas.conversion.html_to_pdf import PresentationConverter
+from opencanvas.evaluation.evaluator import PresentationEvaluator
+from opencanvas.config import Config
 
 def example_1_topic_generation():
     """Example 1: Generate presentation from a topic"""

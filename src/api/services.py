@@ -12,10 +12,10 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 from datetime import datetime
 
-from ..config import Config
-from ..generators.router import GenerationRouter
-from ..conversion.html_to_pdf import PresentationConverter
-from ..evaluation.evaluator import PresentationEvaluator
+from opencanvas.config import Config
+from opencanvas.generators.router import GenerationRouter
+from opencanvas.conversion.html_to_pdf import PresentationConverter
+from opencanvas.evaluation.evaluator import PresentationEvaluator
 from .models import (
     GenerateResponse, ConvertResponse, EvaluateResponse, PipelineResponse,
     EvaluationScores
