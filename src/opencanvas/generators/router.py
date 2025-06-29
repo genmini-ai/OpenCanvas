@@ -69,14 +69,16 @@ class GenerationRouter:
                 return self.pdf_generator.generate_presentation(
                     pdf_source=input_source,
                     presentation_focus=purpose,
-                    theme=theme
+                    theme=theme,
+                    output_dir=output_dir
                 )
             else:
                 logger.info("Routing to topic generator")
                 return self.topic_generator.generate_from_topic(
                     user_text=input_source,
                     purpose=purpose,
-                    theme=theme
+                    theme=theme,
+                    output_dir=output_dir
                 )
         except Exception as e:
             logger.error(f"Generation failed: {e}")

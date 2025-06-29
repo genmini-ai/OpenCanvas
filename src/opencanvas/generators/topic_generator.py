@@ -406,12 +406,23 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
             logger.error(f"Error generating slides: {e}")
             return None
     
-    def generate_from_topic(self, user_text, purpose, theme="professional blue"):
-        """Generate presentation from a topic/text"""
+    def generate_from_topic(self, user_text, purpose, theme="professional blue", output_dir="output"):
+        """Generate presentation from a topic/text with organized file structure"""
+        from opencanvas.utils.file_utils import generate_topic_slug, organize_pipeline_outputs
+        from opencanvas.config import Config
+        
         logger.info(f"🚀 Starting topic-based presentation generation...")
         logger.info(f"📝 User text: {user_text}")
         logger.info(f"🎯 Purpose: {purpose}")
         logger.info(f"🎨 Theme: {theme}")
+        
+        # Generate topic slug and timestamp for organized naming
+        topic_slug = generate_topic_slug(user_text)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = Path(output_dir) if isinstance(output_dir, str) else output_dir
+        
+        logger.info(f"📂 Topic slug: {topic_slug}")
+        logger.info(f"📁 Output directory: {output_path}")
         
         # Step 1: Assess knowledge depth
         logger.info("\n🧠 Assessing knowledge depth...")
@@ -477,35 +488,40 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
             logger.error("❌ Failed to generate slides")
             return None
         
-        # Step 5: Save HTML file
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        html_filename = f"slides_{timestamp}.html"
+        # Step 5: Organize outputs with proper file structure
+        logger.info("📁 Organizing output files...")
+        organized_files = organize_pipeline_outputs(
+            output_dir=output_path,
+            topic_slug=topic_slug,
+            timestamp=timestamp,
+            html_content=html_content,
+            source_content=blog_content  # Save the blog content as source
+        )
         
-        logger.info(f"💾 Saving HTML file as {html_filename}...")
-        saved_html = self.save_html_file(html_content, html_filename)
-        if not saved_html:
-            logger.error("❌ Failed to save HTML file")
-            return None
-        
-        # Step 6: Open in browser
-        logger.info(f"🌐 Opening slides in browser...")
-        self.open_in_browser(html_filename)
+        # Step 6: Open in browser (use the organized HTML file)
+        if 'html' in organized_files:
+            logger.info(f"🌐 Opening slides in browser...")
+            self.open_in_browser(str(organized_files['html']))
         
         results = {
             'knowledge_assessment': knowledge_assessment,
             'research_performed': knowledge_assessment == "INSUFFICIENT",
             'blog_content': blog_content,
             'html_content': html_content,
-            'html_file': html_filename,
+            'html_file': str(organized_files.get('html', '')),
+            'organized_files': organized_files,
+            'topic_slug': topic_slug,
             'timestamp': timestamp
         }
         
+        # Print organized file summary
+        from opencanvas.utils.file_utils import get_file_summary
         logger.info(f"\n✅ Presentation generation complete!")
         logger.info(f"🧠 Knowledge assessment: {knowledge_assessment}")
         if knowledge_assessment == "INSUFFICIENT":
             logger.info(f"🔍 Web research was performed")
-        logger.info(f"📁 HTML file: {html_filename}")
-        logger.info(f"🌐 Slides opened in your default browser")
+        logger.info(f"\n📁 Organized files:")
+        logger.info(get_file_summary(organized_files))
         
         return results
         

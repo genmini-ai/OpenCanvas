@@ -226,23 +226,34 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
         except Exception as e:
             return None, f"Error generating slides directly: {str(e)}"
     
-    def generate_presentation(self, pdf_source, presentation_focus="A comprehensive overview", theme="professional", slide_count=12):
+    def generate_presentation(self, pdf_source, presentation_focus="A comprehensive overview", theme="professional", slide_count=12, output_dir="output"):
         """
-        One-step function to generate a presentation from a PDF source.
+        One-step function to generate a presentation from a PDF source with organized file structure.
         
         Args:
             pdf_source: Either a URL to a PDF or a local file path
             presentation_focus: The main focus or theme of the presentation
             theme: Visual theme for the presentation ("professional", "academic", "modern", etc.)
             slide_count: Target number of slides
+            output_dir: Output directory for organized files
             
         Returns:
             Dict with result information or None if process failed
         """
+        from opencanvas.utils.file_utils import generate_topic_slug, organize_pipeline_outputs
+        
         logger.info(f"🚀 Starting PDF presentation generation...")
         logger.info(f"📄 Source: {pdf_source}")
         logger.info(f"🎯 Focus: {presentation_focus}")
         logger.info(f"🎨 Theme: {theme}")
+        
+        # Generate topic slug and timestamp for organized naming
+        topic_slug = generate_topic_slug(presentation_focus)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = Path(output_dir) if isinstance(output_dir, str) else output_dir
+        
+        logger.info(f"📂 Topic slug: {topic_slug}")
+        logger.info(f"📁 Output directory: {output_path}")
         
         # Determine if source is URL or file path
         if pdf_source.startswith(('http://', 'https://')):
@@ -287,29 +298,35 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
             
         logger.info("3. Slides generated successfully.")
         
-        # Save to file and open
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        html_filename = f"pdf_slides_{timestamp}.html"
+        # Organize outputs with proper file structure
+        logger.info("📁 Organizing output files...")
+        organized_files = organize_pipeline_outputs(
+            output_dir=output_path,
+            topic_slug=topic_slug,
+            timestamp=timestamp,
+            html_content=html_content,
+            source_pdf=pdf_source if not pdf_source.startswith(('http://', 'https://')) else None
+        )
         
-        saved_html = self.save_html_file(html_content, html_filename)
-        if not saved_html:
-            logger.error("❌ Failed to save HTML file")
-            return None
-            
-        logger.info(f"4. Presentation saved to {html_filename}")
+        # Open in browser (use the organized HTML file)
+        if 'html' in organized_files:
+            logger.info(f"🌐 Opening slides in browser...")
+            self.open_in_browser(str(organized_files['html']))
         
-        # Open in browser
-        self.open_in_browser(html_filename)
-        logger.info("5. Opening slides in browser...")
-        
+        # Print organized file summary
+        from opencanvas.utils.file_utils import get_file_summary
         logger.info(f"\n✅ PDF presentation generation complete!")
+        logger.info(f"\n📁 Organized files:")
+        logger.info(get_file_summary(organized_files))
         
         return {
             'pdf_source': pdf_source,
-            'html_file': html_filename,
+            'html_file': str(organized_files.get('html', '')),
             'html_content': html_content,
             'presentation_focus': presentation_focus,
             'theme': theme,
             'slide_count': slide_count,
+            'organized_files': organized_files,
+            'topic_slug': topic_slug,
             'timestamp': timestamp
         }

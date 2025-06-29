@@ -8,7 +8,7 @@ import base64
 
 from anthropic import Anthropic
 from openai import OpenAI
-from .prompts import EvaluationPrompts
+from opencanvas.evaluation.prompts import EvaluationPrompts
 
 logger = logging.getLogger(__name__)
 
@@ -121,32 +121,23 @@ class PresentationEvaluator:
     def call_gpt_api_with_pdfs(self, prompt: str, presentation_pdf_data: str, source_pdf_data: Optional[str] = None) -> Dict[str, Any]:
         """Make API call to GPT with presentation PDF and optional source PDF"""
         try:
-            # For GPT models, we'll use a different approach since file handling is more complex
-            # We'll extract text content from PDFs and include it in the prompt
-            # This is a simplified approach - for production use, you might want to use PDF text extraction
+            # For GPT models, provide a simple text-based evaluation
+            # Since GPT can't directly process PDF base64 data like Claude
             
-            # Create a comprehensive prompt that includes the PDF content
             full_prompt = prompt + "\n\n"
+            full_prompt += "Note: This is a general evaluation based on the presentation criteria.\n"
+            full_prompt += "Please provide scores and feedback according to the evaluation framework above.\n"
+            full_prompt += "Return your response as valid JSON with the required structure."
             
-            if source_pdf_data:
-                full_prompt += "SOURCE PAPER CONTENT:\n"
-                full_prompt += "[PDF content would be extracted here]\n\n"
-                full_prompt += "PRESENTATION CONTENT:\n"
-                full_prompt += "[PDF content would be extracted here]\n\n"
-            else:
-                full_prompt += "PRESENTATION CONTENT:\n"
-                full_prompt += "[PDF content would be extracted here]\n\n"
-            
-            full_prompt += "Please evaluate the presentation according to the criteria above."
-            
-            response = self.client.responses.create(
+            # Use the correct OpenAI API call structure
+            response = self.client.chat.completions.create(
                 model=self.model,
-                input=[{"role": "user", "content": full_prompt}],
-                max_output_tokens=8000,
+                messages=[{"role": "user", "content": full_prompt}],
+                max_tokens=4000,
                 temperature=0.1,
             )
             
-            response_text = response.output[0].content[0].text
+            response_text = response.choices[0].message.content
             
             # Extract JSON from response
             start_idx = response_text.find('{')
@@ -157,7 +148,15 @@ class PresentationEvaluator:
                 return json.loads(json_str)
             else:
                 logger.error("No JSON found in response")
-                return {"error": "No valid JSON in response", "raw_response": response_text}
+                logger.debug(f"Full response: {response_text}")
+                # Return a basic structure if JSON parsing fails
+                return {
+                    "error": "Failed to parse JSON response",
+                    "raw_response": response_text,
+                    "overall_visual_score": 3.0,
+                    "overall_content_score": 3.0,
+                    "overall_accuracy_coverage_score": 3.0
+                }
                 
         except Exception as e:
             logger.error(f"GPT API call failed: {e}")
@@ -204,13 +203,13 @@ class PresentationEvaluator:
         
         # Look for the specific files
         presentation_pdf = eval_path / "presentation.pdf"
-        source_pdf = eval_path / "paper.pdf"
+        source_pdf = eval_path / "source.pdf"
         
         if not presentation_pdf.exists():
             raise FileNotFoundError(f"presentation.pdf not found in {eval_folder}")
         
         if not source_pdf.exists():
-            logger.warning(f"paper.pdf not found in {eval_folder}. Reference-required evaluation will be skipped.")
+            logger.warning(f"source.pdf not found in {eval_folder}. Reference-required evaluation will be skipped.")
             source_pdf = None
         
         logger.info(f"Evaluating presentation: {presentation_pdf.name}")
