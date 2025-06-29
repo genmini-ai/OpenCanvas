@@ -73,13 +73,14 @@ playwright install chromium
 
 4. **Setup environment variables**
 ```bash
-cp env.example .env
+cp .env.example .env
 # Edit .env with your API keys
 ```
 
 Required API keys:
 - `ANTHROPIC_API_KEY`: For Claude AI (required)
 - `BRAVE_API_KEY`: For web search (optional, but recommended)
+- `OPENAI_API_KEY`: For GPT evaluation (optional)
 
 ## Quick Start
 
@@ -107,8 +108,36 @@ opencanvas evaluate evaluation_folder/
 
 #### Full Pipeline
 ```bash
+# Complete workflow with organized outputs
 opencanvas pipeline "quantum computing" --purpose "conference talk" --evaluate --zoom 1.3
+
+# Pipeline with source PDF for evaluation
+opencanvas pipeline "quantum computing" --source-pdf paper.pdf --evaluate
 ```
+
+## Organized Output Structure
+
+OpenCanvas now creates organized directory structures for all outputs:
+
+```
+output/
+└── quantum_computing_20241128_120000/
+    ├── slides/
+    │   ├── quantum_computing_slides.html
+    │   └── quantum_computing_presentation.pdf
+    ├── evaluation/
+    │   └── quantum_computing_evaluation.json
+    └── sources/
+        ├── quantum_computing_source_blog.txt    # For topic-based generation
+        └── quantum_computing_source.pdf         # For PDF-based generation
+```
+
+### Benefits of Organized Structure
+
+- **Topic-based naming**: Files use meaningful names derived from your topic (max 5 words)
+- **Source storage**: Original content is saved for reference-required evaluation
+- **Complete pipeline**: All outputs (.html, .pdf, .json) in one organized folder
+- **Easy evaluation**: Source content is automatically available for comprehensive evaluation
 
 ### API Usage
 
@@ -163,6 +192,109 @@ curl -X POST "http://localhost:8000/api/v1/pipeline" \
 ```
 
 For complete API documentation, see [API_README.md](API_README.md).
+
+## Configuration Reference
+
+### Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `ANTHROPIC_API_KEY` | ✅ | - | Claude API key for generation |
+| `BRAVE_API_KEY` | ❌ | - | Brave Search API for web research |
+| `OPENAI_API_KEY` | ❌ | - | OpenAI API key for GPT evaluation |
+| `EVALUATION_PROVIDER` | ❌ | `claude` | Evaluation provider: `claude` or `gpt` |
+| `EVALUATION_MODEL` | ❌ | `claude-3-5-sonnet-20241022` | Model for evaluation |
+| `DEFAULT_THEME` | ❌ | `professional blue` | Default presentation theme |
+| `DEFAULT_ZOOM` | ❌ | `1.2` | PDF zoom factor |
+| `DEFAULT_CONVERSION_METHOD` | ❌ | `playwright` | PDF conversion method |
+
+### Available Themes
+
+- `professional blue` - Clean, corporate-friendly design
+- `clean minimalist` - Simple, elegant layout
+- `natural earth` - Warm, earth-tone colors
+- `modern contemporary` - Trendy, cutting-edge design
+- `warm earth tones` - Cozy, approachable feel
+- `bold high contrast` - High-impact, attention-grabbing
+
+### Available Models
+
+**Claude Models:**
+- `claude-3-5-sonnet-20241022` (recommended for evaluation)
+- `claude-3-7-sonnet-20250219` (good for generation)
+- `claude-sonnet-4-20250514` (latest, premium)
+
+**GPT Models:**
+- `gpt-4o` (best quality, higher cost)
+- `gpt-4o-mini` (good balance, recommended)
+- `gpt-4-turbo` (fast, good quality)
+
+## Troubleshooting
+
+### Common Issues
+
+**1. "opencanvas command not found"**
+```bash
+# Make sure you installed with -e flag
+pip install -e .
+
+# Check if it's in your PATH
+which opencanvas
+```
+
+**2. "ANTHROPIC_API_KEY is required"**
+```bash
+# Check your .env file exists and has the key
+cat .env | grep ANTHROPIC_API_KEY
+
+# Make sure .env is in the same directory where you run opencanvas
+```
+
+**3. "Model 'gpt-4.1' not found" with Claude provider**
+```bash
+# This happens when EVALUATION_MODEL doesn't match EVALUATION_PROVIDER
+# Fix in .env:
+EVALUATION_PROVIDER=claude
+EVALUATION_MODEL=claude-3-5-sonnet-20241022
+
+# Or use GPT:
+EVALUATION_PROVIDER=gpt  
+EVALUATION_MODEL=gpt-4o-mini
+```
+
+**4. "Playwright not available"**
+```bash
+# Install Playwright browser
+playwright install chromium
+
+# Or use selenium method
+opencanvas convert slides.html --method selenium
+```
+
+**5. Web research not working**
+```bash
+# Add BRAVE_API_KEY to .env for web research
+# Without it, generation uses only Claude's knowledge
+BRAVE_API_KEY=your-brave-key-here
+```
+
+### Validation Commands
+
+```bash
+# Test your configuration
+python -c "from opencanvas.config import Config; Config.validate(); print('✅ Configuration valid')"
+
+# Test API keys
+opencanvas generate "test topic" --output-dir test_output
+
+# Check available models
+python -c "
+from opencanvas.config import Config
+print('Claude Model:', Config.CLAUDE_MODEL)
+print('Evaluation Model:', Config.EVALUATION_MODEL)
+print('Evaluation Provider:', Config.EVALUATION_PROVIDER)
+"
+```
 
 ## Available Commands
 

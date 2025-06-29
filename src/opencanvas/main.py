@@ -8,11 +8,12 @@ import sys
 from pathlib import Path
 import logging
 
-from .config import Config
-from .utils.logging import setup_logging
-from .generators.router import GenerationRouter
-from .conversion.html_to_pdf import PresentationConverter
-from .evaluation.evaluator import PresentationEvaluator
+from opencanvas.config import Config
+from opencanvas.utils.logging import setup_logging
+from opencanvas.generators.router import GenerationRouter
+from opencanvas.conversion.html_to_pdf import PresentationConverter
+from opencanvas.evaluation.evaluator import PresentationEvaluator
+from opencanvas.evaluation.enhanced_evaluator import EnhancedPresentationEvaluator
 
 def main():
     """Main CLI entry point"""
@@ -194,32 +195,86 @@ def handle_evaluate(args, logger):
     """Handle evaluate command"""
     logger.info(f"📊 Evaluating presentation: {args.eval_folder}")
     
-    # Determine API key based on provider
+    # Determine API key and model based on provider
     if args.eval_provider == "claude":
         api_key = Config.ANTHROPIC_API_KEY
         if not api_key:
             logger.error("ANTHROPIC_API_KEY is required for Claude evaluation")
             return 1
-        assert api_key is not None  # For type checker
+        
+        # Use Claude model if provider is Claude, regardless of what's specified in args.model
+        if args.model.startswith('gpt-') or args.model.startswith('o1-'):
+            # If user specified a GPT model but wants Claude provider, use default Claude model
+            model = Config.EVALUATION_MODEL  # Default Claude model
+            logger.warning(f"Using Claude provider but GPT model specified. Using default Claude model: {model}")
+        else:
+            model = args.model
+            
     elif args.eval_provider == "gpt":
         api_key = Config.OPENAI_API_KEY
         if not api_key:
             logger.error("OPENAI_API_KEY is required for GPT evaluation")
             return 1
-        assert api_key is not None  # For type checker
+        
+        # Use GPT model if provider is GPT
+        if args.model.startswith('claude-'):
+            # If user specified a Claude model but wants GPT provider, use a default GPT model
+            model = "gpt-4o-mini"  # Default GPT model
+            logger.warning(f"Using GPT provider but Claude model specified. Using default GPT model: {model}")
+        else:
+            model = args.model
+            
     else:
         logger.error(f"Unsupported evaluation provider: {args.eval_provider}. Use 'claude' or 'gpt'")
         return 1
     
-    logger.info(f"Using {args.eval_provider} provider for evaluation")
+    logger.info(f"Using {args.eval_provider} provider with model {model} for evaluation")
     
-    evaluator = PresentationEvaluator(
-        api_key=api_key,
-        model=args.model,
-        provider=args.eval_provider
-    )
+    # Check if we have an organized structure or flat structure
+    eval_path = Path(args.eval_folder)
+    slides_folder = eval_path / "slides"
+    sources_folder = eval_path / "sources"
     
-    result = evaluator.evaluate_presentation(args.eval_folder)
+    if slides_folder.exists():
+        # Organized structure - use enhanced evaluator
+        logger.info("Detected organized structure, using enhanced evaluator")
+        evaluator = EnhancedPresentationEvaluator(
+            api_key=api_key,
+            model=model,
+            provider=args.eval_provider
+        )
+        
+        # Find the files in organized structure
+        presentation_pdf = slides_folder / "presentation.pdf"
+        source_content_file = sources_folder / "source_content.txt"
+        source_pdf_file = sources_folder / "source.pdf"
+        
+        # Check for legacy file names too
+        if not source_content_file.exists():
+            # Look for legacy source content file
+            for file in sources_folder.glob("*source*blog*.txt"):
+                source_content_file = file
+                break
+        
+        if not presentation_pdf.exists():
+            logger.error(f"presentation.pdf not found in {slides_folder}")
+            return 1
+        
+        result = evaluator.evaluate_presentation_with_sources(
+            presentation_pdf_path=str(presentation_pdf),
+            source_content_path=str(source_content_file) if source_content_file.exists() else None,
+            source_pdf_path=str(source_pdf_file) if source_pdf_file.exists() else None
+        )
+    else:
+        # Flat structure - use original evaluator
+        logger.info("Detected flat structure, using original evaluator")
+        evaluator = PresentationEvaluator(
+            api_key=api_key,
+            model=model,
+            provider=args.eval_provider
+        )
+        
+        result = evaluator.evaluate_presentation(args.eval_folder)
     
     # Print results
     evaluator.print_results(result)
@@ -237,7 +292,9 @@ def handle_evaluate(args, logger):
     return 0
 
 def handle_pipeline(args, logger):
-    """Handle pipeline command - full workflow"""
+    """Handle pipeline command - full workflow with organized outputs"""
+    from opencanvas.utils.file_utils import organize_pipeline_outputs, get_file_summary
+    
     logger.info(f"🔧 Starting full pipeline for: {args.input}")
     
     # Step 1: Generate
@@ -259,6 +316,9 @@ def handle_pipeline(args, logger):
         return 1
     
     html_file = gen_result.get('html_file')
+    organized_files = gen_result.get('organized_files', {})
+    topic_slug = gen_result.get('topic_slug', 'presentation')
+    
     if not html_file:
         logger.error("No HTML file generated")
         return 1
@@ -267,68 +327,122 @@ def handle_pipeline(args, logger):
     
     # Step 2: Convert to PDF
     logger.info("Step 2: Converting to PDF...")
+    
+    # Use the slides folder if we have organized files
+    if 'html' in organized_files:
+        html_source = str(organized_files['html'])
+        pdf_output_dir = organized_files['html'].parent  # Use slides folder
+    else:
+        html_source = html_file
+        pdf_output_dir = args.output_dir
+    
     converter = PresentationConverter(
-        html_file=html_file,
-        output_dir=args.output_dir,
+        html_file=html_source,
+        output_dir=str(pdf_output_dir),
         method=args.method,
         zoom_factor=args.zoom
     )
     
-    pdf_path = converter.convert(output_filename="presentation.pdf")
+    pdf_filename = "presentation.pdf"
+    pdf_path = converter.convert(output_filename=pdf_filename)
     print(f"✅ Step 2 complete: {pdf_path}")
+    
+    # Update organized files with PDF path
+    if organized_files:
+        organized_files['pdf'] = Path(pdf_path)
     
     # Step 3: Evaluate (if requested)
     if args.evaluate:
         logger.info("Step 3: Evaluating presentation...")
         
-        # Setup evaluation folder
-        eval_folder = Path(args.output_dir)
+        # Determine evaluation folder
+        if organized_files and 'base_folder' in organized_files:
+            eval_base_folder = organized_files['base_folder']
+        else:
+            eval_base_folder = Path(args.output_dir)
         
-        # Copy source PDF if provided
-        if args.source_pdf:
+        # Prepare source content for evaluation
+        source_content_path = None
+        source_pdf_path = None
+        
+        # For topic-based generation, use the blog content as source
+        if 'source_content' in organized_files:
+            source_content_path = organized_files['source_content']
+            logger.info(f"Using topic source content for evaluation: {source_content_path}")
+        
+        # For PDF-based generation or explicit source PDF
+        if 'source_pdf' in organized_files:
+            source_pdf_path = organized_files['source_pdf']
+            logger.info(f"Using source PDF for evaluation: {source_pdf_path}")
+        elif args.source_pdf:
+            # Copy external source PDF
             import shutil
             source_path = Path(args.source_pdf)
             if source_path.exists():
-                shutil.copy2(source_path, eval_folder / "paper.pdf")
-                logger.info(f"Copied source PDF: {args.source_pdf}")
+                sources_folder = eval_base_folder / "sources"
+                sources_folder.mkdir(exist_ok=True)
+                source_pdf_path = sources_folder / "source.pdf"
+                shutil.copy2(source_path, source_pdf_path)
+                logger.info(f"Copied external source PDF: {source_pdf_path}")
         
-        # Determine API key based on provider
-        if args.eval_provider == "claude":
-            api_key = Config.ANTHROPIC_API_KEY
+        # Use the improved evaluation configuration
+        try:
+            eval_config = Config.get_evaluation_config()
+            api_key = eval_config['api_key']
+            model = eval_config['model']
+            provider = eval_config['provider']
+            
             if not api_key:
-                logger.error("ANTHROPIC_API_KEY is required for Claude evaluation")
+                logger.error(f"{provider.upper()}_API_KEY is required for {provider} evaluation")
                 return 1
-            assert api_key is not None  # For type checker
-        elif args.eval_provider == "gpt":
-            api_key = Config.OPENAI_API_KEY
-            if not api_key:
-                logger.error("OPENAI_API_KEY is required for GPT evaluation")
-                return 1
-            assert api_key is not None  # For type checker
-        else:
-            logger.error(f"Unsupported evaluation provider: {args.eval_provider}. Use 'claude' or 'gpt'")
+                
+        except ValueError as e:
+            logger.error(str(e))
             return 1
         
-        logger.info(f"Using {args.eval_provider} provider for evaluation")
+        logger.info(f"Using {provider} provider with model {model} for evaluation")
         
-        evaluator = PresentationEvaluator(
+        # Create modified evaluator that can handle source content
+        evaluator = EnhancedPresentationEvaluator(
             api_key=api_key,
-            model=Config.EVALUATION_MODEL,
-            provider=args.eval_provider
+            model=model,
+            provider=provider
         )
-        eval_result = evaluator.evaluate_presentation(str(eval_folder))
+        
+        # Use the correct PDF path (organized files take precedence)
+        final_pdf_path = str(organized_files.get('pdf', pdf_path))
+        
+        eval_result = evaluator.evaluate_presentation_with_sources(
+            presentation_pdf_path=final_pdf_path,
+            source_content_path=str(source_content_path) if source_content_path else None,
+            source_pdf_path=str(source_pdf_path) if source_pdf_path else None
+        )
         
         # Print results
         evaluator.print_results(eval_result)
         
-        # Save results
-        output_path = eval_folder / "evaluation_results.json"
-        evaluator.save_results(eval_result, str(output_path))
+        # Save results in organized structure
+        if organized_files and 'evaluation' in organized_files:
+            eval_output_path = organized_files['evaluation'] / "evaluation_results.json"
+        else:
+            eval_output_path = eval_base_folder / "evaluation_results.json"
         
-        print(f"✅ Step 3 complete: {output_path}")
+        evaluator.save_results(eval_result, str(eval_output_path))
+        
+        # Update organized files
+        if organized_files:
+            organized_files['evaluation_json'] = eval_output_path
+        
+        print(f"✅ Step 3 complete: {eval_output_path}")
     
+    # Final summary
     print(f"\n🎉 Pipeline completed successfully!")
-    print(f"📁 Output directory: {args.output_dir}")
+    
+    if organized_files:
+        print(f"\n📁 Organized output structure:")
+        print(get_file_summary(organized_files))
+    else:
+        print(f"📁 Output directory: {args.output_dir}")
     
     return 0
 
