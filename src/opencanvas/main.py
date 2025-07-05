@@ -13,7 +13,6 @@ from opencanvas.utils.logging import setup_logging
 from opencanvas.generators.router import GenerationRouter
 from opencanvas.conversion.html_to_pdf import PresentationConverter
 from opencanvas.evaluation.evaluator import PresentationEvaluator
-from opencanvas.evaluation.enhanced_evaluator import EnhancedPresentationEvaluator
 
 def main():
     """Main CLI entry point"""
@@ -238,7 +237,7 @@ def handle_evaluate(args, logger):
     if slides_folder.exists():
         # Organized structure - use enhanced evaluator
         logger.info("Detected organized structure, using enhanced evaluator")
-        evaluator = EnhancedPresentationEvaluator(
+        evaluator = PresentationEvaluator(
             api_key=api_key,
             model=model,
             provider=args.eval_provider
@@ -403,7 +402,7 @@ def handle_pipeline(args, logger):
         logger.info(f"Using {provider} provider with model {model} for evaluation")
         
         # Create modified evaluator that can handle source content
-        evaluator = EnhancedPresentationEvaluator(
+        evaluator = PresentationEvaluator(
             api_key=api_key,
             model=model,
             provider=provider

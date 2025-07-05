@@ -8,6 +8,8 @@ import base64
 
 from anthropic import Anthropic
 from openai import OpenAI
+from google import genai
+from google.genai import types
 from opencanvas.evaluation.prompts import EvaluationPrompts
 
 logger = logging.getLogger(__name__)
@@ -23,17 +25,17 @@ class EvaluationResult:
 class PresentationEvaluator:
     """
     Comprehensive presentation evaluation system using three specialized prompts
-    Supports both Claude and GPT models
+    Supports Claude, GPT, and Gemini models
     """
     
-    def __init__(self, api_key: str, model: str = "claude-3-5-sonnet-20241022", provider: Literal["claude", "gpt"] = "claude"):
+    def __init__(self, api_key: str, model: str = "gemini-2.5-flash", provider: Literal["claude", "gpt", "gemini"] = "gemini"):
         """
         Initialize the evaluator
         
         Args:
             api_key: API key for the chosen provider
             model: Model name to use for evaluation
-            provider: Either "claude" or "gpt"
+            provider: Either "claude", "gpt", or "gemini"
         """
         self.provider = provider
         self.model = model
@@ -43,8 +45,11 @@ class PresentationEvaluator:
             self.client = Anthropic(api_key=api_key)
         elif provider == "gpt":
             self.client = OpenAI(api_key=api_key)
+        elif provider == "gemini":
+            # Set the API key for Gemini
+            self.client = genai.Client(api_key=api_key)
         else:
-            raise ValueError("Provider must be either 'claude' or 'gpt'")
+            raise ValueError("Provider must be either 'claude', 'gpt', or 'gemini'")
     
     def extract_pdf_as_base64(self, pdf_path: str) -> str:
         """Extract PDF as base64 data for API calls"""
@@ -55,7 +60,16 @@ class PresentationEvaluator:
         except Exception as e:
             logger.error(f"Error reading PDF file: {e}")
             return ""
-    
+
+    def extract_pdf_as_bytes(self, pdf_path: str) -> bytes:
+        """Extract PDF as bytes for Gemini API calls"""
+        try:
+            with open(pdf_path, 'rb') as file:
+                return file.read()
+        except Exception as e:
+            logger.error(f"Error reading PDF file: {e}")
+            return b""
+
     def extract_pdf_content(self, pdf_path: str) -> str:
         """Extract PDF as base64 data for API calls"""
         return self.extract_pdf_as_base64(pdf_path)
@@ -121,23 +135,49 @@ class PresentationEvaluator:
     def call_gpt_api_with_pdfs(self, prompt: str, presentation_pdf_data: str, source_pdf_data: Optional[str] = None) -> Dict[str, Any]:
         """Make API call to GPT with presentation PDF and optional source PDF"""
         try:
-            # For GPT models, provide a simple text-based evaluation
-            # Since GPT can't directly process PDF base64 data like Claude
+            # Build the content array for the GPT API
+            content = [
+                {
+                    "type": "input_text",
+                    "text": prompt
+                }
+            ]
             
-            full_prompt = prompt + "\n\n"
-            full_prompt += "Note: This is a general evaluation based on the presentation criteria.\n"
-            full_prompt += "Please provide scores and feedback according to the evaluation framework above.\n"
-            full_prompt += "Return your response as valid JSON with the required structure."
+            # Add source PDF if available (for reference-required evaluation)
+            if source_pdf_data:
+                content.append({
+                    "type": "input_file",
+                    "filename": "source.pdf",
+                    "file_data": f"data:application/pdf;base64,{source_pdf_data}",
+                })
+                content.append({
+                    "type": "input_text",
+                    "text": "Above is the source document. Below is the presentation to evaluate:"
+                })
             
-            # Use the correct OpenAI API call structure
-            response = self.client.chat.completions.create(
+            # Add presentation PDF
+            content.append({
+                "type": "input_file",
+                "filename": "presentation.pdf",
+                "file_data": f"data:application/pdf;base64,{presentation_pdf_data}",
+            })
+            content.append({
+                "type": "input_text",
+                "text": "This is the presentation to evaluate. Please assess it according to the evaluation criteria and return your response as valid JSON."
+            })
+            
+            # Use the correct OpenAI responses API
+            response = self.client.responses.create(
                 model=self.model,
-                messages=[{"role": "user", "content": full_prompt}],
-                max_tokens=4000,
+                input=[{
+                    "role": "user",
+                    "content": content
+                }],
+                max_output_tokens=8000,
                 temperature=0.1,
             )
             
-            response_text = response.choices[0].message.content
+            response_text = response.output_text
             
             # Extract JSON from response
             start_idx = response_text.find('{')
@@ -161,16 +201,71 @@ class PresentationEvaluator:
         except Exception as e:
             logger.error(f"GPT API call failed: {e}")
             return {"error": str(e)}
+
+    def call_gemini_api_with_pdfs(self, prompt: str, presentation_pdf_data: str, source_pdf_data: Optional[str] = None) -> Dict[str, Any]:
+        """Make API call to Gemini with presentation PDF and optional source PDF"""
+        try:
+            # Build the content array for Gemini
+            content = []
+            
+            # Add source PDF if available (for reference-required evaluation)
+            if source_pdf_data:
+                source_pdf_bytes = base64.b64decode(source_pdf_data)
+                content.append(types.Part.from_bytes(
+                    data=source_pdf_bytes,
+                    mime_type='application/pdf'
+                ))
+                content.append("Above is the source document. Below is the presentation to evaluate:")
+            
+            # Add presentation PDF
+            presentation_pdf_bytes = base64.b64decode(presentation_pdf_data)
+            content.append(types.Part.from_bytes(
+                data=presentation_pdf_bytes,
+                mime_type='application/pdf'
+            ))
+            
+            # Add the evaluation prompt
+            content.append(f"{prompt}\n\nThis is the presentation to evaluate. Please assess it according to the evaluation criteria and return your response as valid JSON.")
+            
+            # Make the API call
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=content
+            )
+            
+            response_text = response.text
+            
+            # Extract JSON from response
+            start_idx = response_text.find('{')
+            end_idx = response_text.rfind('}') + 1
+            
+            if start_idx != -1 and end_idx != -1:
+                json_str = response_text[start_idx:end_idx]
+                return json.loads(json_str)
+            else:
+                logger.error("No JSON found in response")
+                logger.debug(f"Full response: {response_text}")
+                # Return a basic structure if JSON parsing fails
+                return {
+                    "error": "Failed to parse JSON response",
+                    "raw_response": response_text,
+                    "overall_visual_score": 3.0,
+                    "overall_content_score": 3.0,
+                    "overall_accuracy_coverage_score": 3.0
+                }
+                
+        except Exception as e:
+            logger.error(f"Gemini API call failed: {e}")
+            return {"error": str(e)}
     
     def call_api_with_pdfs(self, prompt: str, presentation_pdf_data: str, source_pdf_data: Optional[str] = None) -> Dict[str, Any]:
         """Make API call using the appropriate provider"""
         if self.provider == "claude":
             return self.call_claude_api_with_pdfs(prompt, presentation_pdf_data, source_pdf_data)
         elif self.provider == "gpt":
-            # Note: GPT implementation is a placeholder
-            # For production use, you would need to implement proper PDF text extraction
-            # and use GPT's vision capabilities or file upload features
             return self.call_gpt_api_with_pdfs(prompt, presentation_pdf_data, source_pdf_data)
+        elif self.provider == "gemini":
+            return self.call_gemini_api_with_pdfs(prompt, presentation_pdf_data, source_pdf_data)
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
     
@@ -315,6 +410,113 @@ class PresentationEvaluator:
                     summary["interpretation"] = "Poor presentation quality"
         
         return summary
+    
+    def evaluate_presentation_with_sources(
+        self,
+        presentation_pdf_path: str,
+        source_content_path: Optional[str] = None,
+        source_pdf_path: Optional[str] = None
+    ) -> EvaluationResult:
+        """
+        Evaluate a presentation with source content for reference-required evaluation
+        
+        Args:
+            presentation_pdf_path: Path to the presentation PDF
+            source_content_path: Path to source content text file (for topic-based presentations)
+            source_pdf_path: Path to source PDF (for PDF-based presentations)
+            
+        Returns:
+            EvaluationResult with comprehensive evaluation
+        """
+        logger.info("Starting presentation evaluation with source content...")
+        
+        # Extract presentation PDF
+        presentation_pdf_data = self.extract_pdf_as_base64(presentation_pdf_path)
+        if not presentation_pdf_data:
+            logger.error("Failed to extract presentation PDF")
+            return EvaluationResult()
+        
+        # Step 1: Visual evaluation (no source needed)
+        visual_scores = self.evaluate_visual(presentation_pdf_data)
+        
+        # Step 2: Content-free evaluation (no source needed)
+        content_free_scores = self.evaluate_content_free(presentation_pdf_data)
+        
+        # Step 3: Content-required evaluation (with source)
+        content_required_scores = None
+        
+        if source_pdf_path:
+            # Use PDF source for reference-required evaluation
+            logger.info(f"Using PDF source for reference evaluation: {source_pdf_path}")
+            source_pdf_data = self.extract_pdf_as_base64(source_pdf_path)
+            if source_pdf_data:
+                content_required_scores = self.evaluate_content_required(
+                    presentation_pdf_data, 
+                    source_pdf_data
+                )
+            else:
+                logger.warning("Failed to extract source PDF data")
+        
+        elif source_content_path:
+            # Use text content for reference-required evaluation
+            logger.info(f"Using text source for reference evaluation: {source_content_path}")
+            content_required_scores = self.evaluate_content_with_text_source(
+                presentation_pdf_data,
+                source_content_path
+            )
+        
+        else:
+            logger.warning("No source content provided for reference-required evaluation")
+        
+        # Combine results
+        result = EvaluationResult(
+            visual_scores=visual_scores,
+            content_free_scores=content_free_scores,
+            content_required_scores=content_required_scores
+        )
+        
+        # Calculate overall scores
+        result.overall_scores = self._calculate_overall_scores(result)
+        
+        return result
+    
+    def evaluate_content_with_text_source(
+        self, 
+        presentation_pdf_data: str, 
+        source_content_path: str
+    ) -> Dict[str, Any]:
+        """
+        Evaluate content dimensions using text source content
+        
+        Args:
+            presentation_pdf_data: Base64 encoded presentation PDF
+            source_content_path: Path to source text content
+            
+        Returns:
+            Evaluation scores for content dimensions requiring reference
+        """
+        try:
+            # Read source content
+            with open(source_content_path, 'r', encoding='utf-8') as f:
+                source_content = f.read()
+            
+            # Create enhanced prompt that includes the source content
+            enhanced_prompt = f"""
+{self.prompts.content_required}
+
+SOURCE CONTENT FOR REFERENCE:
+{source_content}
+
+Please evaluate the presentation against this source content according to the criteria above.
+Focus on how well the presentation captures, organizes, and presents the key information from the source content.
+"""
+            
+            logger.info("Evaluating content with text source reference...")
+            return self.call_api_with_pdfs(enhanced_prompt, presentation_pdf_data)
+            
+        except Exception as e:
+            logger.error(f"Error evaluating with text source: {e}")
+            return {"error": str(e)}
     
     def print_results(self, result: EvaluationResult):
         """Print formatted results to console"""
