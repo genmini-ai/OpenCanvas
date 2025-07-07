@@ -1,6 +1,6 @@
 # OpenCanvas Test Suite
 
-This directory contains comprehensive tests for the OpenCanvas presentation generation system.
+This directory contains comprehensive tests for the OpenCanvas presentation generation system, including end-to-end pipeline tests and adversarial evaluation testing.
 
 ## Quick Start
 
@@ -9,6 +9,7 @@ This directory contains comprehensive tests for the OpenCanvas presentation gene
 python run_tests.py light              # Quick validation
 python run_tests.py topic              # Topic tests only
 python run_tests.py pdf                # PDF tests only
+python run_adversarial_eval_test.py    # Adversarial robustness testing
 
 # From tests directory
 cd tests
@@ -20,6 +21,7 @@ python run_e2e_tests.py light          # Quick validation
 ### 📁 Test Files
 
 - **`test_e2e_pipeline.py`** - Complete end-to-end pipeline tests
+- **`test_adversarial_evaluation.py`** - Adversarial robustness evaluation tests
 - **`test_topics.py`** - Topic-based generation tests
 - **`test_pdfs.py`** - PDF-based generation tests  
 - **`test_conversion.py`** - HTML to PDF conversion tests
@@ -41,6 +43,22 @@ The main test suite (`test_e2e_pipeline.py`) includes:
 3. **AI Safety and Alignment** - `arxiv:2502.02533`
 4. **Transformer Architecture Analysis** - `arxiv:2310.13855`
 5. **Large Language Model Training** - `arxiv:2307.08123`
+
+### 🛡️ Adversarial Evaluation Tests
+
+Tests the robustness of the presentation evaluation system by applying adversarial attacks to presentations and comparing evaluation scores.
+
+#### **5 Adversarial Attacks**
+1. **Beautiful Nonsense** - Replace scientific content with surrealist art references
+2. **Fact Flip** - Invert factual claims and numerical values
+3. **Logical Chaos** - Randomly shuffle slide order
+4. **Swiss Cheese** - Randomly delete critical content  
+5. **Gradual Decay** - Progressive quality degradation
+
+#### **Test Structure**
+- **Original**: 5 topic-based presentations with clean evaluations
+- **Attacked**: 5 topics × 5 attacks = 25 attacked presentations  
+- **Comparison**: Score differences to measure attack effectiveness
 
 ## Running Tests
 
@@ -150,6 +168,53 @@ python -m pytest tests/test_e2e_pipeline.py -v
 # Run specific test types
 python -m pytest tests/test_e2e_pipeline.py::TestE2EPipeline::test_topic_based_e2e_individual -v
 python -m pytest tests/test_e2e_pipeline.py::TestE2EPipeline::test_pdf_based_e2e_individual -v
+```
+
+### Adversarial Evaluation Testing
+
+Tests the robustness of the presentation evaluation system by applying adversarial attacks.
+
+#### Prerequisites
+1. **Run topic-based tests first** to generate original presentations:
+   ```bash
+   python run_e2e_tests.py topic
+   ```
+
+2. **Evaluation API key configured** (Gemini by default):
+   - Set `GEMINI_API_KEY` environment variable
+   - Or configure in `src/opencanvas/config.py`
+
+#### Run Adversarial Tests
+```bash
+# Use existing presentations (recommended)
+cd ..  # Go back to root directory
+python run_adversarial_eval_test.py
+
+# Generate fresh presentations first
+python run_adversarial_eval_test.py --regenerate
+
+# Run only analysis (skip testing)
+python run_adversarial_eval_test.py --analysis-only
+
+# Custom directories
+python run_adversarial_eval_test.py --output-dir custom_analysis
+
+# Verbose logging
+python run_adversarial_eval_test.py --verbose
+```
+
+#### Expected Results
+- **🟢 HIGH robustness** (mean drop < 0.1): Evaluation is robust
+- **🟡 MODERATE robustness** (mean drop 0.1-0.5): Some vulnerability  
+- **🔴 LOW robustness** (mean drop > 0.5): Evaluation is vulnerable
+
+#### Output Structure
+```
+test_output/adversarial_analysis/
+├── adversarial_evaluation_results.json    # Complete test results
+├── analysis_report.json                   # Statistical analysis
+├── attacked_presentations/                # HTML files with attacks
+└── attacked_evaluations/                  # Individual evaluation JSONs
 ```
 
 ## Test Pipeline Stages

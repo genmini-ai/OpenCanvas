@@ -12,6 +12,7 @@ from urllib.parse import urljoin, urlparse
 import logging
 
 from .base import BaseGenerator
+from opencanvas.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -406,7 +407,7 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
             logger.error(f"Error generating slides: {e}")
             return None
     
-    def generate_from_topic(self, user_text, purpose, theme="professional blue", output_dir="output"):
+    def generate_from_topic(self, user_text, purpose, theme="professional blue", output_dir=str(Config.OUTPUT_DIR)):
         """Generate presentation from a topic/text with organized file structure"""
         from opencanvas.utils.file_utils import generate_topic_slug, organize_pipeline_outputs
         from opencanvas.config import Config

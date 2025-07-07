@@ -6,6 +6,7 @@ from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, HttpUrl
 from enum import Enum
 from pathlib import Path
+from opencanvas.config import Config
 
 
 class PurposeEnum(str, Enum):
@@ -43,7 +44,7 @@ class GenerateRequest(BaseModel):
     input_source: str = Field(..., description="Topic text or PDF file path/URL")
     purpose: PurposeEnum = Field(default=PurposeEnum.GENERAL_PRESENTATION, description="Purpose of presentation")
     theme: ThemeEnum = Field(default=ThemeEnum.PROFESSIONAL_BLUE, description="Visual theme")
-    output_dir: Optional[str] = Field(default="output", description="Output directory")
+    output_dir: Optional[str] = Field(default=str(Config.OUTPUT_DIR), description="Output directory")
 
 
 class GenerateResponse(BaseModel):
@@ -61,7 +62,7 @@ class ConvertRequest(BaseModel):
     output_filename: str = Field(default="presentation.pdf", description="Output PDF filename")
     method: ConversionMethodEnum = Field(default=ConversionMethodEnum.SELENIUM, description="Browser automation method")
     zoom_factor: float = Field(default=1.2, ge=0.1, le=3.0, description="Zoom factor for PDF")
-    output_dir: str = Field(default="output", description="Output directory")
+    output_dir: str = Field(default=str(Config.OUTPUT_DIR), description="Output directory")
     cleanup: bool = Field(default=True, description="Whether to cleanup temporary files")
 
 
@@ -105,7 +106,7 @@ class PipelineRequest(BaseModel):
     theme: ThemeEnum = Field(default=ThemeEnum.PROFESSIONAL_BLUE, description="Visual theme")
     source_pdf: Optional[str] = Field(None, description="Source PDF for evaluation (if input is topic)")
     evaluate: bool = Field(default=False, description="Run evaluation after generation")
-    output_dir: str = Field(default="output", description="Output directory")
+    output_dir: str = Field(default=str(Config.OUTPUT_DIR), description="Output directory")
     zoom_factor: float = Field(default=1.2, ge=0.1, le=3.0, description="PDF zoom factor")
     method: ConversionMethodEnum = Field(default=ConversionMethodEnum.SELENIUM, description="Conversion method")
 

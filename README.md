@@ -507,6 +507,22 @@ cd tests
 python run_e2e_tests.py light          # Light mode for quick validation
 ```
 
+### Adversarial Evaluation Testing
+Test the robustness of the evaluation system:
+
+```bash
+# Run adversarial evaluation tests (requires existing presentations)
+python run_adversarial_eval_test.py
+
+# Generate fresh presentations and test
+python run_adversarial_eval_test.py --regenerate
+
+# Analysis only (skip testing)
+python run_adversarial_eval_test.py --analysis-only
+```
+
+This feature applies 5 different adversarial attacks to test presentations and measures how well the evaluation system detects quality degradation.
+
 ### Individual Test Files
 Run specific test components:
 

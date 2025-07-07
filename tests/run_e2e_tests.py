@@ -87,13 +87,14 @@ def main():
         print_usage()
         return 1
     
-    # Save results to test_output directory
+    # Save results to output directory
     import json
     from pathlib import Path
+    from opencanvas.config import Config
     
-    test_output_dir = Path("test_output")
-    test_output_dir.mkdir(exist_ok=True)
-    results_file = test_output_dir / "e2e_test_results.json"
+    output_dir = Config.OUTPUT_DIR
+    output_dir.mkdir(exist_ok=True)
+    results_file = output_dir / "e2e_test_results.json"
     
     with open(results_file, "w") as f:
         json.dump(results, f, indent=2, default=str)
