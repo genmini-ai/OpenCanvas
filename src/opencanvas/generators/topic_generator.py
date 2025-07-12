@@ -13,15 +13,26 @@ import logging
 
 from .base import BaseGenerator
 from opencanvas.config import Config
+from opencanvas.image_validation import ImageValidationPipeline
 
 logger = logging.getLogger(__name__)
 
 class TopicGenerator(BaseGenerator):
-    def __init__(self, api_key, brave_api_key=None):
+    def __init__(self, api_key, brave_api_key=None, enable_image_validation=True):
         """Initialize the topic-based slide generator with Anthropic API key and optional Brave API key"""
         super().__init__(api_key)
         self.client = Anthropic(api_key=api_key)
         self.brave_api_key = brave_api_key or os.getenv('BRAVE_API_KEY')
+        
+        # Initialize image validation pipeline
+        self.enable_image_validation = enable_image_validation
+        if self.enable_image_validation:
+            try:
+                self.image_validator = ImageValidationPipeline(anthropic_api_key=api_key)
+                logger.info("✅ Image validation pipeline initialized")
+            except Exception as e:
+                logger.warning(f"⚠️ Image validation disabled due to error: {e}")
+                self.enable_image_validation = False
         
     def assess_knowledge_depth(self, user_text):
         """Check if Claude has enough knowledge to write an in-depth blog post"""
@@ -489,6 +500,34 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
             logger.error("❌ Failed to generate slides")
             return None
         
+        # Step 4.5: Validate and fix images
+        validation_report = None
+        if self.enable_image_validation:
+            logger.info("🖼️ Validating and fixing images...")
+            try:
+                # Convert HTML to slide format for validation
+                slides = [{'html': html_content, 'id': 'main_presentation'}]
+                
+                # Run validation pipeline
+                validated_slides, validation_report = self.image_validator.validate_and_fix_slides(slides)
+                
+                # Update HTML content with validated version
+                if validated_slides and validated_slides[0]['html']:
+                    html_content = validated_slides[0]['html']
+                    
+                    if validation_report.get('successful_replacements', 0) > 0:
+                        logger.info(f"✅ Image validation complete: {validation_report['successful_replacements']} images replaced")
+                    else:
+                        logger.info("✅ Image validation complete: all images valid")
+                else:
+                    logger.warning("⚠️ Image validation returned empty result")
+                    
+            except Exception as e:
+                logger.warning(f"⚠️ Image validation failed: {e}")
+                validation_report = {'error': str(e)}
+        else:
+            logger.info("🖼️ Image validation disabled")
+        
         # Step 5: Organize outputs with proper file structure
         logger.info("📁 Organizing output files...")
         organized_files = organize_pipeline_outputs(
@@ -512,7 +551,8 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
             'html_file': str(organized_files.get('html', '')),
             'organized_files': organized_files,
             'topic_slug': topic_slug,
-            'timestamp': timestamp
+            'timestamp': timestamp,
+            'image_validation_report': validation_report
         }
         
         # Print organized file summary
@@ -521,6 +561,16 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
         logger.info(f"🧠 Knowledge assessment: {knowledge_assessment}")
         if knowledge_assessment == "INSUFFICIENT":
             logger.info(f"🔍 Web research was performed")
+        
+        # Log image validation summary
+        if validation_report and 'error' not in validation_report:
+            if validation_report.get('successful_replacements', 0) > 0:
+                logger.info(f"🖼️ Image validation: {validation_report['successful_replacements']} images replaced, {validation_report.get('total_images_checked', 0)} total checked")
+            else:
+                logger.info(f"🖼️ Image validation: All {validation_report.get('total_images_checked', 0)} images valid")
+        elif validation_report and 'error' in validation_report:
+            logger.info(f"🖼️ Image validation: Failed ({validation_report['error']})")
+        
         logger.info(f"\n📁 Organized files:")
         logger.info(get_file_summary(organized_files))
         
