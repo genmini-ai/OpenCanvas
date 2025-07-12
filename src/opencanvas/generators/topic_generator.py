@@ -28,7 +28,8 @@ class TopicGenerator(BaseGenerator):
         self.enable_image_validation = enable_image_validation
         if self.enable_image_validation:
             try:
-                self.image_validator = ImageValidationPipeline(anthropic_api_key=api_key)
+                # Let ImageValidationPipeline load API key from config/env
+                self.image_validator = ImageValidationPipeline()
                 logger.info("✅ Image validation pipeline initialized")
             except Exception as e:
                 logger.warning(f"⚠️ Image validation disabled due to error: {e}")

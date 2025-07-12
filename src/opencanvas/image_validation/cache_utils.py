@@ -10,8 +10,8 @@ from typing import Dict, List, Optional
 from pathlib import Path
 import logging
 
-from .topic_image_cache import TopicImageCache
-from .prompt_tester import PromptSuccessTracker
+from opencanvas.image_validation.topic_image_cache import TopicImageCache
+from opencanvas.image_validation.prompt_tester import PromptSuccessTracker
 
 logger = logging.getLogger(__name__)
 

@@ -6,24 +6,42 @@ Uses multiple prompt strategies to maximize success rate.
 import json
 import time
 import re
+import os
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
 import anthropic
-from .url_validator import URLValidator
-from .topic_image_cache import TopicImageCache
+
+from opencanvas.image_validation.url_validator import URLValidator
+from opencanvas.image_validation.topic_image_cache import TopicImageCache
+from opencanvas.config import Config
 
 
 class ClaudeImageRetriever:
     """Generate image URLs using Claude with optimized prompts."""
     
-    def __init__(self, anthropic_api_key: str, cache: Optional[TopicImageCache] = None):
+    def __init__(self, anthropic_api_key: Optional[str] = None, cache: Optional[TopicImageCache] = None):
         """
         Initialize the retriever.
         
         Args:
-            anthropic_api_key: API key for Anthropic
+            anthropic_api_key: API key for Anthropic (from config/env if not provided)
             cache: Optional TopicImageCache instance
         """
+        # Get API key from multiple sources
+        if not anthropic_api_key:
+            # Try main config first (loads from .env)
+            if Config and hasattr(Config, 'ANTHROPIC_API_KEY'):
+                anthropic_api_key = Config.ANTHROPIC_API_KEY
+            
+            # Fallback to direct environment variable
+            if not anthropic_api_key:
+                anthropic_api_key = os.getenv('ANTHROPIC_API_KEY')
+        
+        if not anthropic_api_key:
+            raise ValueError("No Anthropic API key found. Check Config.ANTHROPIC_API_KEY or ANTHROPIC_API_KEY env var.")
+        
+        print(f"  🔑 API key loaded successfully (length: {len(anthropic_api_key)})")
+        
         self.client = anthropic.Anthropic(api_key=anthropic_api_key)
         self.validator = URLValidator()
         self.cache = cache or TopicImageCache()
@@ -31,59 +49,64 @@ class ClaudeImageRetriever:
         # Prompt templates with different strategies
         self.prompt_templates = {
             "v1_direct": {
-                "system": "You are an expert at finding relevant Unsplash image IDs. You only suggest images you are certain exist on Unsplash.",
+                "system": "You are an expert at finding relevant Unsplash images. You provide complete Unsplash URLs for images you know exist.",
                 "user": """Find 3 Unsplash images for this topic: "{topic}"
 
-Return ONLY a JSON array of image IDs (not full URLs), like:
-["1234567890", "0987654321", "1122334455"]
+Return ONLY a JSON array of complete Unsplash URLs, like:
+["https://images.unsplash.com/photo-1234567890?ixlib=rb-4.0.3", "https://images.unsplash.com/photo-0987654321?ixlib=rb-4.0.3", "https://images.unsplash.com/photo-1122334455?ixlib=rb-4.0.3"]
 
 Requirements:
-- Use only well-known Unsplash photo IDs you're certain exist
-- IDs should be the alphanumeric string after 'photo-' in Unsplash URLs
+- Use only complete Unsplash URLs for images you are confident exist
+- URLs should be in format: https://images.unsplash.com/photo-[ID]?ixlib=rb-4.0.3
 - Choose images that directly relate to the topic
 - Return ONLY the JSON array, no other text"""
             },
             
-            "v2_context": {
-                "system": "You are an expert at finding relevant stock images. You have deep knowledge of popular Unsplash photos and their IDs.",
-                "user": """Context from presentation slide:
-{slide_context}
+            "v2_improved": {
+                "system": "You are an expert at finding relevant Unsplash images. You provide complete Unsplash URLs for images you know exist.",
+                "user": """Find Unsplash images for this topic: "{topic}"
 
-Topic focus: {topic}
+Context: {slide_context}
 
-Suggest 3 relevant Unsplash photo IDs that would enhance this slide visually.
+Return ONLY a JSON array of complete Unsplash URLs, like:
+["https://images.unsplash.com/photo-1234567890?ixlib=rb-4.0.3", "https://images.unsplash.com/photo-0987654321?ixlib=rb-4.0.3"]
 
-Return as JSON:
-{{
-  "images": [
-    {{"id": "photo_id_here", "reason": "brief reason for selection"}},
-    {{"id": "photo_id_here", "reason": "brief reason for selection"}},
-    {{"id": "photo_id_here", "reason": "brief reason for selection"}}
-  ]
-}}
-
-Use only verified Unsplash photo IDs you know exist."""
+CRITICAL Requirements:
+- Use only complete Unsplash URLs for images you are confident exist
+- URLs must be in format: https://images.unsplash.com/photo-[ID]?ixlib=rb-4.0.3
+- NEVER repeat the same URL - each must be unique
+- Choose images that directly relate to the topic and context
+- Provide UP TO 3 images maximum - if you only know 1-2 good ones, stop there
+- Return ONLY the JSON array, no other text"""
             },
             
-            "v3_fallback": {
-                "system": "You are helping find images for a presentation. Suggest realistic Unsplash photo IDs based on common photography subjects.",
-                "user": """I need images related to: {topic}
+            "v3_quality": {
+                "system": "You are a professional photographer and designer with deep knowledge of Unsplash's high-quality image collection. You only recommend images you are absolutely certain exist and are of professional quality.",
+                "user": """Topic: "{topic}"
+Context: {slide_context}
 
-Based on common Unsplash photography categories, suggest 3 photo IDs that likely exist.
-Focus on:
-- Generic subjects (nature, business, technology, people)
-- Popular photography themes
-- Well-documented photo collections
+Think like a professional: What would be the PERFECT image for this presentation slide?
 
-Format: ["id1", "id2", "id3"]
+Step 1: Consider the visual needs (but don't write this out)
+Step 2: Identify 1-2 Unsplash images you are 100% confident exist and are visually excellent
+Step 3: Return ONLY those high-confidence URLs
 
-Important: Only suggest IDs using common Unsplash patterns you've seen before."""
+Return ONLY a JSON array of complete Unsplash URLs:
+["https://images.unsplash.com/photo-ID?ixlib=rb-4.0.3"]
+
+QUALITY REQUIREMENTS:
+- Only provide URLs you are absolutely certain exist on Unsplash
+- Each image must be visually striking and professionally composed
+- Quality over quantity - prefer 1 perfect image over 3 mediocre ones
+- URLs must use exact format: https://images.unsplash.com/photo-[ID]?ixlib=rb-4.0.3
+- NO duplicates, NO made-up IDs, NO guessing
+- If unsure, provide fewer images or skip entirely"""
             }
         }
         
         # Track performance
         self.prompt_stats = {k: {"attempts": 0, "successes": 0} for k in self.prompt_templates}
-        self.current_strategy = "v1_direct"
+        self.current_strategy = "v2_improved"
     
     def get_best_strategy(self) -> str:
         """Select the best performing prompt strategy."""
@@ -111,55 +134,65 @@ Important: Only suggest IDs using common Unsplash patterns you've seen before.""
         current_idx = strategies.index(self.current_strategy)
         return strategies[(current_idx + 1) % len(strategies)]
     
-    def extract_ids_from_response(self, response: str, strategy: str) -> List[str]:
+    def extract_urls_from_response(self, response: str, strategy: str) -> List[str]:
         """
-        Extract image IDs from Claude's response.
+        Extract image URLs from Claude's response.
         
         Args:
             response: Claude's response text
             strategy: Which prompt strategy was used
             
         Returns:
-            List of extracted image IDs
+            List of extracted image URLs
         """
-        ids = []
+        urls = []
         
         try:
-            # Try to parse as JSON first
-            if strategy == "v2_context":
-                data = json.loads(response)
-                if isinstance(data, dict) and "images" in data:
-                    ids = [img["id"] for img in data["images"] if "id" in img]
-            else:
-                # For v1 and v3, expect a simple array
-                data = json.loads(response)
-                if isinstance(data, list):
-                    ids = data
+            # All strategies now expect a simple JSON array of URLs
+            data = json.loads(response)
+            if isinstance(data, list):
+                urls = data
         except json.JSONDecodeError:
             # Fallback: extract using regex
-            # Look for patterns like "1234567890" or photo-1234567890
+            # Look for Unsplash URL patterns
             patterns = [
-                r'"([a-zA-Z0-9_-]{10,})"',  # Quoted IDs
-                r'photo-([a-zA-Z0-9_-]+)',   # photo- prefix
-                r'\[.*?"([a-zA-Z0-9_-]{10,})".*?\]',  # In array
+                r'https://images\.unsplash\.com/photo-[a-zA-Z0-9_-]+[^"\s]*',  # Complete URLs
+                r'"(https://[^"]*unsplash[^"]*)"',  # Quoted URLs
+                r'https://[^\s]*unsplash[^\s]*',  # Any unsplash URLs
             ]
             
             for pattern in patterns:
                 matches = re.findall(pattern, response)
                 if matches:
-                    ids.extend(matches)
+                    urls.extend(matches)
                     break
         
-        # Clean and validate IDs
-        clean_ids = []
-        for id_str in ids:
-            # Remove 'photo-' prefix if present
-            clean_id = id_str.replace('photo-', '').strip()
-            # Basic validation: should be alphanumeric with possible dashes/underscores
-            if re.match(r'^[a-zA-Z0-9_-]+$', clean_id) and len(clean_id) >= 10:
-                clean_ids.append(clean_id)
+        # Clean and validate URLs
+        clean_urls = []
+        for url_str in urls:
+            url_str = url_str.strip()
+            # Basic validation: should be a valid Unsplash URL
+            if ('unsplash.com' in url_str and 
+                url_str.startswith('http') and 
+                'photo-' in url_str):
+                clean_urls.append(url_str)
         
-        return clean_ids[:3]  # Maximum 3 IDs
+        return clean_urls[:3]  # Maximum 3 URLs
+    
+    def _extract_id_from_url(self, url: str) -> Optional[str]:
+        """
+        Extract the image ID from an Unsplash URL.
+        
+        Args:
+            url: Complete Unsplash URL
+            
+        Returns:
+            Image ID or None if not found
+        """
+        # Pattern to match photo ID in Unsplash URLs
+        # e.g., https://images.unsplash.com/photo-1234567890?params -> 1234567890
+        match = re.search(r'photo-([a-zA-Z0-9_-]+)', url)
+        return match.group(1) if match else None
     
     def generate_images(
         self, 
@@ -210,6 +243,7 @@ Important: Only suggest IDs using common Unsplash patterns you've seen before.""
             
             try:
                 # Call Claude
+                print(f"    📝 Prompt preview: {user_prompt[:100]}...")
                 start_time = time.time()
                 message = self.client.messages.create(
                     model="claude-3-haiku-20240307",  # Fast model for simple tasks
@@ -220,23 +254,26 @@ Important: Only suggest IDs using common Unsplash patterns you've seen before.""
                 )
                 response_time = (time.time() - start_time) * 1000
                 
-                # Extract IDs
+                # Extract URLs
                 response_text = message.content[0].text
-                image_ids = self.extract_ids_from_response(response_text, strategy)
+                print(f"    🤖 Claude response: {response_text}")
+                image_urls = self.extract_urls_from_response(response_text, strategy)
+                print(f"    📷 Extracted URLs: {image_urls}")
                 
-                # Validate IDs
-                if image_ids:
-                    # Build URLs and validate
-                    urls = [self.cache.build_url(img_id, 0) for img_id in image_ids]
-                    validation_results = self.validator.validate_batch(urls)
+                # Validate URLs
+                if image_urls:
+                    validation_results = self.validator.validate_batch(image_urls)
                     
-                    # Track valid images
-                    for i, (img_id, result) in enumerate(zip(image_ids, validation_results)):
+                    # Track valid images and extract IDs for storage
+                    for i, (url, result) in enumerate(zip(image_urls, validation_results)):
                         if result['valid']:
-                            # Higher confidence for earlier suggestions
-                            confidence = 0.9 - (i * 0.1) - (attempts - 1) * 0.2
-                            confidence = max(confidence, 0.5)
-                            valid_images.append((img_id, confidence))
+                            # Extract ID from URL for cache storage
+                            img_id = self._extract_id_from_url(url)
+                            if img_id:
+                                # Higher confidence for earlier suggestions
+                                confidence = 0.9 - (i * 0.1) - (attempts - 1) * 0.2
+                                confidence = max(confidence, 0.5)
+                                valid_images.append((img_id, confidence))
                     
                     # Update strategy stats
                     self.prompt_stats[strategy]["attempts"] += 1
@@ -244,7 +281,9 @@ Important: Only suggest IDs using common Unsplash patterns you've seen before.""
                         self.prompt_stats[strategy]["successes"] += 1
                 
             except Exception as e:
-                print(f"Error generating images with {strategy}: {e}")
+                print(f"    ❌ Error generating images with {strategy}: {e}")
+                import traceback
+                traceback.print_exc()
                 continue
             
             # If we have at least one valid image, we can stop
@@ -269,19 +308,23 @@ Important: Only suggest IDs using common Unsplash patterns you've seen before.""
             List of (image_id, source) tuples
         """
         # First check cache for exact match
+        print(f"    🔍 Checking cache for topic: '{topic}'")
         cached = self.cache.get_images_for_topic(topic)
         if cached:
+            print(f"    ✅ Found {len(cached)} cached images")
             return cached
         
         # Check for similar topics
+        print(f"    🔍 Checking for similar topics...")
         similar = self.cache.find_similar_topics(topic, min_similarity=0.7)
         if similar:
             # Use images from the most similar topic
             best_match = similar[0]
-            print(f"Using images from similar topic: {best_match[0]} (similarity: {best_match[1]:.2f})")
+            print(f"    🔗 Using images from similar topic: {best_match[0]} (similarity: {best_match[1]:.2f})")
             return [(img_id, 0) for img_id in best_match[2]]
         
         # Generate new images
+        print(f"    🆕 Generating new images with Claude...")
         generated = self.generate_images(topic, slide_context)
         
         if generated:

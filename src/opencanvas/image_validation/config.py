@@ -236,6 +236,18 @@ Example usage:
   export IMAGE_VALIDATION_TIMEOUT="5.0"
 """
 
-if __name__ == "__main__":
+def main():
+    """Main function for testing configuration."""
     ImageValidationConfig.print_config_summary()
     print("\n" + ENV_VARS_HELP)
+
+if __name__ == "__main__":
+    # Add path for proper imports when run as script
+    import sys
+    from pathlib import Path
+    current_dir = Path(__file__).parent  # image_validation directory
+    opencanvas_dir = current_dir.parent   # opencanvas directory
+    src_dir = opencanvas_dir.parent       # src directory
+    sys.path.insert(0, str(src_dir))
+    
+    main()

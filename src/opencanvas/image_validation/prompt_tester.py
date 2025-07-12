@@ -5,14 +5,17 @@ Provides A/B testing framework and performance analytics.
 
 import json
 import time
+import os
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
 import duckdb
 import numpy as np
-from .claude_image_retriever import ClaudeImageRetriever
-from .url_validator import URLValidator
-from .topic_image_cache import TopicImageCache
+
+from opencanvas.image_validation.claude_image_retriever import ClaudeImageRetriever
+from opencanvas.image_validation.url_validator import URLValidator
+from opencanvas.image_validation.topic_image_cache import TopicImageCache
+from opencanvas.config import Config
 
 
 class PromptSuccessTracker:
@@ -230,7 +233,7 @@ class PromptSuccessTracker:
         test_name: str,
         strategies: List[str],
         sample_size: int = 50,
-        anthropic_api_key: str = None
+        anthropic_api_key: Optional[str] = None
     ) -> Dict:
         """
         Run A/B test comparing multiple prompt strategies.
@@ -239,14 +242,25 @@ class PromptSuccessTracker:
             test_name: Name for this test
             strategies: List of strategy names to compare
             sample_size: Number of tests per strategy
-            anthropic_api_key: Anthropic API key
+            anthropic_api_key: Anthropic API key (from config/env if not provided)
             
         Returns:
             Test results summary
         """
+        # Get API key if not provided
+        if not anthropic_api_key:
+            if Config and hasattr(Config, 'ANTHROPIC_API_KEY'):
+                anthropic_api_key = Config.ANTHROPIC_API_KEY
+            else:
+                anthropic_api_key = os.getenv('ANTHROPIC_API_KEY')
+        
+        if not anthropic_api_key:
+            raise ValueError("No Anthropic API key found for A/B testing")
+        
         # Initialize components
         cache = TopicImageCache()
-        retriever = ClaudeImageRetriever(anthropic_api_key, cache)
+        # Let ClaudeImageRetriever load API key from config/env  
+        retriever = ClaudeImageRetriever(cache=cache)
         
         # Record test configuration
         self.con.execute("""

@@ -9,11 +9,12 @@ import logging
 from typing import List, Dict, Optional, Tuple
 from pathlib import Path
 
-from .topic_image_cache import TopicImageCache
-from .url_validator import URLValidator
-from .claude_image_retriever import ClaudeImageRetriever
-from .html_parser import SlideImageParser
-from .image_replacer import ImageReplacer
+from opencanvas.image_validation.topic_image_cache import TopicImageCache
+from opencanvas.image_validation.url_validator import URLValidator
+from opencanvas.image_validation.claude_image_retriever import ClaudeImageRetriever
+from opencanvas.image_validation.html_parser import SlideImageParser
+from opencanvas.image_validation.image_replacer import ImageReplacer
+from opencanvas.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class ImageValidationPipeline:
         Initialize the validation pipeline.
         
         Args:
-            anthropic_api_key: API key for Claude (from env if not provided)
+            anthropic_api_key: API key for Claude (from env/config if not provided)
             cache_db_path: Path to cache database
             enable_validation: Whether to enable validation (for testing)
         """
@@ -40,11 +41,18 @@ class ImageValidationPipeline:
         if not self.enable_validation:
             return
         
-        # Get API key from environment if not provided
+        # Get API key from multiple sources in order of preference
         if not anthropic_api_key:
-            anthropic_api_key = os.getenv('ANTHROPIC_API_KEY')
+            # Try main config first (loads from .env)
+            if Config and hasattr(Config, 'ANTHROPIC_API_KEY'):
+                anthropic_api_key = Config.ANTHROPIC_API_KEY
+            
+            # Fallback to direct environment variable
             if not anthropic_api_key:
-                logger.warning("No Anthropic API key provided. Image validation disabled.")
+                anthropic_api_key = os.getenv('ANTHROPIC_API_KEY')
+            
+            if not anthropic_api_key:
+                logger.warning("No Anthropic API key found. Checked Config.ANTHROPIC_API_KEY and ANTHROPIC_API_KEY env var. Image validation disabled.")
                 self.enable_validation = False
                 return
         
@@ -52,7 +60,8 @@ class ImageValidationPipeline:
         try:
             self.cache = TopicImageCache(cache_db_path)
             self.validator = URLValidator()
-            self.retriever = ClaudeImageRetriever(anthropic_api_key, self.cache)
+            # Let ClaudeImageRetriever load API key from config/env
+            self.retriever = ClaudeImageRetriever(cache=self.cache)
             self.parser = SlideImageParser()
             self.replacer = ImageReplacer()
             

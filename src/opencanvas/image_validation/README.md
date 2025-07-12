@@ -125,7 +125,13 @@ if not status['valid']:
 ### Run Test Suite
 
 ```bash
+# Navigate to the image validation directory
 cd src/opencanvas/image_validation
+
+# Quick setup verification
+python quick_test.py
+
+# Full test suite
 python test_image_validation.py
 ```
 
@@ -224,13 +230,24 @@ cache_metrics: date → lookups, hits, claude_calls
 
 ### 4. Prompt Strategies
 
-The system uses multiple prompt strategies optimized for different scenarios:
+The system uses optimized prompt strategies for Claude image generation:
 
-- **v1_direct**: Simple, direct requests for known image IDs
-- **v2_context**: Context-aware requests with slide information
-- **v3_fallback**: Generic requests for common photography subjects
+- **v2_improved** ⭐: Context-aware with anti-duplicate instructions - **DEFAULT STRATEGY**
+- **v1_direct**: Simple, direct URL requests - previous default
+- **v3_quality**: Professional photographer perspective, quality over quantity
 
 Performance is tracked and the best-performing strategy is automatically selected.
+
+#### Strategy Performance Benchmarks (10-topic average)
+
+| Strategy | Success Rate | Response Time | Cost per Request | Notes |
+|----------|-------------|---------------|------------------|-------|
+| **CURRENT_PRODUCTION** | **100.0%** | **39ms** | Cache/Free | Uses cache + fallbacks |
+| **v2_improved** ⭐ | **93.3%** | **1725ms** | **$0.000215** | **NEW DEFAULT - Best individual** |
+| **v1_direct** | 90.0% | 2199ms | $0.000211 | Previous default |
+| **v3_quality** | 60.0% | 1719ms | $0.000245 | Conservative quality-focused |
+
+*Benchmark shows production pipeline (with caching) significantly outperforms individual strategies due to cache hits and topic similarity matching.*
 
 ## 🛠️ Maintenance
 
@@ -307,6 +324,48 @@ start = time.time()
 images = cache.get_images_for_topic("business")
 print(f"Cache lookup in {(time.time() - start) * 1000:.1f}ms")
 ```
+
+## 🧪 Testing
+
+### Strategy Performance Testing
+
+Test different prompt strategies and measure performance:
+
+```bash
+cd src/opencanvas/image_validation
+python test_claude_retriever.py
+```
+
+**Test Options:**
+- **Option 1**: Test all topics (comprehensive)
+- **Option 2**: Test prompt strategies (single topic or "multi" for 10-topic average)
+- **Option 3**: Test single topic
+- **Option 4**: Quick test (3 topics)
+
+**Example Multi-Topic Benchmark:**
+```bash
+# Choose option 2, enter "multi"
+python test_claude_retriever.py
+Enter choice (1-4): 2
+Enter topic (or 'multi' for 10-topic average): multi
+```
+
+**Sample Output:**
+```
+🔹 v1_direct:
+   Average Success Rate: 86.7%
+   Test Success Rate: 90.0% (9/10 topics)
+   Average Response Time: 3430ms
+   Total Images: 23/25 distinct valid (from 30 generated)
+   Average Tokens: 360 (235 in, 125 out)
+   Average Cost: $0.000215 per request
+```
+
+**Key Metrics:**
+- **Success Rate**: % of distinct URLs that are valid
+- **Distinct vs Generated**: Shows duplicate detection (e.g., 25 distinct from 30 total)
+- **Token Usage**: Input/output tokens for cost analysis
+- **Cost per Request**: Based on Haiku pricing ($0.25/1M input, $1.25/1M output)
 
 ## 🤝 Contributing
 
