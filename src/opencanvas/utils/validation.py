@@ -43,7 +43,9 @@ class InputValidator:
                 return False, "File is not a PDF (wrong extension)"
 
             # Check MIME type
-            mime_type, _ = mimetypes.guess_type(file_path.as_uri())
+            # Use absolute path for URI conversion
+            absolute_path = file_path.resolve()
+            mime_type, _ = mimetypes.guess_type(absolute_path.as_uri())
             if mime_type != 'application/pdf':
                 return False, "File MIME type is not 'application/pdf'"
 
