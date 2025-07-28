@@ -119,90 +119,191 @@ class PresentationAdversarialAttacks:
         return modified_html
     
     def attack_2_fact_flip(self) -> str:
-        """Multiple types of factual corruptions"""
+        """Generic factual corruptions: inverts comparatives, numbers, and claims across all topics"""
         fact_flips = [
-            # Numerical inversions
-            (r'decreased by (~?\d+%)', r'increased by \1'),
-            (r'increased by (~?\d+%)', r'decreased by \1'),
-            (r'Cost decreased', 'Cost increased'),
+            # Generic comparative inversions (order matters - longer phrases first)
+            (r'\bmore effective\b', 'less effective'),
+            (r'\bless effective\b', 'more effective'),
+            (r'\bmore accurate\b', 'less accurate'),
+            (r'\bless accurate\b', 'more accurate'),
+            (r'\bmore expensive\b', 'cheaper'),
+            (r'\bmore\b', 'less'),
+            (r'\bless\b', 'more'),
+            (r'\bhigher\b', 'lower'),
+            (r'\blower\b', 'higher'),
+            (r'\bfaster\b', 'slower'),
+            (r'\bslower\b', 'faster'),
+            (r'\blarger\b', 'smaller'),
+            (r'\bsmaller\b', 'larger'),
+            (r'\bbetter\b', 'worse'),
+            (r'\bworse\b', 'better'),
+            (r'\bstronger\b', 'weaker'),
+            (r'\bweaker\b', 'stronger'),
+            (r'\beasier\b', 'harder'),
+            (r'\bharder\b', 'easier'),
+            (r'\bcheaper\b', 'more expensive'),
+            
+            # Generic trend inversions
+            (r'increased by', 'decreased by'),
+            (r'decreased by', 'increased by'),
             (r'improved by', 'worsened by'),
+            (r'worsened by', 'improved by'),
             (r'reduced by', 'increased by'),
+            (r'enhanced by', 'diminished by'),
+            (r'accelerated', 'decelerated'),
+            (r'growing', 'shrinking'),
+            (r'shrinking', 'growing'),
+            (r'rising', 'falling'),
+            (r'falling', 'rising'),
+            (r'expanding', 'contracting'),
+            (r'contracting', 'expanding'),
             
-            # Wrong conclusions
-            (r'offers a sustainable path', 'proves an unsustainable path'),
-            (r'increasingly competitive', 'increasingly uncompetitive'),
-            (r'can power inclusive development', 'will hinder inclusive development'),
-            (r'shows promise', 'shows failure'),
-            (r'effective', 'ineffective'),
-            (r'successful', 'unsuccessful'),
-            (r'beneficial', 'harmful'),
-            (r'positive', 'negative'),
+            # Generic effectiveness inversions
+            (r'\beffective\b', 'ineffective'),
+            (r'\bineffective\b', 'effective'),
+            (r'\bsuccessful\b', 'unsuccessful'),
+            (r'\bunsuccessful\b', 'successful'),
+            (r'\bbeneficial\b', 'harmful'),
+            (r'\bharmful\b', 'beneficial'),
+            (r'\bpositive\b', 'negative'),
+            (r'\bnegative\b', 'positive'),
+            (r'\buseful\b', 'useless'),
+            (r'\buseless\b', 'useful'),
+            (r'\breliable\b', 'unreliable'),
+            (r'\bunreliable\b', 'reliable'),
+            (r'\baccurate\b', 'inaccurate'),
+            (r'\binaccurate\b', 'accurate'),
             
-            # Unit changes (making numbers 1000x wrong) - handled separately
-            (r'(\d+)\s*MW', 'REPLACE_MW'),
-            (r'(\d+)\s*GW', 'REPLACE_GW'),
-            (r'(\d+)\s*%', 'REPLACE_PERCENT'),
+            # Generic possibility/ability inversions
+            (r'\bcan\b', 'cannot'),
+            (r'\bcannot\b', 'can'),
+            (r'\bwill\b', 'will not'),
+            (r'\bwill not\b', 'will'),
+            (r'\bshould\b', 'should not'),
+            (r'\bshould not\b', 'should'),
+            (r'\bmust\b', 'must not'),
+            (r'\bmust not\b', 'must'),
+            (r'\bpossible\b', 'impossible'),
+            (r'\bimpossible\b', 'possible'),
+            (r'\bfeasible\b', 'infeasible'),
+            (r'\binfeasible\b', 'feasible'),
+            (r'\brecommended\b', 'not recommended'),
+            (r'\bnot recommended\b', 'recommended'),
             
-            # Price inversions
-            (r'\$0\.0(\d)', r'$\1.0'),
-            (r'below national average', 'above national average'),
-            (r'affordable', 'expensive'),
-            (r'cost-effective', 'cost-prohibitive'),
+            # Generic quality inversions
+            (r'\bhigh quality\b', 'low quality'),
+            (r'\blow quality\b', 'high quality'),
+            (r'\bexcellent\b', 'poor'),
+            (r'\bpoor\b', 'excellent'),
+            (r'\boptimal\b', 'suboptimal'),
+            (r'\bsuboptimal\b', 'optimal'),
+            (r'\bsuperior\b', 'inferior'),
+            (r'\binferior\b', 'superior'),
+            (r'\badvanced\b', 'primitive'),
+            (r'\bprimitive\b', 'advanced'),
+            (r'\bmodern\b', 'outdated'),
+            (r'\boutdated\b', 'modern'),
             
-            # Country/location swaps
-            (r'Bangladesh', 'Belgium'),
-            (r'Sub-Saharan Africa', 'Northern Europe'),
-            (r'Ethiopia', 'Estonia'),
-            (r'Nepal', 'Netherlands'),
-            (r'developing countries', 'developed countries'),
-            (r'rural areas', 'urban areas'),
-            
-            # Technology effectiveness inversions
-            (r'excellent solar resources', 'poor solar resources'),
-            (r'Low operational costs', 'High operational costs'),
-            (r'Long operational life', 'Short operational life'),
-            (r'high efficiency', 'low efficiency'),
-            (r'reliable', 'unreliable'),
-            (r'scalable', 'non-scalable'),
-            
-            # Complete opposite statements
-            (r'renewable energy makes sense', 'renewable energy makes no sense'),
-            (r'accelerate implementation', 'halt implementation'),
-            (r'recommended', 'not recommended'),
-            (r'should', 'should not'),
-            (r'will', 'will not'),
+            # Generic outcome inversions
+            (r'\bsuccess\b', 'failure'),
+            (r'\bfailure\b', 'success'),
+            (r'\bgain\b', 'loss'),
+            (r'\bloss\b', 'gain'),
+            (r'\bprofit\b', 'loss'),
+            (r'\badvantage\b', 'disadvantage'),
+            (r'\bdisadvantage\b', 'advantage'),
+            (r'\bstrength\b', 'weakness'),
+            (r'\bweakness\b', 'strength'),
+            (r'\bopportunity\b', 'threat'),
+            (r'\bthreat\b', 'opportunity'),
         ]
         
         modified_html = self.original_html
         
-        # Handle special numeric transformations first
-        # MW transformations (multiply by 1000)
-        def replace_mw(match):
-            return f'{int(match.group(1))*1000} MW'
-        modified_html = re.sub(r'(\d+)\s*MW', replace_mw, modified_html, flags=re.IGNORECASE)
+        # Generic numeric transformations that work across all domains
+        def corrupt_number(match):
+            num_str = match.group(1)
+            try:
+                num = float(num_str)
+                
+                # Different corruption strategies based on number range
+                if num == 0:
+                    return "1"
+                elif 0 < num < 1:
+                    # Decimal numbers: flip magnitude (0.1 → 10)
+                    return str(int(1/num)) if 1/num <= 100 else "10"
+                elif 1 <= num <= 10:
+                    # Small integers: multiply by 10
+                    return str(int(num * 10))
+                elif 10 < num <= 100:
+                    # Medium numbers: divide by 10 or multiply by 10
+                    return str(int(num / 10)) if num >= 20 else str(int(num * 10))
+                elif num > 100:
+                    # Large numbers: divide by 100
+                    return str(int(num / 100)) if num >= 1000 else str(int(num / 10))
+                else:
+                    return num_str
+            except:
+                return num_str
         
-        # GW transformations (divide by 1000 or add decimal)
-        def replace_gw(match):
-            num = int(match.group(1))
-            if num > 1000:
-                return f'{num//1000} GW'
-            else:
-                return f'0.{num} GW'
-        modified_html = re.sub(r'(\d+)\s*GW', replace_gw, modified_html, flags=re.IGNORECASE)
+        # Apply generic number corruption to numbers in context
+        # Target patterns like "increased by X", "X times", "X people", "X%", "$X", etc.
+        number_patterns = [
+            r'(\d+(?:\.\d+)?)\s*(?:times|fold)',  # "5 times", "3.2 fold"
+            r'(\d+(?:\.\d+)?)\s*(?:million|billion|thousand)',  # "50 million"
+            r'(\d+(?:\.\d+)?)\s*(?:years?|months?|days?)',  # "10 years"
+            r'(\d+(?:\.\d+)?)\s*(?:people|patients|users|participants)',  # "100 people"
+            r'\$(\d+(?:\.\d+)?)',  # "$50"
+            r'(\d+(?:\.\d+)?)\s*(?:percent)',  # "30 percent"
+        ]
         
-        # Percentage transformations (invert)
-        def replace_percent(match):
-            num = int(match.group(1))
-            if num <= 100:
-                return f'{100-num}%'
-            else:
-                return f'{num//10}%'
-        modified_html = re.sub(r'(\d+)\s*%', replace_percent, modified_html, flags=re.IGNORECASE)
+        for pattern in number_patterns:
+            def replace_number_in_context(match):
+                full_match = match.group(0)
+                number_part = match.group(1)
+                corrupted_number = corrupt_number(match)
+                return full_match.replace(number_part, corrupted_number)
+            
+            modified_html = re.sub(pattern, replace_number_in_context, modified_html, flags=re.IGNORECASE)
         
-        # Apply regular string replacements
+        # Percentage transformations (invert) - only in text content, not CSS
+        def replace_percent_safe(text):
+            # Only replace percentages that are clearly in content, not CSS
+            # Look for patterns like "by 50%" or "increased 20%" etc
+            def replace_match(match):
+                num = int(match.group(1))
+                if num <= 100:
+                    return f'{100-num}%'
+                else:
+                    return f'{num//10}%'
+            
+            # Only match percentages that are preceded by words/spaces, not CSS values
+            return re.sub(r'(?<=[a-zA-Z\s])(\d+)\s*%', replace_match, text)
+        
+        # First, protect CSS by temporarily replacing style blocks and inline styles
+        style_blocks = []
+        def protect_styles(match):
+            style_blocks.append(match.group(0))
+            return f'__STYLE_BLOCK_{len(style_blocks)-1}__'
+        
+        # Protect <style> blocks
+        protected_html = re.sub(r'<style[^>]*>.*?</style>', protect_styles, modified_html, flags=re.DOTALL | re.IGNORECASE)
+        
+        # Protect inline style attributes
+        protected_html = re.sub(r'style="[^"]*"', protect_styles, protected_html, flags=re.IGNORECASE)
+        
+        # Apply percentage transformation only outside style blocks
+        protected_html = replace_percent_safe(protected_html)
+        
+        # Restore style blocks
+        for i, style in enumerate(style_blocks):
+            protected_html = protected_html.replace(f'__STYLE_BLOCK_{i}__', style)
+        
+        modified_html = protected_html
+        
+        # Apply generic word/phrase replacements
         for pattern, replacement in fact_flips:
-            if replacement not in ['REPLACE_MW', 'REPLACE_GW', 'REPLACE_PERCENT']:
-                modified_html = re.sub(pattern, replacement, modified_html, flags=re.IGNORECASE)
+            modified_html = re.sub(pattern, replacement, modified_html, flags=re.IGNORECASE)
         
         return modified_html
     

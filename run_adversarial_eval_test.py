@@ -148,11 +148,12 @@ Examples:
                 print(f"  💥 Significant impact rate: {significant_rate:.1%}")
             
             # Evaluation robustness interpretation
+            # High score drops indicate HIGH robustness (evaluator detects attacks)
             mean_drop = overall_stats.get("mean_score_drop_all_attacks", 0)
-            if mean_drop < 0.1:
-                robustness = "🟢 HIGH (evaluation is robust to attacks)"
-            elif mean_drop < 0.5:
-                robustness = "🟡 MODERATE (evaluation shows some vulnerability)"
+            if mean_drop >= 2.0:
+                robustness = "🟢 HIGH (evaluation successfully detects and penalizes attacks)"
+            elif mean_drop >= 0.5:
+                robustness = "🟡 MODERATE (evaluation shows good attack detection)"
             else:
                 robustness = "🔴 LOW (evaluation is vulnerable to attacks)"
             
