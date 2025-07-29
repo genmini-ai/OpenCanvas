@@ -22,6 +22,13 @@ setup(
         "duckdb>=0.8.0",
         "aiohttp>=3.8.0",
         "numpy>=1.24.0",
+        # PDF processing dependencies
+        "pdfplumber>=0.10.0",
+        "pillow>=10.0.0",
+        # Additional PDF text extraction methods
+        "PyMuPDF>=1.23.0",
+        "PyPDF2>=3.0.0",
+        "pdfminer.six>=20221105",
     ],
     python_requires=">=3.8",
     entry_points={
