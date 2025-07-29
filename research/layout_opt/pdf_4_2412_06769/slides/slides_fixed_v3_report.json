@@ -1,0 +1,50 @@
+{
+  "input_file": "pdf_4_2412_06769/slides/slides.html",
+  "output_file": "pdf_4_2412_06769/slides/slides_fixed_v3.html",
+  "slide_count": 12,
+  "problem_slides": [
+    "slide-5",
+    "slide-7",
+    "slide-10"
+  ],
+  "fixes_applied": [
+    {
+      "type": "overflow_detection",
+      "description": "Detected potential overflow in 3 slides",
+      "slides": [
+        "slide-5",
+        "slide-7",
+        "slide-10"
+      ]
+    },
+    {
+      "type": "improved_css",
+      "description": "Injected improved CSS with better overflow handling"
+    },
+    {
+      "type": "enhanced_js",
+      "description": "Added enhanced JavaScript for dynamic fixes"
+    },
+    {
+      "type": "slide_fix",
+      "description": "Applied content fixes to slide-5"
+    },
+    {
+      "type": "slide_fix",
+      "description": "Applied content fixes to slide-7"
+    },
+    {
+      "type": "slide_fix",
+      "description": "Applied content fixes to slide-10"
+    },
+    {
+      "type": "image_constraints",
+      "description": "Constrained 10 images"
+    }
+  ],
+  "file_size": {
+    "original": 80141,
+    "fixed": 71474,
+    "difference": -8667
+  }
+}

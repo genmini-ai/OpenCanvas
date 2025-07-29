@@ -1,0 +1,29 @@
+{
+  "input_file": "pdf_4_2412_06769/slides/slides.html",
+  "output_file": "pdf_4_2412_06769/slides/slides_fixed_v6.html",
+  "slide_count": 12,
+  "fixes_applied": [
+    {
+      "type": "autolayout_library",
+      "description": "Added AutoLayout.js constraint solver library"
+    },
+    {
+      "type": "constraint_css",
+      "description": "Injected CSS for constraint-based layout"
+    },
+    {
+      "type": "constraint_solver",
+      "description": "Added constraint solver implementation"
+    },
+    {
+      "type": "element_marking",
+      "description": "Marked 13 elements for constraint layout"
+    }
+  ],
+  "approach": "Constraint-based layout with AutoLayout.js principles",
+  "file_size": {
+    "original": 80141,
+    "fixed": 75401,
+    "difference": -4740
+  }
+}
