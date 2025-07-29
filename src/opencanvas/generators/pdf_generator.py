@@ -12,6 +12,7 @@ import logging
 
 from .base import BaseGenerator
 from opencanvas.utils.validation import InputValidator
+from opencanvas.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -237,7 +238,7 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
         except Exception as e:
             return None, f"Error generating slides directly: {str(e)}"
     
-    def generate_presentation(self, pdf_source, presentation_focus="A comprehensive overview", theme="professional", slide_count=12, output_dir="output"):
+    def generate_presentation(self, pdf_source, presentation_focus="A comprehensive overview", theme="professional", slide_count=12, output_dir=str(Config.OUTPUT_DIR)):
         """
         One-step function to generate a presentation from a PDF source with organized file structure.
         

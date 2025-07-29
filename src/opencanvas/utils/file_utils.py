@@ -44,17 +44,18 @@ def generate_topic_slug(text: str, max_words: int = 5) -> str:
 def create_organized_output_structure(output_dir: Path, topic_slug: str, timestamp: str) -> Dict[str, Path]:
     """
     Create organized directory structure for outputs
+    Structure: output_dir/timestamp/slides/, output_dir/timestamp/evaluation/, etc.
     
     Args:
-        output_dir: Base output directory
-        topic_slug: Clean topic identifier
+        output_dir: Base output directory (already contains topic name)
+        topic_slug: Clean topic identifier (not used in new structure)
         timestamp: Timestamp string
         
     Returns:
         Dictionary with paths for different file types
     """
-    # Create main folder for this presentation
-    presentation_folder = output_dir / f"{topic_slug}_{timestamp}"
+    # Create timestamp folder within the topic directory
+    presentation_folder = output_dir / timestamp
     presentation_folder.mkdir(parents=True, exist_ok=True)
     
     # Create subfolders

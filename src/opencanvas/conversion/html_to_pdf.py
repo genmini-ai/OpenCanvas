@@ -127,7 +127,7 @@ class PresentationConverter:
         return driver
 
     def convert_with_playwright(self, output_filename: str) -> str:
-        """Convert using Playwright - produces selectable PDF with proper 4:3 format."""
+        """Convert using Playwright - produces selectable PDF with proper multi-slide support."""
         logger.info("Converting with Playwright...")
         
         pdf_path = self.output_dir / output_filename
@@ -145,67 +145,168 @@ class PresentationConverter:
             # Set print media type for better PDF rendering
             page.emulate_media(media='print')
             
-            # Hide navigation elements and setup slide breaks
-            page.add_style_tag(content=f"""
-                @media print {{
+            # Hide navigation elements
+            page.add_style_tag(content="""
+                @media print {
                     /* Hide navigation elements */
                     .controls, .slide-number, .progress-bar, .navigation,
-                    [class*="control"], [class*="nav"], .presenter-notes {{
+                    [class*="control"], [class*="nav"], .presenter-notes {
                         display: none !important;
-                    }}
+                    }
                     
                     /* Ensure full content width is captured */
-                    body {{
-                        zoom: {self.zoom_factor};
+                    body {
                         width: 100% !important;
                         max-width: none !important;
                         overflow: visible !important;
-                    }}
+                    }
                     
                     /* Ensure slides break properly and use full width */
-                    .slide, section {{
+                    .slide, section {
                         page-break-after: always;
                         page-break-inside: avoid;
                         width: 100% !important;
                         max-width: none !important;
                         min-width: 100% !important;
-                    }}
+                    }
                     
                     /* Last slide shouldn't have page break */
-                    .slide:last-child, section:last-child {{
+                    .slide:last-child, section:last-child {
                         page-break-after: auto;
-                    }}
-                }}
+                    }
+                }
             """)
             
-            # Use 16:9 aspect ratio to match 1920x1080 and capture full content
-            page_width = 16.0 * self.zoom_factor  # 16:9 ratio for full width
-            page_height = 9.0 * self.zoom_factor   # 16:9 ratio
+            # Check if this is a multi-slide presentation
+            slides = page.query_selector_all('.slide')
+            total_slides = len(slides)
             
-            # Generate PDF with proper 4:3 aspect ratio
-            page.pdf(
-                path=str(pdf_path),
-                width=f"{page_width}in",
-                height=f"{page_height}in",
-                print_background=True,
-                margin={
-                    'top': '0.2in',
-                    'right': '0.2in', 
-                    'bottom': '0.2in',
-                    'left': '0.2in'
-                },
-                prefer_css_page_size=False,
-                display_header_footer=False,
-                landscape=False
-            )
+            if total_slides <= 1:
+                # Single slide or no slide structure detected - use single page PDF
+                logger.info("Single slide detected, using single-page PDF generation")
+                
+                # Use 16:9 aspect ratio to match 1920x1080 and capture full content
+                page_width = 16.0 * self.zoom_factor  # 16:9 ratio for full width
+                page_height = 9.0 * self.zoom_factor   # 16:9 ratio
+                
+                # Generate PDF with proper 16:9 aspect ratio
+                page.pdf(
+                    path=str(pdf_path),
+                    width=f"{page_width}in",
+                    height=f"{page_height}in",
+                    print_background=True,
+                    margin={
+                        'top': '0.2in',
+                        'right': '0.2in', 
+                        'bottom': '0.2in',
+                        'left': '0.2in'
+                    },
+                    prefer_css_page_size=False,
+                    display_header_footer=False,
+                    landscape=False
+                )
+            else:
+                # Multi-slide presentation - capture each slide individually
+                logger.info(f"Multi-slide presentation detected ({total_slides} slides)")
+                
+                # Capture each slide as a separate PDF page
+                temp_pdfs = []
+                
+                for slide_num in range(1, total_slides + 1):
+                    logger.info(f"Capturing slide {slide_num}/{total_slides}")
+                    
+                    # Navigate to specific slide (most presentations use arrow keys)
+                    if slide_num > 1:
+                        page.keyboard.press('ArrowRight')
+                        page.wait_for_timeout(1000)
+                    
+                    # Generate PDF for this slide
+                    temp_pdf_path = self.output_dir / f"temp_slide_{slide_num:02d}.pdf"
+                    
+                    page_width = 16.0 * self.zoom_factor  # 16:9 ratio
+                    page_height = 9.0 * self.zoom_factor
+                    
+                    page.pdf(
+                        path=str(temp_pdf_path),
+                        width=f"{page_width}in",
+                        height=f"{page_height}in",
+                        print_background=True,
+                        margin={
+                            'top': '0.2in',
+                            'right': '0.2in', 
+                            'bottom': '0.2in',
+                            'left': '0.2in'
+                        },
+                        prefer_css_page_size=False,
+                        display_header_footer=False,
+                        landscape=False
+                    )
+                    
+                    temp_pdfs.append(str(temp_pdf_path))
+                
+                # Combine all PDFs into one
+                self._combine_pdfs(temp_pdfs, str(pdf_path))
+                
+                # Clean up temporary PDFs
+                for temp_pdf in temp_pdfs:
+                    try:
+                        os.remove(temp_pdf)
+                    except:
+                        pass
             
             browser.close()
-        
-        logger.info(f"PDF generated with Playwright (16:9 format): {pdf_path}")
-        return str(pdf_path)
+            
+            logger.info(f"PDF generated with Playwright (16:9 format): {pdf_path}")
+            return str(pdf_path)
+
+    def _combine_pdfs(self, pdf_paths: List[str], output_path: str):
+        """Combine multiple PDFs into one using PyPDF2 or fallback to system tools."""
+        try:
+            # Try using PyPDF2 first
+            try:
+                from PyPDF2 import PdfMerger
+                merger = PdfMerger()
+                
+                for pdf_path in pdf_paths:
+                    merger.append(pdf_path)
+                
+                merger.write(output_path)
+                merger.close()
+                logger.info(f"Combined {len(pdf_paths)} PDFs using PyPDF2")
+                return
+                
+            except ImportError:
+                logger.info("PyPDF2 not available, trying system tools...")
+                
+            # Fallback to system tools
+            if shutil.which('pdftk'):
+                # Use pdftk if available
+                cmd = ['pdftk'] + pdf_paths + ['cat', 'output', output_path]
+                subprocess.run(cmd, check=True)
+                logger.info(f"Combined {len(pdf_paths)} PDFs using pdftk")
+                return
+                
+            elif shutil.which('gs'):
+                # Use Ghostscript if available
+                cmd = ['gs', '-dNOPAUSE', '-dBATCH', '-sDEVICE=pdfwrite', 
+                       f'-sOutputFile={output_path}'] + pdf_paths
+                subprocess.run(cmd, check=True)
+                logger.info(f"Combined {len(pdf_paths)} PDFs using Ghostscript")
+                return
+                
+            else:
+                # Last resort: just use the first PDF
+                logger.warning("No PDF merging tools available, using first slide only")
+                shutil.copy(pdf_paths[0], output_path)
+                
+        except Exception as e:
+            logger.error(f"Error combining PDFs: {e}")
+            # Fallback: copy first PDF
+            if pdf_paths:
+                shutil.copy(pdf_paths[0], output_path)
 
     def convert_with_chrome_headless(self, output_filename: str) -> str:
-        """Convert using Chrome headless - produces selectable PDF with proper 4:3 format."""
+        """Convert using Chrome headless - produces selectable PDF with proper multi-slide support."""
         logger.info("Converting with Chrome headless...")
         
         pdf_path = self.output_dir / output_filename
@@ -231,50 +332,167 @@ class PresentationConverter:
         if not chrome_path:
             raise RuntimeError("Chrome/Chromium not found. Please install Chrome or Chromium browser.")
         
-        # Calculate 16:9 aspect ratio paper size in mm to match 1920x1080
-        base_width_mm = 406   # 16.0 inches in mm (16:9 ratio)
-        base_height_mm = 229  # 9.0 inches in mm (16:9 ratio)
-        
-        paper_width = base_width_mm * self.zoom_factor
-        paper_height = base_height_mm * self.zoom_factor
-        
-        # Build command for headless Chrome (no automation banner)
-        cmd = [
-            chrome_path,
-            '--headless',
-            '--disable-gpu', 
-            '--no-sandbox',
-            '--disable-dev-shm-usage',
-            '--run-all-compositor-stages-before-draw',
-            '--virtual-time-budget=5000',
-            '--disable-infobars',
-            '--disable-extensions',
-            f'--force-device-scale-factor={self.zoom_factor}',
-            f'--print-to-pdf-paper-width={paper_width}',
-            f'--print-to-pdf-paper-height={paper_height}',
-            '--print-to-pdf=' + str(pdf_path),
-            '--no-pdf-header-footer',
-            file_url
-        ]
-        
+        # For multi-slide presentations, we need to use Selenium to navigate
+        # Chrome headless alone can't navigate between slides
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            # Check if this is a multi-slide presentation using Selenium
+            options = Options()
+            options.add_argument("--headless")
+            options.add_argument("--disable-gpu")
+            options.add_argument("--no-sandbox") 
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_argument("--disable-infobars")
+            options.add_argument("--disable-extensions")
+            options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            options.add_experimental_option('useAutomationExtension', False)
             
-            if result.returncode != 0:
-                logger.error(f"Chrome command failed: {result.stderr}")
-                raise RuntimeError(f"Chrome headless conversion failed: {result.stderr}")
+            driver = webdriver.Chrome(options=options)
             
-            if not pdf_path.exists():
-                raise RuntimeError("PDF was not created")
+            try:
+                driver.get(file_url)
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.TAG_NAME, "body"))
+                )
+                time.sleep(2)
                 
-            logger.info(f"PDF generated with Chrome headless (16:9 format): {pdf_path}")
-            return str(pdf_path)
-            
+                # Check for slides
+                slides = driver.find_elements(By.CLASS_NAME, "slide")
+                total_slides = len(slides)
+                
+                if total_slides <= 1:
+                    # Single slide - use direct Chrome headless
+                    logger.info("Single slide detected, using direct Chrome headless")
+                    driver.quit()
+                    
+                    # Calculate 16:9 aspect ratio paper size in mm
+                    base_width_mm = 406   # 16.0 inches in mm (16:9 ratio)
+                    base_height_mm = 229  # 9.0 inches in mm (16:9 ratio)
+                    
+                    paper_width = base_width_mm * self.zoom_factor
+                    paper_height = base_height_mm * self.zoom_factor
+                    
+                    # Build command for headless Chrome
+                    cmd = [
+                        chrome_path,
+                        '--headless',
+                        '--disable-gpu', 
+                        '--no-sandbox',
+                        '--disable-dev-shm-usage',
+                        '--run-all-compositor-stages-before-draw',
+                        '--virtual-time-budget=5000',
+                        '--disable-infobars',
+                        '--disable-extensions',
+                        f'--force-device-scale-factor={self.zoom_factor}',
+                        f'--print-to-pdf-paper-width={paper_width}',
+                        f'--print-to-pdf-paper-height={paper_height}',
+                        '--print-to-pdf=' + str(pdf_path),
+                        '--no-pdf-header-footer',
+                        file_url
+                    ]
+                    
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                    
+                    if result.returncode != 0:
+                        logger.error(f"Chrome command failed: {result.stderr}")
+                        raise RuntimeError(f"Chrome headless conversion failed: {result.stderr}")
+                    
+                    if not pdf_path.exists():
+                        raise RuntimeError("PDF was not created")
+                        
+                    logger.info(f"PDF generated with Chrome headless (16:9 format): {pdf_path}")
+                    return str(pdf_path)
+                
+                else:
+                    # Multi-slide presentation - capture each slide using Selenium CDP
+                    logger.info(f"Multi-slide presentation detected ({total_slides} slides), using Selenium CDP")
+                    
+                    # Hide navigation elements
+                    driver.execute_script("""
+                        const style = document.createElement('style');
+                        style.textContent = `
+                            .controls, .slide-number, .progress-bar, .navigation,
+                            [class*="control"], [class*="nav"], .presenter-notes {
+                                display: none !important;
+                            }
+                            .slide, section {
+                                width: 100% !important;
+                                max-width: none !important;
+                                min-width: 100% !important;
+                            }
+                        `;
+                        document.head.appendChild(style);
+                    """)
+                    
+                    # Apply zoom
+                    driver.execute_script(f"""
+                        document.body.style.zoom = '{self.zoom_factor}';
+                        document.body.style.width = '100%';
+                        document.body.style.maxWidth = 'none';
+                        document.body.style.overflow = 'visible';
+                    """)
+                    
+                    # Capture each slide using CDP
+                    temp_pdfs = []
+                    
+                    for slide_num in range(1, total_slides + 1):
+                        logger.info(f"Capturing slide {slide_num}/{total_slides}")
+                        
+                        # Navigate to specific slide
+                        if slide_num > 1:
+                            driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ARROW_RIGHT)
+                            time.sleep(1)
+                        
+                        # Use CDP to generate PDF for this slide
+                        base_width, base_height = 16.0, 9.0  # 16:9 ratio
+                        
+                        pdf_options = {
+                            'landscape': False,
+                            'displayHeaderFooter': False,
+                            'printBackground': True,
+                            'preferCSSPageSize': False,
+                            'marginTop': 0.2,
+                            'marginBottom': 0.2, 
+                            'marginLeft': 0.2,
+                            'marginRight': 0.2,
+                            'paperWidth': base_width * self.zoom_factor,
+                            'paperHeight': base_height * self.zoom_factor,
+                            'scale': 1.0
+                        }
+                        
+                        result = driver.execute_cdp_cmd('Page.printToPDF', pdf_options)
+                        pdf_data = result['data']
+                        
+                        # Save temporary PDF
+                        temp_pdf_path = self.output_dir / f"temp_slide_{slide_num:02d}.pdf"
+                        with open(temp_pdf_path, 'wb') as f:
+                            f.write(base64.b64decode(pdf_data))
+                        
+                        temp_pdfs.append(str(temp_pdf_path))
+                    
+                    # Combine all PDFs
+                    self._combine_pdfs(temp_pdfs, str(pdf_path))
+                    
+                    # Clean up temporary PDFs
+                    for temp_pdf in temp_pdfs:
+                        try:
+                            os.remove(temp_pdf)
+                        except:
+                            pass
+                    
+                    logger.info(f"PDF generated with Chrome headless multi-slide (16:9 format): {pdf_path}")
+                    return str(pdf_path)
+                    
+            finally:
+                driver.quit()
+                
         except subprocess.TimeoutExpired:
             raise RuntimeError("Chrome headless conversion timed out")
+        except Exception as e:
+            logger.error(f"Chrome headless conversion failed: {e}")
+            raise RuntimeError(f"Chrome headless conversion failed: {str(e)}")
 
     def convert_with_selenium_cdp(self, output_filename: str) -> str:
-        """Convert using Selenium with Chrome DevTools Protocol - proper 4:3 format, no automation banner."""
+        """Convert using Selenium with Chrome DevTools Protocol - proper multi-slide support."""
         logger.info("Converting with Selenium + Chrome DevTools Protocol...")
         
         pdf_path = self.output_dir / output_filename
@@ -307,56 +525,143 @@ class PresentationConverter:
             )
             time.sleep(3)
             
-            # Apply zoom and ensure full width capture
-            driver.execute_script(f"""
-                document.body.style.zoom = '{self.zoom_factor}';
-                document.body.style.width = '100%';
-                document.body.style.maxWidth = 'none';
-                document.body.style.overflow = 'visible';
+            # Check for slides
+            slides = driver.find_elements(By.CLASS_NAME, "slide")
+            total_slides = len(slides)
+            
+            if total_slides <= 1:
+                # Single slide - generate single PDF
+                logger.info("Single slide detected, generating single PDF")
                 
-                // Hide navigation elements
-                const style = document.createElement('style');
-                style.textContent = `
-                    .controls, .slide-number, .progress-bar, .navigation,
-                    [class*="control"], [class*="nav"], .presenter-notes {{
-                        display: none !important;
-                    }}
-                    .slide, section {{
-                        width: 100% !important;
-                        max-width: none !important;
-                        min-width: 100% !important;
-                    }}
-                `;
-                document.head.appendChild(style);
-            """)
-            
-            # Use 16:9 dimensions to match 1920x1080 viewport
-            base_width, base_height = 16.0, 9.0  # 16:9 ratio (1920x1080 equivalent)
-            
-            pdf_options = {
-                'landscape': False,
-                'displayHeaderFooter': False,
-                'printBackground': True,
-                'preferCSSPageSize': False,
-                'marginTop': 0.2,
-                'marginBottom': 0.2, 
-                'marginLeft': 0.2,
-                'marginRight': 0.2,
-                'paperWidth': base_width * self.zoom_factor,
-                'paperHeight': base_height * self.zoom_factor,
-                'scale': 1.0
-            }
-            
-            # Execute CDP command
-            result = driver.execute_cdp_cmd('Page.printToPDF', pdf_options)
-            pdf_data = result['data']
-            
-            # Decode and save PDF
-            with open(pdf_path, 'wb') as f:
-                f.write(base64.b64decode(pdf_data))
-            
-            logger.info(f"PDF generated with Selenium CDP (16:9 format): {pdf_path}")
-            return str(pdf_path)
+                # Apply zoom and ensure full width capture
+                driver.execute_script(f"""
+                    document.body.style.zoom = '{self.zoom_factor}';
+                    document.body.style.width = '100%';
+                    document.body.style.maxWidth = 'none';
+                    document.body.style.overflow = 'visible';
+                    
+                    // Hide navigation elements
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        .controls, .slide-number, .progress-bar, .navigation,
+                        [class*="control"], [class*="nav"], .presenter-notes {{
+                            display: none !important;
+                        }}
+                        .slide, section {{
+                            width: 100% !important;
+                            max-width: none !important;
+                            min-width: 100% !important;
+                        }}
+                    `;
+                    document.head.appendChild(style);
+                """)
+                
+                # Use 16:9 dimensions
+                base_width, base_height = 16.0, 9.0  # 16:9 ratio
+                
+                pdf_options = {
+                    'landscape': False,
+                    'displayHeaderFooter': False,
+                    'printBackground': True,
+                    'preferCSSPageSize': False,
+                    'marginTop': 0.2,
+                    'marginBottom': 0.2, 
+                    'marginLeft': 0.2,
+                    'marginRight': 0.2,
+                    'paperWidth': base_width * self.zoom_factor,
+                    'paperHeight': base_height * self.zoom_factor,
+                    'scale': 1.0
+                }
+                
+                # Execute CDP command
+                result = driver.execute_cdp_cmd('Page.printToPDF', pdf_options)
+                pdf_data = result['data']
+                
+                # Decode and save PDF
+                with open(pdf_path, 'wb') as f:
+                    f.write(base64.b64decode(pdf_data))
+                
+                logger.info(f"PDF generated with Selenium CDP (16:9 format): {pdf_path}")
+                return str(pdf_path)
+                
+            else:
+                # Multi-slide presentation - capture each slide
+                logger.info(f"Multi-slide presentation detected ({total_slides} slides)")
+                
+                # Apply zoom and hide navigation elements
+                driver.execute_script(f"""
+                    document.body.style.zoom = '{self.zoom_factor}';
+                    document.body.style.width = '100%';
+                    document.body.style.maxWidth = 'none';
+                    document.body.style.overflow = 'visible';
+                    
+                    // Hide navigation elements
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        .controls, .slide-number, .progress-bar, .navigation,
+                        [class*="control"], [class*="nav"], .presenter-notes {{
+                            display: none !important;
+                        }}
+                        .slide, section {{
+                            width: 100% !important;
+                            max-width: none !important;
+                            min-width: 100% !important;
+                        }}
+                    `;
+                    document.head.appendChild(style);
+                """)
+                
+                # Capture each slide
+                temp_pdfs = []
+                
+                for slide_num in range(1, total_slides + 1):
+                    logger.info(f"Capturing slide {slide_num}/{total_slides}")
+                    
+                    # Navigate to specific slide
+                    if slide_num > 1:
+                        driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ARROW_RIGHT)
+                        time.sleep(1)
+                    
+                    # Use 16:9 dimensions
+                    base_width, base_height = 16.0, 9.0  # 16:9 ratio
+                    
+                    pdf_options = {
+                        'landscape': False,
+                        'displayHeaderFooter': False,
+                        'printBackground': True,
+                        'preferCSSPageSize': False,
+                        'marginTop': 0.2,
+                        'marginBottom': 0.2, 
+                        'marginLeft': 0.2,
+                        'marginRight': 0.2,
+                        'paperWidth': base_width * self.zoom_factor,
+                        'paperHeight': base_height * self.zoom_factor,
+                        'scale': 1.0
+                    }
+                    
+                    # Execute CDP command
+                    result = driver.execute_cdp_cmd('Page.printToPDF', pdf_options)
+                    pdf_data = result['data']
+                    
+                    # Save temporary PDF
+                    temp_pdf_path = self.output_dir / f"temp_slide_{slide_num:02d}.pdf"
+                    with open(temp_pdf_path, 'wb') as f:
+                        f.write(base64.b64decode(pdf_data))
+                    
+                    temp_pdfs.append(str(temp_pdf_path))
+                
+                # Combine all PDFs
+                self._combine_pdfs(temp_pdfs, str(pdf_path))
+                
+                # Clean up temporary PDFs
+                for temp_pdf in temp_pdfs:
+                    try:
+                        os.remove(temp_pdf)
+                    except:
+                        pass
+                
+                logger.info(f"PDF generated with Selenium CDP multi-slide (16:9 format): {pdf_path}")
+                return str(pdf_path)
             
         finally:
             driver.quit()

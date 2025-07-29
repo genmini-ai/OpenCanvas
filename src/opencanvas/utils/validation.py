@@ -19,8 +19,8 @@ class InputValidator:
             if not parsed.scheme or not parsed.netloc:
                 return False, "Invalid URL format"
 
-            # Check if URL ends with .pdf
-            if url.lower().endswith('.pdf'):
+            # Check if URL contains 'pdf'
+            if 'pdf' in url.lower():
                 return True, "Valid PDF URL"
 
             return False, "URL does not appear to point to a PDF file"

@@ -97,12 +97,12 @@ You are an expert presentation content evaluator with high academic standards. Y
 ## Evaluation Criteria (1-5 Scale) - BE RIGOROUS
 
 ### Logical Structure [PRESENTATION-LEVEL]
-**Definition**: Organizes information in a coherent sequence that effectively builds understanding
-- **1 Point**: Confusing or illogical organization that significantly hinders comprehension; random order or poor flow between concepts
-- **2 Points**: Basic organization with noticeable flow issues; some logical gaps or abrupt transitions that disrupt understanding
-- **3 Points**: Generally logical structure with mostly clear progression; adequate flow but could be more compelling or better organized
-- **4 Points**: Well-organized presentation with clear logical flow and smooth transitions; easy to follow and builds understanding effectively
-- **5 Points**: MASTERFUL organization that creates compelling narrative arc; seamless logical progression that maximizes understanding and engagement; exemplary storytelling structure
+**Definition**: Organizes information in a coherent sequence with consistent facts that effectively builds understanding
+- **1 Point**: Confusing or illogical organization that significantly hinders comprehension; random order, poor flow between concepts, OR internal contradictions that undermine credibility
+- **2 Points**: Basic organization with noticeable flow issues; some logical gaps, abrupt transitions, OR factual inconsistencies that disrupt understanding
+- **3 Points**: Generally logical structure with consistent facts and mostly clear progression; adequate flow but could be more compelling or better organized
+- **4 Points**: Well-organized presentation with clear logical flow, smooth transitions, and factually consistent claims; easy to follow and builds understanding effectively
+- **5 Points**: MASTERFUL organization that creates compelling narrative arc; seamless logical progression with perfect factual consistency that maximizes understanding and engagement; exemplary storytelling structure
 
 ### Narrative Quality [PRESENTATION-LEVEL]
 **Definition**: Creates a compelling scientific story that communicates the significance of the research
@@ -136,11 +136,17 @@ You are an expert presentation content evaluator with high academic standards. Y
 
 ## Instructions
 1. Review the entire presentation with high academic standards
-2. Focus on internal coherence and presentation flow - do not assess factual accuracy
+2. Focus on internal coherence and presentation flow - assess factual consistency within the presentation
 3. Evaluate how well the presentation tells a story and builds understanding
 4. Be rigorous - most presentations should score 2-4, with 5s reserved for truly exceptional work
 5. Consider whether this would be compelling at a top academic conference
 6. Provide specific examples from the presentation to justify your assessments
+
+## Consistency Verification
+- Check for contradictory claims within the presentation (e.g., "increased" vs "decreased" for same metric)
+- Verify numerical plausibility (unit consistency, percentage ranges, scale appropriateness)
+- Flag geographic or demographic mismatches (e.g., developing countries with advanced infrastructure claims)
+- Note any claims that contradict basic logic or established facts
 
 Note: This evaluation focuses on presentation structure and narrative effectiveness that can be assessed without access to source materials. For accuracy and completeness evaluation, source materials would be required.
 
@@ -154,12 +160,12 @@ You are an expert presentation content evaluator. Your task is to assess the pre
 ## Evaluation Criteria (1-5 Scale)
 
 ### Accuracy [PRESENTATION-LEVEL]
-**Definition**: Correctly represents the source material's facts, technical elements, and attributions
-- **1 Point**: Significant factual errors, misrepresentations, or incorrect technical details throughout presentation
-- **2 Points**: Generally accurate but contains some notable errors or unclear technical elements across slides
-- **3 Points**: Mostly accurate presentation with minor inaccuracies that don't affect main conclusions
-- **4 Points**: Highly accurate presentation with only trivial errors or ambiguities
-- **5 Points**: Completely accurate representation of all facts, technical elements, and proper attributions throughout
+**Definition**: Correctly represents the source material's facts, technical elements, and attributions with strict fidelity to the source
+- **1 Point**: Significant factual errors, misrepresentations, or incorrect technical details throughout presentation; major deviations from source material
+- **2 Points**: Generally accurate but contains some notable errors, modifications, or unclear technical elements that deviate from source material
+- **3 Points**: Mostly accurate presentation with minor inaccuracies or slight modifications that don't affect main conclusions
+- **4 Points**: Highly accurate presentation with only trivial errors or ambiguities; faithful to source material
+- **5 Points**: Completely accurate representation with strict fidelity to source material; no unauthorized modifications of facts, technical elements, or attributions
 
 ### Essential Coverage [PRESENTATION-LEVEL]
 **Definition**: Includes all key findings and necessary methodological context from the source material
@@ -192,7 +198,14 @@ You are an expert presentation content evaluator. Your task is to assess the pre
 4. Note any misrepresentations, omissions, or inaccuracies in your reasoning
 5. Provide specific examples comparing presentation content to source material
 6. Calculate overall_accuracy_coverage_score as the average of both dimension scores
-7. Focus on fidelity to the source material rather than presentation quality
+7. Focus on strict fidelity to the source material rather than presentation quality
+
+## Source Fidelity Requirements
+- ANY deviation from source material facts should reduce the accuracy score
+- Treat the source PDF as the golden standard - no modifications to facts, numbers, or conclusions are acceptable
+- Flag any inversions of claims (e.g., source says "increased" but presentation says "decreased")
+- Penalize heavily for unauthorized changes to numerical values, percentages, or technical specifications
+- Report any contradictions between presentation claims and source material
 
 ## Source Material Instructions
 - Use the attached PDF as the ground truth for evaluation
