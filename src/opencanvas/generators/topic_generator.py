@@ -11,7 +11,7 @@ import re
 from urllib.parse import urljoin, urlparse
 import logging
 
-from .base import BaseGenerator
+from opencanvas.generators.base import BaseGenerator
 from opencanvas.config import Config
 from opencanvas.image_validation import ImageValidationPipeline
 

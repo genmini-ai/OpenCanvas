@@ -1,6 +1,6 @@
 """Core utilities module"""
 
-from .logging import setup_logging
-from .validation import InputValidator, ValidationError
+from opencanvas.utils.logging import setup_logging
+from opencanvas.utils.validation import InputValidator, ValidationError
 
 __all__ = ['setup_logging', 'InputValidator', 'ValidationError']

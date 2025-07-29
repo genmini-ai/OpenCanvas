@@ -14,15 +14,15 @@ for generated presentations, including:
 Main entry point: ImageValidationPipeline
 """
 
-from .image_validator import ImageValidationPipeline
-from .topic_image_cache import TopicImageCache
-from .url_validator import URLValidator
-from .claude_image_retriever import ClaudeImageRetriever
-from .html_parser import SlideImageParser
-from .image_replacer import ImageReplacer
-from .prompt_tester import PromptSuccessTracker
-from .cache_utils import CacheMaintenanceUtils
-from .config import ImageValidationConfig
+from opencanvas.image_validation.image_validator import ImageValidationPipeline
+from opencanvas.image_validation.topic_image_cache import TopicImageCache
+from opencanvas.image_validation.url_validator import URLValidator
+from opencanvas.image_validation.claude_image_retriever import ClaudeImageRetriever
+from opencanvas.image_validation.html_parser import SlideImageParser
+from opencanvas.image_validation.image_replacer import ImageReplacer
+from opencanvas.image_validation.prompt_tester import PromptSuccessTracker
+from opencanvas.image_validation.cache_utils import CacheMaintenanceUtils
+from opencanvas.image_validation.config import ImageValidationConfig
 
 __all__ = [
     'ImageValidationPipeline',

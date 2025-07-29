@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 import mimetypes
 import logging
 
-from .base import BaseGenerator
+from opencanvas.generators.base import BaseGenerator
 from opencanvas.utils.validation import InputValidator
 from opencanvas.config import Config
 

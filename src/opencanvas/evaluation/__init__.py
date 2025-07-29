@@ -1,7 +1,7 @@
 """Presentation evaluation module"""
 
-from .evaluator import PresentationEvaluator, EvaluationResult
-from .prompts import EvaluationPrompts
-from .adversarial_attacks import PresentationAdversarialAttacks, apply_adversarial_attack
+from opencanvas.evaluation.evaluator import PresentationEvaluator, EvaluationResult
+from opencanvas.evaluation.prompts import EvaluationPrompts
+from opencanvas.evaluation.adversarial_attacks import PresentationAdversarialAttacks, apply_adversarial_attack
 
 __all__ = ['PresentationEvaluator', 'EvaluationResult', 'EvaluationPrompts', 'PresentationAdversarialAttacks', 'apply_adversarial_attack']

@@ -2,8 +2,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 import logging
 
-from .topic_generator import TopicGenerator
-from .pdf_generator import PDFGenerator
+from opencanvas.generators.topic_generator import TopicGenerator
+from opencanvas.generators.pdf_generator import PDFGenerator
 from opencanvas.utils.validation import InputValidator
 
 logger = logging.getLogger(__name__)
