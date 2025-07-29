@@ -194,11 +194,14 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
 '''
         try:
             logger.info("🔍 Analyzing PDF and generating slides in one step...")
+            logger.info("📡 Using streaming for long-running operation...")
             
-            message = self.client.messages.create(
+            # Use streaming for long operations
+            stream = self.client.messages.create(
                 model="claude-3-7-sonnet-20250219",
-                max_tokens=15000,
+                max_tokens=50000,
                 temperature=0.7,
+                stream=True,
                 messages=[
                     {
                         "role": "user",
@@ -220,8 +223,16 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
                 ],
             )
             
-            # The response is expected to be HTML code, so we clean it up if needed
-            html_content = message.content[0].text
+            # Collect the streamed response
+            html_content = ""
+            for chunk in stream:
+                if chunk.type == "content_block_delta":
+                    html_content += chunk.delta.text
+                    # Log progress every 1000 characters
+                    if len(html_content) % 1000 == 0:
+                        logger.info(f"📝 Generated {len(html_content)} characters...")
+            
+            logger.info(f"✅ Completed generation: {len(html_content)} characters")
             return self.clean_html_content(html_content), None
 
         except Exception as e:

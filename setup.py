@@ -17,6 +17,7 @@ setup(
         "opencv-python>=4.8.0",
         "python-dotenv>=1.0.0",
         "openai==1.88.0",
+        "google-genai>=0.3.0",
         # Image validation dependencies
         "duckdb>=0.8.0",
         "aiohttp>=3.8.0",

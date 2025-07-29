@@ -137,6 +137,12 @@ def handle_generate(args, logger):
     """Handle generate command"""
     logger.info(f"🚀 Starting generation from: {args.input}")
     
+    # Check if we have the required API key for generation
+    if not Config.ANTHROPIC_API_KEY:
+        logger.error("ANTHROPIC_API_KEY is required for generation")
+        logger.error("Please set ANTHROPIC_API_KEY environment variable or add it to your .env file")
+        return 1
+    
     router = GenerationRouter(
         api_key=Config.ANTHROPIC_API_KEY,
         brave_api_key=Config.BRAVE_API_KEY

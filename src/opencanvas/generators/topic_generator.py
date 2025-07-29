@@ -405,13 +405,27 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
 """
         
         try:
-            response = self.client.messages.create(
+            logger.info("📡 Using streaming for slide generation...")
+            
+            # Use streaming for long operations
+            stream = self.client.messages.create(
                 model="claude-3-7-sonnet-20250219",
-                max_tokens=15000,
+                max_tokens=50000,
                 temperature=0.5,
+                stream=True,
                 messages=[{"role": "user", "content": slide_prompt}]
             )
-            html_content = response.content[0].text
+            
+            # Collect the streamed response
+            html_content = ""
+            for chunk in stream:
+                if chunk.type == "content_block_delta":
+                    html_content += chunk.delta.text
+                    # Log progress every 1000 characters
+                    if len(html_content) % 1000 == 0:
+                        logger.info(f"📝 Generated {len(html_content)} characters...")
+            
+            logger.info(f"✅ Completed generation: {len(html_content)} characters")
             
             # Clean up HTML if wrapped in code blocks
             return self.clean_html_content(html_content)

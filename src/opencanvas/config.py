@@ -64,8 +64,9 @@ class Config:
     @classmethod
     def validate(cls):
         """Validate required configuration"""
-        if not cls.ANTHROPIC_API_KEY:
-            raise ValueError("ANTHROPIC_API_KEY is required")
+        # Only require ANTHROPIC_API_KEY if we're using Claude for evaluation
+        if cls.EVALUATION_PROVIDER == 'claude' and not cls.ANTHROPIC_API_KEY:
+            raise ValueError("ANTHROPIC_API_KEY is required for Claude evaluation")
         
         # Validate evaluation setup
         if cls.EVALUATION_PROVIDER == 'gpt' and not cls.OPENAI_API_KEY:

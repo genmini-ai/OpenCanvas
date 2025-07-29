@@ -73,6 +73,7 @@ playwright-report/
 # Test data
 test_data/
 test_output/
+output/
 
 # local test file
 test_*.py
