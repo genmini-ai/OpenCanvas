@@ -41,6 +41,9 @@ Examples:
   
   # Start API server
   opencanvas api --host 0.0.0.0 --port 8000 --reload
+  
+  # Run self-evolution cycle
+  opencanvas evolve --max-iterations 3 --improvement-threshold 0.15
         """
     )
     
@@ -97,6 +100,15 @@ Examples:
                            help='Log level (default: info)')
     api_parser.add_argument('--workers', type=int, default=1, help='Number of worker processes (default: 1)')
     
+    # Evolution command
+    evolve_parser = subparsers.add_parser('evolve', help='Run self-evolution cycle to improve generation quality')
+    evolve_parser.add_argument('--topics', help='Comma-separated list of test topics')
+    evolve_parser.add_argument('--max-iterations', type=int, default=5, help='Maximum number of evolution iterations (default: 5)')
+    evolve_parser.add_argument('--improvement-threshold', type=float, default=0.2, help='Minimum improvement threshold (default: 0.2)')
+    evolve_parser.add_argument('--output-dir', default='evolution_output', help='Output directory for evolution results')
+    evolve_parser.add_argument('--start-iteration', type=int, default=1, help='Starting iteration number (default: 1)')
+    evolve_parser.add_argument('--reflection-only', action='store_true', help='Only run reflection analysis on existing results')
+    
     args = parser.parse_args()
     
     # Setup logging
@@ -122,6 +134,8 @@ Examples:
             return handle_pipeline(args, logger)
         elif args.command == 'api':
             return handle_api(args, logger)
+        elif args.command == 'evolve':
+            return handle_evolve(args, logger)
         else:
             parser.print_help()
             return 1
@@ -492,6 +506,73 @@ def handle_api(args, logger):
         return 1
     
     return 0
+
+def handle_evolve(args, logger):
+    """Handle evolve command - run multi-agent self-evolution cycle"""
+    logger.info("🤖 Starting OpenCanvas Multi-Agent Evolution")
+    logger.info(f"📁 Output directory: {args.output_dir}")
+    logger.info(f"🔄 Max iterations: {args.max_iterations}")
+    logger.info(f"📊 Improvement threshold: {args.improvement_threshold}")
+    
+    try:
+        from opencanvas.evolution import MultiAgentEvolutionManager
+        
+        # Parse topics if provided
+        test_topics = None
+        if args.topics:
+            test_topics = [topic.strip() for topic in args.topics.split(',')]
+            logger.info(f"🎯 Custom topics: {test_topics}")
+        else:
+            logger.info("🎯 Using default test topics")
+        
+        # Initialize multi-agent evolution manager
+        manager = MultiAgentEvolutionManager(
+            output_dir=args.output_dir,
+            test_topics=test_topics,
+            max_iterations=args.max_iterations,
+            improvement_threshold=args.improvement_threshold
+        )
+        
+        # Run multi-agent evolution cycle
+        logger.info("🤖 Starting multi-agent evolution cycle...")
+        results = manager.run_multi_agent_evolution(start_iteration=args.start_iteration)
+        
+        # Print final summary
+        print("\n" + "="*60)
+        print("🤖 MULTI-AGENT EVOLUTION COMPLETE")
+        print("="*60)
+        print(f"✅ Total iterations: {results.get('total_iterations', 0)}")
+        print(f"🏆 Best iteration: {results.get('best_iteration', {}).get('iteration', 'N/A')}")
+        
+        if results.get('final_improvement'):
+            print(f"\n📈 FINAL IMPROVEMENT:")
+            for category, improvement in results['final_improvement'].items():
+                sign = "+" if improvement >= 0 else ""
+                print(f"  {category.replace('_', ' ').title()}: {sign}{improvement:.3f}")
+        
+        # Show agent system performance
+        agent_perf = results.get('agent_system_performance', {})
+        if agent_perf:
+            system_rel = agent_perf.get('system_reliability', {})
+            print(f"\n🤖 AGENT SYSTEM PERFORMANCE:")
+            print(f"  Orchestration Success Rate: {system_rel.get('orchestration_success_rate', 0):.1%}")
+            print(f"  Implementation Success Rate: {system_rel.get('implementation_success_rate', 0):.1%}")
+        
+        print(f"\n📁 Complete results saved to: {args.output_dir}/multi_agent_evolution_results.json")
+        
+        # Return success/failure based on whether any iterations completed
+        return 0 if results.get('total_iterations', 0) > 0 else 1
+        
+    except ImportError as e:
+        logger.error(f"Evolution dependencies not available: {e}")
+        logger.error("This feature requires the multi-agent evolution module to be implemented")
+        return 1
+    except Exception as e:
+        logger.error(f"Multi-agent evolution failed: {e}")
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
+        return 1
 
 if __name__ == "__main__":
     sys.exit(main())

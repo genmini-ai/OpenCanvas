@@ -55,24 +55,24 @@ You have deep expertise in:
 Return a JSON object with exactly this structure:
 
 ```json
-{
-  "content_analysis": {
+{{
+  "content_analysis": {{
     "primary_themes": ["theme1", "theme2", "theme3"],
     "emotional_tone": "description of overall emotional character",
     "complexity_level": "simple|moderate|complex",
     "key_message": "main takeaway in one sentence"
-  },
+  }},
   "recommendations": [
-    {
+    {{
       "style_name": "Creative, memorable name (2-3 words)",
       "style_category": "conservative|balanced|bold",
-      "color_palette": {
+      "color_palette": {{
         "primary": "#000000",
         "secondary": "#000000", 
         "accent": "#000000",
         "background": "#000000",
         "text": "#000000"
-      },
+      }},
       "animation_philosophy": "Brief description of movement approach",
       "animation_details": [
         "Specific animation type 1",
@@ -80,16 +80,16 @@ Return a JSON object with exactly this structure:
         "Specific animation type 3"
       ],
       "typography_approach": "Font personality and hierarchy strategy",
-      "font_suggestions": {
+      "font_suggestions": {{
         "headings": "Font family or style description",
         "body": "Font family or style description"
-      },
+      }},
       "visual_rationale": "Detailed explanation of why this style serves the content and audience (100-150 words)",
       "mood_keywords": ["keyword1", "keyword2", "keyword3"],
       "best_suited_for": "Type of audience or context this style excels with"
-    }
+    }}
   ]
-}
+}}
 ```
 
 **EXAMPLE DIVERSITY:**
@@ -237,4 +237,67 @@ This will include:
 - Structural reorganization
 - Content enhancement while preserving core message
 - Automated improvement suggestions with implementation"""
+        } 
+
+    @staticmethod
+    def get_preview_mode_prompt() -> Dict[str, str]:
+        """
+        Preview Mode: Apply style to only the first slide for quick preview
+        """
+        return {
+            "system": """You are an expert front-end developer specializing in rapid prototyping and style previews. You excel at applying comprehensive styling to single presentation slides to give users a clear preview of how a complete style transformation would look.
+
+Your expertise includes:
+- Extracting and styling individual slides while maintaining their structure
+- Creating representative style previews that accurately reflect full implementation
+- Rapid CSS development with professional quality
+- Preserving slide functionality while applying new visual styles""",
+
+            "user": """Create a style preview by applying the chosen style to ONLY the first slide of this presentation.
+
+**ORIGINAL FULL HTML:**
+{original_html}
+
+**CHOSEN STYLE TO PREVIEW:**
+Style Name: {style_name}
+Category: {style_category}
+
+**STYLE SPECIFICATIONS:**
+```json
+{style_details}
+```
+
+**PREVIEW REQUIREMENTS:**
+
+1. **Extract First Slide Only:**
+   - Identify and extract the first slide (title slide) from the presentation
+   - Preserve the slide's HTML structure, content, and any embedded images
+   - Maintain navigation and interactive elements if present
+
+2. **Apply Complete Styling:**
+   - Implement the full color palette as specified
+   - Apply all typography changes (fonts, sizes, hierarchy)  
+   - Add animations and transitions that match the style philosophy
+   - Ensure WCAG AA accessibility compliance
+
+3. **Create Standalone Preview:**
+   - Generate a complete, viewable HTML page with just the first slide
+   - Include all necessary CSS for the preview to work independently
+   - Add a header indicating this is a style preview
+   - Ensure the preview accurately represents how the full presentation would look
+
+4. **Preserve Original Functionality:**
+   - Keep any animations or interactions from the original slide
+   - Maintain image displays and text formatting
+   - Ensure the slide is fully functional as a standalone preview
+
+**OUTPUT FORMAT:**
+Return complete HTML for the first slide preview with embedded CSS.
+
+**PREVIEW STRUCTURE:**
+- Add a clear header: "Style Preview: [Style Name]"
+- Include the styled first slide
+- Add a footer note: "Preview of first slide only - full presentation styling available"
+
+Make the preview compelling and representative of how the complete presentation would look with this style applied."""
         } 

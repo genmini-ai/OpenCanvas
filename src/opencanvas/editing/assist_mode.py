@@ -170,7 +170,7 @@ class AssistModeStyleEditor:
             # Call Claude for style implementation
             message = self.client.messages.create(
                 model=self.prompts.EDITING_MODEL,
-                max_tokens=8000,  # Larger token limit for full HTML output
+                max_tokens=20000,  # Larger token limit for full HTML output
                 temperature=0.3,  # Lower temperature for consistent implementation
                 system=prompt_template["system"],
                 messages=[{"role": "user", "content": user_prompt}]
@@ -238,6 +238,125 @@ class AssistModeStyleEditor:
         
         return modified_html.strip(), implementation_summary
     
+    def generate_style_previews(
+        self,
+        original_html: str,
+        recommendations: List[StyleRecommendation]
+    ) -> Dict[str, str]:
+        """
+        Generate preview HTML for all style recommendations (first slide only)
+        
+        Args:
+            original_html: The original HTML presentation content
+            recommendations: List of style recommendations to preview
+            
+        Returns:
+            Dictionary mapping style names to preview HTML
+        """
+        logger.info(f"Generating previews for {len(recommendations)} style recommendations")
+        
+        previews = {}
+        
+        # Get the preview prompt template
+        prompt_template = self.prompts.get_preview_mode_prompt()
+        
+        for i, style in enumerate(recommendations, 1):
+            logger.info(f"Generating preview {i}/{len(recommendations)}: {style.style_name}")
+            
+            # Format the user prompt for preview
+            user_prompt = prompt_template["user"].format(
+                original_html=original_html,
+                style_name=style.style_name,
+                style_category=style.style_category,
+                style_details=json.dumps(style.to_dict(), indent=2)
+            )
+            
+            try:
+                # Call Claude for preview generation (faster than full implementation)
+                message = self.client.messages.create(
+                    model=self.prompts.EDITING_MODEL,
+                    max_tokens=6000,  # Smaller than full implementation
+                    temperature=0.3,
+                    system=prompt_template["system"],
+                    messages=[{"role": "user", "content": user_prompt}]
+                )
+                
+                response_text = message.content[0].text
+                
+                # Extract HTML from response
+                preview_html = self._parse_preview_response(response_text, style.style_name)
+                previews[style.style_name] = preview_html
+                
+                logger.info(f"Successfully generated preview for {style.style_name}")
+                
+            except Exception as e:
+                logger.error(f"Error generating preview for {style.style_name}: {e}")
+                # Create a fallback preview
+                previews[style.style_name] = self._create_fallback_preview(style.style_name, str(e))
+        
+        return previews
+    
+    def _parse_preview_response(self, response_text: str, style_name: str) -> str:
+        """Parse the preview response to extract HTML"""
+        # Try to find HTML content
+        html_start = response_text.find('<!DOCTYPE')
+        if html_start == -1:
+            html_start = response_text.find('<html')
+        
+        if html_start != -1:
+            # Find the end of HTML
+            html_end = response_text.rfind('</html>')
+            if html_end != -1:
+                html_end += 7
+                return response_text[html_start:html_end]
+            else:
+                return response_text[html_start:]
+        
+        # If no HTML markers found, wrap the response
+        return f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>Preview: {style_name}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; padding: 20px; }}
+        .preview-header {{ background: #f0f0f0; padding: 15px; margin-bottom: 20px; border-radius: 5px; }}
+    </style>
+</head>
+<body>
+    <div class="preview-header">
+        <h2>Style Preview: {style_name}</h2>
+        <p>Preview generation in progress...</p>
+    </div>
+    <div class="preview-content">
+        {response_text}
+    </div>
+</body>
+</html>"""
+    
+    def _create_fallback_preview(self, style_name: str, error_msg: str) -> str:
+        """Create a fallback preview when generation fails"""
+        return f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>Preview Error: {style_name}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }}
+        .error-header {{ background: #ffebee; padding: 15px; margin-bottom: 20px; border-radius: 5px; border-left: 4px solid #f44336; }}
+        .error-content {{ background: white; padding: 15px; border-radius: 5px; }}
+    </style>
+</head>
+<body>
+    <div class="error-header">
+        <h2>Preview Generation Failed: {style_name}</h2>
+        <p>Unable to generate preview for this style.</p>
+    </div>
+    <div class="error-content">
+        <p><strong>Error:</strong> {error_msg}</p>
+        <p>You can still proceed with full implementation of this style.</p>
+    </div>
+</body>
+</html>"""
+
     def get_editing_stats(self) -> Dict[str, Any]:
         """Get statistics about editing operations"""
         return {
@@ -246,6 +365,7 @@ class AssistModeStyleEditor:
             "autonomy_mode_available": False,  # TODO: Implement autonomy mode
             "features": [
                 "Style analysis and recommendations",
+                "Style preview generation (first slide only)",
                 "Professional CSS implementation", 
                 "Animation integration",
                 "Typography optimization",

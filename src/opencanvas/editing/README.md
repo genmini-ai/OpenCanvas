@@ -5,18 +5,18 @@ The editing module provides intelligent presentation styling and modification ca
 - **Assist Mode**: Provides style recommendations and implements chosen styles
 - **Autonomy Mode**: Directly modifies content and images (coming soon)
 
-## 🎨 Assist Mode - Two-Step Style Editing
+## 🎨 Assist Mode - Complete Style Editing Experience
 
-### Step 1: Style Analysis & Recommendations
+### Preview Mode: Visual Style Comparison
 
-Analyzes your presentation content and provides 3 diverse style recommendations:
+**NEW**: Preview all 3 style recommendations before committing to full implementation:
 
 ```python
 from opencanvas.editing import AssistModeStyleEditor
 
 editor = AssistModeStyleEditor()
 
-# Get 3 diverse style recommendations
+# Step 1: Get style recommendations
 content_analysis, recommendations = editor.get_style_recommendations(
     html_content=presentation_html,
     topic="AI in animal care",
@@ -24,23 +24,27 @@ content_analysis, recommendations = editor.get_style_recommendations(
     audience="veterinary professionals"
 )
 
-# View recommendations
-for rec in recommendations:
-    print(f"Style: {rec.style_name}")
-    print(f"Category: {rec.style_category}")
-    print(f"Colors: {rec.color_palette}")
-    print(f"Rationale: {rec.visual_rationale}")
+# Step 2: Generate previews for all styles (first slide only)
+previews = editor.generate_style_previews(
+    original_html=presentation_html,
+    recommendations=recommendations
+)
+
+# Save previews for browser comparison
+for style_name, preview_html in previews.items():
+    with open(f"preview_{style_name.replace(' ', '_').lower()}.html", "w") as f:
+        f.write(preview_html)
 ```
 
-### Step 2: Style Implementation
+### Full Implementation
 
-Implements your chosen style with professional CSS and animations:
+After choosing your preferred style from previews:
 
 ```python
 # Choose a recommendation
-chosen_style = recommendations[0]  # e.g., "Clinical Precision"
+chosen_style = recommendations[0]  # Based on preview comparison
 
-# Implement the style
+# Implement the style on full presentation
 modified_html, summary = editor.implement_chosen_style(
     original_html=presentation_html,
     chosen_style=chosen_style
@@ -77,20 +81,34 @@ modified_html, summary = editor.implement_chosen_style(
 )
 ```
 
-### Demo Script
+### Test Scripts
 
-Run the included demo to see the system in action:
+Several scripts are available to test different aspects of the editing system:
 
+#### **Complete Workflow (Recommended)**
 ```bash
 cd src/opencanvas/editing
+python complete_workflow.py
+```
+The full experience: analyze → preview all 3 styles → choose → implement full presentation
+
+#### **Preview Only**
+```bash
+python preview_test.py
+```
+Generate and compare all 3 style previews without full implementation
+
+#### **Quick Test**
+```bash
+python quick_test.py
+```
+Automatically apply the first style recommendation for rapid testing
+
+#### **Basic Demo**
+```bash
 python demo.py
 ```
-
-This will:
-1. Analyze a sample "AI in Animal Care" presentation
-2. Generate 3 diverse style recommendations  
-3. Implement the first recommendation
-4. Save both original and styled versions to `demo_output/`
+Simple demonstration with sample content
 
 ## 🎯 Style Categories
 
@@ -219,10 +237,14 @@ Coming soon - direct content and image editing:
 
 ## 📈 Performance
 
-- **Step 1 (Analysis)**: ~5-10 seconds, 4k tokens
-- **Step 2 (Implementation)**: ~10-15 seconds, 8k tokens  
+- **Style Analysis**: ~5-10 seconds, 4k tokens
+- **Preview Generation**: ~10-20 seconds per style, 6k tokens (3 styles = 30-60s total)
+- **Full Implementation**: ~15-30 seconds, 8k tokens  
 - **Model**: Claude Sonnet 4 for optimal quality and capability
-- **Cost**: ~$0.05-0.10 per complete two-step styling
+- **Cost**: 
+  - Preview mode: ~$0.15-0.25 (generates all 3 previews)
+  - Full implementation: ~$0.05-0.10 per style
+  - Complete workflow: ~$0.20-0.35 total
 
 ## 🎯 Best Practices
 
