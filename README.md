@@ -96,6 +96,15 @@ opencanvas generate "AI in healthcare applications" --purpose "academic presenta
 opencanvas generate "https://arxiv.org/pdf/2505.20286" --purpose "research seminar"
 ```
 
+#### Generate from PDF with Image Extraction
+```bash
+# Extract and include images from PDF with AI-generated captions
+opencanvas generate "https://arxiv.org/pdf/2505.20286" --purpose "research seminar" --extract-images
+
+# Local PDF with image extraction
+opencanvas generate "paper.pdf" --purpose "conference presentation" --extract-images
+```
+
 #### Convert HTML to PDF
 ```bash
 opencanvas convert output/slides.html --output presentation.pdf --zoom 1.5
@@ -127,9 +136,13 @@ output/
     │   └── quantum_computing_presentation.pdf
     ├── evaluation/
     │   └── quantum_computing_evaluation.json
-    └── sources/
-        ├── quantum_computing_source_blog.txt    # For topic-based generation
-        └── quantum_computing_source.pdf         # For PDF-based generation
+    ├── sources/
+    │   ├── quantum_computing_source_blog.txt    # For topic-based generation
+    │   └── quantum_computing_source.pdf         # For PDF-based generation
+    └── extracted_images/                        # For PDF-based generation with image extraction
+        ├── plot_page1_img1.png
+        ├── plot_page2_chart1.png
+        └── plot_page3_fig1.png
 ```
 
 ### Benefits of Organized Structure
@@ -468,6 +481,8 @@ OpenCanvas/
 - **LaTeX Support**: Mathematical formulas and equations
 - **Mermaid Diagrams**: Process flows and system architecture
 - **Citation Handling**: Proper attribution and references
+- **Image Extraction**: Automatic extraction of plots, charts, and figures with AI-generated captions
+- **Visual Integration**: Extracted images are automatically incorporated into presentations with proper paths
 
 ### HTML to PDF Conversion
 - **Multiple Methods**: Selenium and Playwright support

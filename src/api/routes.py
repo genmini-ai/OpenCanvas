@@ -64,7 +64,8 @@ async def generate_presentation(request: GenerateRequest):
             input_source=request.input_source,
             purpose=request.purpose.value,
             theme=request.theme.value,
-            output_dir=request.output_dir
+            output_dir=request.output_dir,
+            extract_images=request.extract_images
         )
         
         if not response.success:
@@ -170,7 +171,8 @@ async def run_pipeline(request: PipelineRequest):
             evaluate=request.evaluate,
             output_dir=request.output_dir,
             zoom_factor=request.zoom_factor,
-            method=request.method.value
+            method=request.method.value,
+            extract_images=request.extract_images
         )
         
         if not response.success:

@@ -9,10 +9,13 @@ from datetime import datetime
 from urllib.parse import urlparse
 import mimetypes
 import logging
+import tempfile
 
 from opencanvas.generators.base import BaseGenerator
 from opencanvas.utils.validation import InputValidator
 from opencanvas.config import Config
+from opencanvas.utils.plot_caption_extractor import PDFPlotCaptionExtractor
+from opencanvas.utils.file_utils import create_organized_output_structure
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +28,7 @@ class PDFGenerator(BaseGenerator):
         super().__init__(api_key)
         self.client = Anthropic(api_key=api_key)
         self.presentation_focus = None
+        self.plot_extractor = None
 
     def validate_pdf_url(self, url):
         """Validate if the URL points to a PDF file"""
@@ -57,10 +61,103 @@ class PDFGenerator(BaseGenerator):
         except Exception as e:
             return None, f"Error downloading and encoding PDF: {str(e)}"
 
-    def generate_slides_html(self, pdf_data, presentation_focus, theme="professional"):
+    def _extract_images_and_captions(self, pdf_data, output_dir):
+        """
+        Extract images and captions from PDF using PDFPlotCaptionExtractor
+        
+        Args:
+            pdf_data: Base64 encoded PDF data
+            output_dir: Directory to save extracted images
+            
+        Returns:
+            Tuple of (image_captions_dict, extracted_images_dir, plots_list)
+        """
+        try:
+            # Initialize plot extractor if not already done
+            if self.plot_extractor is None:
+                self.plot_extractor = PDFPlotCaptionExtractor(
+                    api_key=self.api_key, 
+                    provider="claude"
+                )
+            
+            # Create temporary PDF file from base64 data
+            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
+                pdf_bytes = base64.b64decode(pdf_data)
+                temp_pdf.write(pdf_bytes)
+                temp_pdf_path = temp_pdf.name
+            
+            try:
+                # Extract plots and captions
+                plots = self.plot_extractor.extract_captions_from_pdf(temp_pdf_path)
+                
+                if not plots:
+                    logger.info("No images/plots found in PDF")
+                    return {}, None, []
+                
+                # Create extracted_images directory
+                extracted_images_dir = output_dir / "extracted_images"
+                extracted_images_dir.mkdir(exist_ok=True)
+                
+                # Save images and create caption mapping
+                image_captions = {}
+                for plot in plots:
+                    if plot.image_data:
+                        # Save image with plot_id as filename
+                        image_filename = f"{plot.plot_id}.png"
+                        image_path = extracted_images_dir / image_filename
+                        
+                        with open(image_path, "wb") as f:
+                            f.write(plot.image_data)
+                        
+                        # Create relative path for HTML (go up one level from slides/ to parent directory)
+                        relative_path = f"../extracted_images/{image_filename}"
+                        image_captions[plot.plot_id] = {
+                            'caption': plot.caption or "No caption found",
+                            'path': relative_path,
+                            'error': plot.error
+                        }
+                        
+                        logger.info(f"Extracted image: {plot.plot_id} -> {image_path}")
+                
+                logger.info(f"Extracted {len(image_captions)} images with captions")
+                return image_captions, extracted_images_dir, plots
+                
+            finally:
+                # Clean up temporary file
+                if os.path.exists(temp_pdf_path):
+                    os.unlink(temp_pdf_path)
+                    
+        except Exception as e:
+            logger.error(f"Error extracting images and captions: {e}")
+            return {}, None, []
+
+    def generate_slides_html(self, pdf_data, presentation_focus, theme="professional", extract_images=False, output_dir=None):
         """Generate HTML slides directly from PDF content in a single step."""
         
         self.presentation_focus = presentation_focus
+        
+        # Extract images and captions if enabled
+        image_captions = {}
+        extracted_images_dir = None
+        if extract_images and output_dir:
+            logger.info("🔍 Extracting images and captions from PDF...")
+            image_captions, extracted_images_dir, plots = self._extract_images_and_captions(pdf_data, output_dir)
+            
+            if image_captions:
+                logger.info(f"📸 Found {len(image_captions)} images with captions")
+            else:
+                logger.info("📸 No images found in PDF")
+        
+        # Build image context for prompt
+        image_context = ""
+        if image_captions:
+            image_context = "\n\n<extracted_images>\n"
+            image_context += "The following images have been extracted from the PDF with their captions:\n"
+            for image_id, info in image_captions.items():
+                image_context += f"- {image_id}: {info['caption']} (file: {info['path']})\n"
+            image_context += "\nPlease incorporate these images into the presentation using their file paths.\n"
+            image_context += "Use <img src='../extracted_images/image_id.png' alt='caption'> format.\n"
+            image_context += "</extracted_images>\n"
         
         # Updated academic generation prompt
         academic_gen_prompt = f'''<presentation_task>
@@ -191,6 +288,7 @@ IMPORTANT: The HTML must be a complete, self-contained file that opens directly 
 
 IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and end with </html>. No explanations, no markdown formatting around the code.
 </output_requirements>
+{image_context}
 '''
         try:
             logger.info("🔍 Analyzing PDF and generating slides in one step...")
@@ -238,7 +336,7 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
         except Exception as e:
             return None, f"Error generating slides directly: {str(e)}"
     
-    def generate_presentation(self, pdf_source, presentation_focus="A comprehensive overview", theme="professional", slide_count=12, output_dir=str(Config.OUTPUT_DIR)):
+    def generate_presentation(self, pdf_source, presentation_focus="A comprehensive overview", theme="professional", slide_count=12, output_dir=str(Config.OUTPUT_DIR), extract_images=False):
         """
         One-step function to generate a presentation from a PDF source with organized file structure.
         
@@ -248,6 +346,7 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
             theme: Visual theme for the presentation ("professional", "academic", "modern", etc.)
             slide_count: Target number of slides
             output_dir: Output directory for organized files
+            extract_images: Whether to extract and include images from the PDF
             
         Returns:
             Dict with result information or None if process failed
@@ -258,6 +357,7 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
         logger.info(f"📄 Source: {pdf_source}")
         logger.info(f"🎯 Focus: {presentation_focus}")
         logger.info(f"🎨 Theme: {theme}")
+        logger.info(f"📸 Extract images: {extract_images}")
         
         # Generate topic slug and timestamp for organized naming
         topic_slug = generate_topic_slug(presentation_focus)
@@ -297,11 +397,16 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
         
         logger.info("2. PDF encoded successfully.")
         
-        # Generate slides directly in one step
+        # Create organized output structure
+        paths = create_organized_output_structure(output_path, topic_slug, timestamp)
+        
+        # Generate slides directly in one step with image extraction if enabled
         html_content, error = self.generate_slides_html(
             pdf_data, 
             presentation_focus,
-            theme
+            theme,
+            extract_images=extract_images,
+            output_dir=paths['base']
         )
         
         if error:
@@ -340,5 +445,6 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
             'slide_count': slide_count,
             'organized_files': organized_files,
             'topic_slug': topic_slug,
-            'timestamp': timestamp
+            'timestamp': timestamp,
+            'extract_images': extract_images
         }
