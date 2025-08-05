@@ -186,13 +186,14 @@ class PDFPlotCaptionExtractor:
     AI-powered caption extractor for plots, charts, and figures from PDF files
     """
 
-    def __init__(self, api_key: Optional[str] = None, provider: str = "gpt"):
+    def __init__(self, api_key: Optional[str] = None, provider: str = "gpt", resolution: int = 300):
         """
         Initialize the caption extractor
 
         Args:
             api_key: API key (will use environment variable if not provided)
             provider: AI provider - "gpt" or "claude" (default: "gpt")
+            resolution: Resolution in DPI for rendering PDF pages (default: 300)
         """
         if not PDFPLUMBER_AVAILABLE:
             raise ImportError(
@@ -200,6 +201,8 @@ class PDFPlotCaptionExtractor:
             )
 
         self.provider = provider
+        self.resolution = resolution
+        self.scale_factor = resolution / 72  # Convert PDF points to pixels
 
         if provider == "gpt":
             if not OPENAI_AVAILABLE:
@@ -271,7 +274,7 @@ Look for:
                     logger.info(f"Debugging page {page_num}")
 
                     # Get page image
-                    page_image = page.to_image(resolution=300)
+                    page_image = page.to_image(resolution=self.resolution)
                     page_width = page.width
                     page_height = page.height
                     img_width, img_height = page_image.original.size
@@ -284,19 +287,17 @@ Look for:
                     for img_idx, img_info in enumerate(page.images):
                         x0, y0, x1, y1 = (
                             img_info["x0"],
-                            img_info["y0"],
+                            img_info["top"],
                             img_info["x1"],
-                            img_info["y1"],
+                            img_info["bottom"],
                         )
 
-                        # Convert coordinates
-                        scale_x = img_width / page_width
-                        scale_y = img_height / page_height
-
-                        img_x0 = int(x0 * scale_x)
-                        img_y0 = int((page_height - y1) * scale_y)
-                        img_x1 = int(x1 * scale_x)
-                        img_y1 = int((page_height - y0) * scale_y)
+                        # Convert coordinates using scale factor
+                        scale_factor = self.resolution / 72  # Same as self.scale_factor
+                        img_x0 = int(x0 * scale_factor)
+                        img_y0 = int(y0 * scale_factor)
+                        img_x1 = int(x1 * scale_factor)
+                        img_y1 = int(y1 * scale_factor)
 
                         # Draw bounding box
                         draw.rectangle(
@@ -408,60 +409,26 @@ Look for:
             Image data as bytes, or None if extraction failed
         """
         try:
-            # Method 1: Use page.to_image() with proper coordinate conversion
-            page_image = page.to_image(resolution=300)
-
-            # Get image coordinates from pdfplumber
-            x0, y0, x1, y1 = (
-                img_info["x0"],
-                img_info["y0"],
-                img_info["x1"],
-                img_info["y1"],
-            )
-
-            # pdfplumber coordinates are in points, convert to image pixels
-            # The page image has a different coordinate system
-            page_width = page.width
-            page_height = page.height
-
-            # Get the actual image dimensions
-            img_width, img_height = page_image.original.size
-
-            # Convert PDF coordinates to image coordinates
-            # Note: PDF coordinates start from bottom-left, image coordinates from top-left
-            scale_x = img_width / page_width
-            scale_y = img_height / page_height
-
-            # Convert coordinates
-            img_x0 = int(x0 * scale_x)
-            img_y0 = int((page_height - y1) * scale_y)  # Flip Y coordinate
-            img_x1 = int(x1 * scale_x)
-            img_y1 = int((page_height - y0) * scale_y)  # Flip Y coordinate
-
-            # Ensure coordinates are within bounds
-            img_x0 = max(0, min(img_x0, img_width))
-            img_y0 = max(0, min(img_y0, img_height))
-            img_x1 = max(img_x0, min(img_x1, img_width))
-            img_y1 = max(img_y0, min(img_y1, img_height))
-
-            # Only crop if we have a valid region
-            if img_x1 > img_x0 and img_y1 > img_y0:
-                cropped_image = page_image.original.crop(
-                    (img_x0, img_y0, img_x1, img_y1)
-                )
-
-                # Convert to PNG
-                img_buffer = io.BytesIO()
-                cropped_image.save(img_buffer, format="PNG")
-                return img_buffer.getvalue()
-            else:
-                logger.warning(
-                    f"Invalid crop region: ({img_x0}, {img_y0}, {img_x1}, {img_y1})"
-                )
-                return None
+            # Render the page as a PIL image
+            page_image = page.to_image(resolution=self.resolution)
+            pil_page = page_image.original
+            
+            # Get coordinates in PDF points and scale to pixels
+            x0 = int(img_info['x0'] * self.scale_factor)
+            top = int(img_info['top'] * self.scale_factor)
+            x1 = int(img_info['x1'] * self.scale_factor)
+            bottom = int(img_info['bottom'] * self.scale_factor)
+            
+            # Crop the image from the page
+            cropped = pil_page.crop((x0, top, x1, bottom))
+            
+            # Convert to PNG bytes
+            img_buffer = io.BytesIO()
+            cropped.save(img_buffer, format="PNG")
+            return img_buffer.getvalue()
 
         except Exception as e:
-            logger.warning(f"Failed to extract image using page.to_image(): {e}")
+            logger.warning(f"Failed to extract image: {e}")
             return None
 
     def _extract_pdf_text(self, pdf_path: str, method: str = "auto") -> Dict[int, str]:
