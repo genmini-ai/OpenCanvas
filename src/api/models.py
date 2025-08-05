@@ -45,6 +45,7 @@ class GenerateRequest(BaseModel):
     purpose: PurposeEnum = Field(default=PurposeEnum.GENERAL_PRESENTATION, description="Purpose of presentation")
     theme: ThemeEnum = Field(default=ThemeEnum.PROFESSIONAL_BLUE, description="Visual theme")
     output_dir: Optional[str] = Field(default=str(Config.OUTPUT_DIR), description="Output directory")
+    extract_images: bool = Field(default=False, description="Extract and include images from PDF (PDF input only)")
 
 
 class GenerateResponse(BaseModel):
@@ -109,6 +110,7 @@ class PipelineRequest(BaseModel):
     output_dir: str = Field(default=str(Config.OUTPUT_DIR), description="Output directory")
     zoom_factor: float = Field(default=1.2, ge=0.1, le=3.0, description="PDF zoom factor")
     method: ConversionMethodEnum = Field(default=ConversionMethodEnum.SELENIUM, description="Conversion method")
+    extract_images: bool = Field(default=False, description="Extract and include images from PDF (PDF input only)")
 
 
 class PipelineResponse(BaseModel):

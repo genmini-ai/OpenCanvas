@@ -16,6 +16,7 @@ import io
 import os
 from PIL import Image, ImageDraw
 
+import json
 try:
     from anthropic import Anthropic
 
@@ -628,8 +629,6 @@ Please analyze the plot in the context of the page text to find the exact captio
                 response_text = message.content[0].text
 
             # Parse JSON response
-            import json
-
             try:
                 # Find JSON in response
                 start_idx = response_text.find("{")
@@ -711,7 +710,6 @@ Please analyze the plot in the context of the page text to find the exact captio
         Returns:
             JSON string with plot_id: caption pairs
         """
-        import json
 
         result = {}
         for plot in plots:

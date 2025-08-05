@@ -44,7 +44,7 @@ class GenerationRouter:
         logger.info(f"Detected topic text: {input_source[:50]}...")
         return 'topic'
     
-    def generate(self, input_source: str, purpose: str, theme: str, output_dir: str = 'output'):
+    def generate(self, input_source: str, purpose: str, theme: str, output_dir: str = 'output', extract_images: bool = False):
         """Route to appropriate generator based on input type"""
         logger.info(f"Starting generation with router")
         logger.info(f"Input: {input_source}")
@@ -70,10 +70,14 @@ class GenerationRouter:
                     pdf_source=input_source,
                     presentation_focus=purpose,
                     theme=theme,
-                    output_dir=output_dir
+                    output_dir=output_dir,
+                    extract_images=extract_images
                 )
             else:
                 logger.info("Routing to topic generator")
+                # extract_images is only applicable for PDF generation
+                if extract_images:
+                    logger.warning("Image extraction is only available for PDF inputs")
                 return self.topic_generator.generate_from_topic(
                     user_text=input_source,
                     purpose=purpose,
