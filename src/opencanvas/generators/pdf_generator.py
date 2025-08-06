@@ -114,10 +114,13 @@ class PDFGenerator(BaseGenerator):
                         image_captions[plot.plot_id] = {
                             'caption': plot.caption or "No caption found",
                             'path': relative_path,
+                            'dimensions': plot.dimensions or "unknown",
+                            'width': plot.width,
+                            'height': plot.height,
                             'error': plot.error
                         }
                         
-                        logger.info(f"Extracted image: {plot.plot_id} -> {image_path}")
+                        logger.info(f"Extracted image: {plot.plot_id} -> {image_path} ({plot.dimensions or 'unknown'})")
                 
                 logger.info(f"Extracted {len(image_captions)} images with captions")
                 return image_captions, extracted_images_dir, plots
@@ -152,11 +155,13 @@ class PDFGenerator(BaseGenerator):
         image_context = ""
         if image_captions:
             image_context = "\n\n<extracted_images>\n"
-            image_context += "The following images have been extracted from the PDF with their captions:\n"
+            image_context += "The following images have been extracted from the PDF with their captions and dimensions:\n"
             for image_id, info in image_captions.items():
-                image_context += f"- {image_id}: {info['caption']} (file: {info['path']})\n"
+                dimensions = info.get('dimensions', 'unknown')
+                image_context += f"- {image_id}: {info['caption']} (file: {info['path']}, size: {dimensions})\n"
             image_context += "\nPlease incorporate these images into the presentation using their file paths.\n"
             image_context += "Use <img src='../extracted_images/image_id.png' alt='caption'> format.\n"
+            image_context += "Consider the image dimensions when placing them in the layout to ensure proper fit.\n"
             image_context += "</extracted_images>\n"
         
         # Updated academic generation prompt
