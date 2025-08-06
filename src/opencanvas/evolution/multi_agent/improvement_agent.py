@@ -94,13 +94,16 @@ You excel at bridging the gap between quality analysis and practical system enha
         current_baseline = input_data.get("current_baseline", {})
         iteration_number = input_data.get("iteration_number", 1)
         
+        reflection_json = json.dumps(reflection_results, indent=2)
+        baseline_json = json.dumps(current_baseline, indent=2)
+        
         prompt = f"""Design specific, implementable improvements based on the following reflection analysis for evolution iteration {iteration_number}.
 
 REFLECTION ANALYSIS:
-{json.dumps(reflection_results, indent=2)}
+{reflection_json}
 
 CURRENT BASELINE SCORES:
-{json.dumps(current_baseline, indent=2)}
+{baseline_json}
 
 ## Improvement Design Requirements:
 
@@ -137,7 +140,7 @@ Design validation and quality assurance improvements:
 ```json
 {
   "improvement_iteration": {
-    "iteration_number": {iteration_number},
+    "iteration_number": ITERATION_NUMBER,
     "target_baseline": {{
       "visual_target": X.X,
       "content_target": X.X,

@@ -89,13 +89,16 @@ You excel at transforming raw evaluation data into actionable insights that driv
         if not evaluation_data:
             return {"error": "No evaluation data provided"}
         
+        evaluation_json = json.dumps(evaluation_data, indent=2)
+        topics_str = ', '.join(topics)
+        
         prompt = f"""Analyze the following {len(evaluation_data)} presentation evaluation results to identify systematic quality patterns and improvement opportunities.
 
 EVALUATION DATA:
-{json.dumps(evaluation_data, indent=2)}
+{evaluation_json}
 
 TOPICS ANALYZED:
-{', '.join(topics)}
+{topics_str}
 
 ## Analysis Required:
 
@@ -134,47 +137,12 @@ Rank improvement opportunities by:
 
 ## Output Format:
 
-```json
-{
-  "analysis_summary": {
-    "total_presentations": X,
-    "topics_analyzed": ["topic1", "topic2"],
-    "baseline_performance": {
-      "visual_average": X.X,
-      "content_average": X.X,
-      "accuracy_average": X.X,
-      "overall_average": X.X
-    }
-  },
-  "weakness_patterns": [
-    {
-      "category": "visual|content_free|content_required",
-      "dimension": "specific_dimension_name",
-      "frequency": X,
-      "avg_score": X.X,
-      "severity": "high|medium|low",
-      "description": "Clear description of the pattern",
-      "examples": ["Example 1", "Example 2"],
-      "root_cause_hypothesis": "Why this pattern occurs"
-    }
-  ],
-  "strengths": [
-    "Dimension or aspect that consistently performs well"
-  ],
-  "improvement_opportunities": [
-    {
-      "priority": "high|medium|low",
-      "description": "Specific improvement opportunity",
-      "expected_impact": "Expected score improvement",
-      "affected_dimensions": ["dim1", "dim2"],
-      "implementation_approach": "How to implement this improvement"
-    }
-  ],
-  "key_insights": [
-    "Major insight about presentation quality patterns"
-  ]
-}
-```
+Return a JSON object with the following structure:
+- analysis_summary: total_presentations, topics_analyzed, baseline_performance averages
+- weakness_patterns: array of patterns with category, dimension, frequency, avg_score, severity, description, examples, root_cause_hypothesis
+- strengths: array of consistently well-performing dimensions
+- improvement_opportunities: array with priority, description, expected_impact, affected_dimensions, implementation_approach
+- key_insights: array of major insights about presentation quality patterns
 
 Provide thorough analysis with specific examples and actionable recommendations."""
         
@@ -197,10 +165,12 @@ Provide thorough analysis with specific examples and actionable recommendations.
         if len(iterations) < 2:
             return {"error": "Need at least 2 iterations for comparison"}
         
+        iterations_json = json.dumps(iterations, indent=2)
+        
         prompt = f"""Compare presentation quality across {len(iterations)} evolution iterations to assess improvement patterns and identify trends.
 
 ITERATION DATA:
-{json.dumps(iterations, indent=2)}
+{iterations_json}
 
 ## Comparison Analysis Required:
 
@@ -231,36 +201,11 @@ Identify broader trends:
 
 ## Output Format:
 
-```json
-{
-  "comparison_summary": {
-    "iterations_compared": X,
-    "improvement_trend": "improving|plateauing|declining",
-    "best_iteration": X,
-    "total_improvement": X.X,
-    "avg_improvement_per_iteration": X.X
-  },
-  "dimension_trends": {
-    "visual": {
-      "trend": "improving|stable|declining",
-      "total_change": X.X,
-      "best_iteration": X,
-      "plateau_detected": true/false
-    }
-  },
-  "effective_improvements": [
-    {
-      "improvement": "Description of improvement",
-      "iteration_applied": X,
-      "score_impact": X.X,
-      "dimensions_affected": ["dim1", "dim2"]
-    }
-  ],
-  "recommendations": [
-    "Recommendation based on iteration comparison"
-  ]
-}
-```
+Return a JSON object with:
+- comparison_summary: iterations_compared, improvement_trend, best_iteration, total_improvement, avg_improvement_per_iteration
+- dimension_trends: For each dimension (visual, content, etc.) include trend, total_change, best_iteration, plateau_detected
+- effective_improvements: Array with improvement description, iteration_applied, score_impact, dimensions_affected
+- recommendations: Array of recommendations based on iteration comparison
 
 Focus on identifying which improvements are most effective and whether continued evolution is worthwhile."""
         
@@ -281,13 +226,16 @@ Focus on identifying which improvements are most effective and whether continued
         weakness_patterns = input_data.get("weakness_patterns", [])
         generation_context = input_data.get("generation_context", {})
         
+        weakness_json = json.dumps(weakness_patterns, indent=2)
+        context_json = json.dumps(generation_context, indent=2)
+        
         prompt = f"""Perform deep root cause analysis for the identified presentation quality weakness patterns.
 
 WEAKNESS PATTERNS:
-{json.dumps(weakness_patterns, indent=2)}
+{weakness_json}
 
 GENERATION CONTEXT:
-{json.dumps(generation_context, indent=2)}
+{context_json}
 
 ## Root Cause Analysis Required:
 
@@ -319,35 +267,12 @@ Rate each potential intervention:
 
 ## Output Format:
 
-```json
-{
-  "root_cause_analysis": [
-    {
-      "weakness_pattern": "Pattern description",
-      "primary_root_cause": "Main underlying cause",
-      "contributing_factors": ["Factor 1", "Factor 2"],
-      "issue_type": "systematic|topic_specific|random",
-      "intervention_points": [
-        {
-          "stage": "pre_generation|during_generation|post_generation|evaluation",
-          "intervention": "Specific intervention description",
-          "difficulty": "easy|medium|hard",
-          "expected_impact": "high|medium|low"
-        }
-      ]
-    }
-  ],
-  "systemic_issues": [
-    "Issues that affect the overall generation system"
-  ],
-  "quick_wins": [
-    "Easy improvements with high impact"
-  ],
-  "strategic_improvements": [
-    "More complex improvements for long-term gains"
-  ]
-}
-```
+Return a JSON object with:
+- root_cause_analysis: Array of objects with weakness_pattern, primary_root_cause, contributing_factors, issue_type, intervention_points
+- intervention_points: Array with stage, intervention, difficulty, expected_impact
+- systemic_issues: Array of issues affecting overall generation system
+- quick_wins: Array of easy improvements with high impact
+- strategic_improvements: Array of complex improvements for long-term gains
 
 Focus on actionable insights that can drive specific system improvements."""
         

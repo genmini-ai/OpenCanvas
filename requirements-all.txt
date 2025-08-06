@@ -37,3 +37,17 @@ seaborn>=0.11.0
 
 # Note: This file combines requirements.txt and requirements-api.txt
 # For minimal installations, use the individual files instead 
+
+## 🎯 **Visual Comparison Dataset Structure**
+
+```
+test_output/visual_comparison_dataset/
+├── slides/                    # PDF presentations from different generators
+├── human_scores/             # Human evaluation template (empty, for filling)
+├── ai_scores/               # AI evaluation results (completed)
+└── comparison_analysis/     # Analysis comparing human vs AI scores
+```
+
+## 📊 **What You Have**
+
+1. **AI 
