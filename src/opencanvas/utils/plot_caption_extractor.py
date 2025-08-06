@@ -171,6 +171,9 @@ class PlotInfo:
     key_insights: List[str] = None
     suggested_title: Optional[str] = None
     error: Optional[str] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+    dimensions: Optional[str] = None
 
 
 @dataclass
@@ -372,6 +375,15 @@ Look for:
                             image_data = self._extract_image_from_page(page, img)
 
                             if image_data:
+                                # Extract image dimensions
+                                try:
+                                    img_pil = Image.open(io.BytesIO(image_data))
+                                    width, height = img_pil.size
+                                    dimensions = f"{width}x{height}px"
+                                except Exception as e:
+                                    logger.warning(f"Failed to get dimensions for image {img_idx} on page {page_num}: {e}")
+                                    width, height, dimensions = None, None, "unknown"
+                                
                                 plot_id = f"plot_page{page_num}_img{img_idx}"
                                 plot_info = PlotInfo(
                                     plot_id=plot_id,
@@ -379,10 +391,13 @@ Look for:
                                     image_data=image_data,
                                     coordinates=(x0, y0, x1, y1),
                                     image_name=img.get("name", f"image_{img_idx}"),
+                                    width=width,
+                                    height=height,
+                                    dimensions=dimensions,
                                 )
                                 plots.append(plot_info)
                                 logger.info(
-                                    f"Extracted plot from page {page_num}, image {img_idx}"
+                                    f"Extracted plot from page {page_num}, image {img_idx} ({dimensions})"
                                 )
 
                         except Exception as e:
