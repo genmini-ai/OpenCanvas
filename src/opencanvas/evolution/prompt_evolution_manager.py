@@ -3,6 +3,7 @@ Prompt Evolution Manager - Manages evolution of generation prompts across iterat
 """
 
 import json
+from opencanvas.evolution.prompts.evolution_prompts import EvolutionPrompts
 import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional
@@ -293,11 +294,12 @@ Generate complete HTML presentation based on the PDF content.""",
         """Evolve the topic generation prompt"""
         
         # Base prompt structure
-        base_prompt = """You are an expert presentation generator with enhanced quality standards. Create a comprehensive HTML presentation based on the given topic.
-
-TOPIC: {topic}
-PURPOSE: {purpose}
-THEME: {theme}"""
+        base_prompt = EvolutionPrompts.get_prompt(
+            'TOPIC_GENERATION_BASE',
+            topic='{topic}',
+            purpose='{purpose}',
+            theme='{theme}'
+        )
         
         # Add evolution improvements
         evolution_sections = []
@@ -357,11 +359,12 @@ Generate complete HTML presentation that meets these evolved standards."""
                                     baseline_scores: Dict[str, float]) -> str:
         """Evolve the PDF generation prompt"""
         
-        base_prompt = """You are an expert presentation generator with enhanced fidelity standards. Create a comprehensive HTML presentation based on the provided PDF content.
-
-PDF CONTENT: {pdf_content}
-PURPOSE: {purpose}
-THEME: {theme}"""
+        base_prompt = EvolutionPrompts.get_prompt(
+            'TOPIC_GENERATION_BASE',
+            topic='{topic}',
+            purpose='{purpose}',
+            theme='{theme}'
+        )
         
         # Add source fidelity enhancements
         evolution_sections = []

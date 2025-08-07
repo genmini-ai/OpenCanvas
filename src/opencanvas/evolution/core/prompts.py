@@ -3,6 +3,7 @@ Prompt Evolution Management - Simplified prompt versioning and management
 """
 
 import json
+from opencanvas.evolution.prompts.evolution_prompts import EvolutionPrompts
 import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional
@@ -19,7 +20,7 @@ class PromptManager:
     def __init__(self, evolution_dir: str = "evolution_prompts"):
         """Initialize prompt manager"""
         self.evolution_dir = Path(evolution_dir)
-        self.evolution_dir.mkdir(exist_ok=True)
+        # Don't create directory until we actually need to save prompts
         self.current_iteration = self._get_latest_iteration()
         
         # Standard prompt categories
@@ -34,6 +35,9 @@ class PromptManager:
     def create_iteration(self, iteration_number: int, improvements: List[Dict[str, Any]], 
                         baseline_scores: Dict[str, float]) -> str:
         """Create new iteration with evolved prompts"""
+        
+        # Create evolution directory only when we actually save prompts
+        self.evolution_dir.mkdir(parents=True, exist_ok=True)
         
         iteration_dir = self.evolution_dir / f"iteration_{iteration_number:03d}"
         iteration_dir.mkdir(exist_ok=True)
@@ -81,6 +85,9 @@ class PromptManager:
     def _get_latest_iteration(self) -> int:
         """Get the latest iteration number"""
         
+        if not self.evolution_dir.exists():
+            return 0
+            
         iteration_dirs = [d for d in self.evolution_dir.iterdir() 
                          if d.is_dir() and d.name.startswith("iteration_")]
         
@@ -242,11 +249,12 @@ Generate complete HTML presentation based on the PDF content.""",
                             baseline_scores: Dict[str, float]) -> str:
         """Evolve topic generation prompt"""
         
-        base_prompt = """You are an expert presentation generator with enhanced quality standards. Create a comprehensive HTML presentation based on the given topic.
-
-TOPIC: {topic}
-PURPOSE: {purpose}
-THEME: {theme}"""
+        base_prompt = EvolutionPrompts.get_prompt(
+            'TOPIC_GENERATION_BASE',
+            topic='{topic}',
+            purpose='{purpose}',
+            theme='{theme}'
+        )
         
         # Add enhancement sections based on improvements
         enhancements = []
@@ -298,11 +306,12 @@ Generate complete HTML presentation that meets these evolved standards."""
                           baseline_scores: Dict[str, float]) -> str:
         """Evolve PDF generation prompt"""
         
-        base_prompt = """You are an expert presentation generator with enhanced fidelity standards. Create a comprehensive HTML presentation based on the provided PDF content.
-
-PDF CONTENT: {pdf_content}
-PURPOSE: {purpose}
-THEME: {theme}"""
+        base_prompt = EvolutionPrompts.get_prompt(
+            'TOPIC_GENERATION_BASE',
+            topic='{topic}',
+            purpose='{purpose}',
+            theme='{theme}'
+        )
         
         # Add PDF-specific enhancements
         enhancements = []
@@ -418,15 +427,91 @@ Ensure all presentations meet these enhanced quality standards before finalizati
             json.dump(metadata, f, indent=2)
     
     def _get_baseline_prompts(self) -> Dict[str, str]:
-        """Get baseline prompts as fallback"""
+        """Get baseline prompts from production generators"""
         
-        # Simple baseline prompts
+        # Use production-quality prompts from src/opencanvas/generators
+        # This is the actual prompt used in topic_generator.py (lines 331-405)
+        topic_generation_prompt = """<presentation_task>
+Create a stunning, visually captivating HTML presentation that makes viewers stop and say "wow" based on this content:
+
+{blog_content}
+
+Purpose of presentation: {purpose}
+Visual theme: {theme}
+</presentation_task>
+
+<design_philosophy>
+CREATE EMOTIONAL IMPACT:
+- Prioritize the "wow factor" over conventional design
+- Make every slide feel alive and dynamic with subtle animations
+- Choose bold, vibrant colors over muted, safe options
+- Use cutting-edge web design trends (glassmorphism, gradient overlays, micro-animations)
+- Push the boundaries of what's possible with modern CSS and JavaScript
+- Create a premium, cutting-edge experience that feels expensive
+</design_philosophy>
+
+<visual_requirements>
+1. Create a self-contained HTML file with embedded CSS and JavaScript
+2. Use Reveal.js style (without requiring the actual library) with modern slide transitions and physics-based animations
+3. Implement a sophisticated color scheme with gradients and depth for the "{theme}" theme
+4. Include micro-interactions: hover effects, animated reveals, parallax scrolling
+5. Use expressive, modern typography with varied font weights and sizes
+6. Add glassmorphism effects, subtle shadows, and layered visual depth
+7. Include elegant transitions between slides (avoid basic fades)
+8. Create approximately 10-15 slides with dynamic, non-static layouts
+9. Use animated bullet points that reveal progressively - break content into concise bullet points, not paragraphs
+10. Include a stunning title slide with animated elements and section dividers with visual flair
+11. Optimize for 1280px × 720px with responsive scaling
+12. Add subtle background animations or patterns that enhance without distracting
+13. HEIGHT-AWARE LAYOUT: Ensure all content fit within the 720px height by adjusting complexity
+14. Do not include large blocks of text - keep slides visually appealing and professional
+15. BALANCED VISUAL LAYOUT: Prioritize visual balance over text density - use images from https://images.unsplash.com/ (only when certain about photo ID), tables, charts, and visual elements to break up text and create engaging slide compositions
+</visual_requirements>
+
+<content_presentation>
+- Transform text into visually engaging elements with icons, graphics, and spacing
+- Use concise bullet points with animated reveals (maximum ~100 words per slide)
+- Create visual hierarchy through size, color, and positioning
+- Include progress indicators and slide counters with elegant styling
+- Break up content with visual elements: images, tables, charts, and graphics instead of text blocks
+- Leverage visual storytelling with appropriate imagery and data visualizations
+</content_presentation>
+
+<content_enhancements>
+- For data analysis: Create beautiful, animated charts with smooth transitions using Chart.js or D3.js
+- For travel content: Add immersive imagery, interactive maps, destination animations, and travel icons
+- For workshops: Include engaging process diagrams, interactive elements, and activity visualizations
+- For general content: Use relevant, high-quality images from Unsplash when photo IDs are known with certainty
+</content_enhancements>
+
+<technical_excellence>
+- Use advanced CSS features: backdrop-filter, clip-path, CSS Grid, Flexbox, custom properties
+- Implement smooth JavaScript animations with requestAnimationFrame
+- Add keyboard navigation with visual feedback
+- Include preloaders and smooth state transitions
+- Ensure the presentation feels responsive and premium
+</technical_excellence>
+
+<motion_design>
+- Everything should have subtle movement and life
+- Use staggered animations for lists and elements
+- Implement smooth cursor tracking effects
+- Add entrance animations for each slide element
+- Create seamless transitions that maintain visual flow
+</motion_design>
+
+<output_requirements>
+IMPORTANT: The HTML must be a complete, self-contained file that opens directly in a browser and immediately impresses with its visual sophistication.
+
+IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and end with </html>. No explanations, no markdown formatting around the code.
+</output_requirements>"""
+        
         return {
-            "topic_generation": "Create a presentation about {topic} for {purpose} with {theme} theme.",
+            "topic_generation": topic_generation_prompt,
             "pdf_generation": "Create a presentation from the PDF content: {pdf_content}",
-            "visual_enhancement": "Enhance visual quality",
-            "content_validation": "Validate content quality",
-            "quality_control": "Apply quality control checks"
+            "visual_enhancement": "Enhance visual quality with modern design trends",
+            "content_validation": "Validate content quality and coherence",
+            "quality_control": "Apply quality control checks for production readiness"
         }
     
     def get_evolution_history(self) -> Dict[str, Any]:

@@ -9,6 +9,7 @@ from pathlib import Path
 
 from opencanvas.generators.base import BaseGenerator
 from opencanvas.evolution.prompt_evolution_manager import PromptEvolutionManager
+from opencanvas.evolution.prompts.evolution_prompts import EvolutionPrompts
 from opencanvas.config import Config
 
 logger = logging.getLogger(__name__)
@@ -329,7 +330,7 @@ svg text {
             client = Anthropic(api_key=self.api_key)
             
             message = client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model="claude-sonnet-4-20250514",
                 max_tokens=8000,
                 temperature=0.1,
                 messages=[{"role": "user", "content": prompt}]
@@ -350,11 +351,12 @@ svg text {
         logger.info("🔄 Falling back to basic generation")
         
         # Simple fallback prompt
-        fallback_prompt = f"""Create a presentation about: {content}
-Purpose: {purpose}
-Theme: {theme}
-
-Generate a simple HTML presentation with multiple slides."""
+        fallback_prompt = EvolutionPrompts.get_prompt(
+            'FALLBACK_GENERATION',
+            content=content,
+            purpose=purpose,
+            theme=theme
+        )
         
         return self._call_generation_api(fallback_prompt)
     

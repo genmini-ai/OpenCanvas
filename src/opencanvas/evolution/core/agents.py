@@ -10,6 +10,7 @@ from anthropic import Anthropic
 
 from opencanvas.config import Config
 from opencanvas.evolution.config.agent_prompts import AGENT_PROMPTS, AGENT_ACTIONS, AGENT_CONFIG
+from opencanvas.evolution.prompts.evolution_prompts import EvolutionPrompts
 
 logger = logging.getLogger(__name__)
 
@@ -132,41 +133,37 @@ class EvolutionAgent:
         evaluations_json = json.dumps(evaluations, indent=2)
         topics_str = str(topics)
         
-        prompt = f"""Analyze the following presentation evaluation results to identify systematic weakness patterns and improvement opportunities.
-
-EVALUATION DATA:
-{evaluations_json}
-
-TOPICS EVALUATED:
-{topics_str}
-
-## Analysis Requirements:
-
-1. **Weakness Pattern Identification**
-   - Find dimensions that consistently score below 3.5/5
-   - Identify recurring issues across multiple presentations
-   - Calculate average scores by dimension and category
-
-2. **Root Cause Analysis**
-   - Determine why specific dimensions are underperforming
-   - Identify systemic vs. content-specific issues
-   - Look for correlations between different quality dimensions
-
-3. **Impact Assessment**
-   - Prioritize issues by frequency and severity
-   - Estimate improvement potential for each weakness
-   - Consider feasibility of addressing each issue
-
-## Output Format:
-
-Return a JSON object with:
-- baseline_performance: category averages
-- weakness_patterns: array with category, dimension, avg_score, frequency, severity, root_causes, improvement_potential
-- opportunities: array with area, impact, complexity, description
-
-Provide systematic analysis with specific metrics and actionable insights."""
+        prompt = EvolutionPrompts.get_prompt(
+            'CORE_ANALYZE_EVALUATIONS',
+            evaluations_json=evaluations_json,
+            topics_str=topics_str
+        )
 
         result = self._call_claude(prompt)
+        
+        # Log key reflection findings
+        if isinstance(result, dict):
+            logger.info("📊 REFLECTION ANALYSIS RESULTS:")
+            if "weakness_patterns" in result:
+                logger.info(f"  🔴 Weaknesses found: {len(result['weakness_patterns'])} patterns")
+                for pattern in result.get('weakness_patterns', [])[:3]:  # Log top 3
+                    logger.info(f"    - {pattern.get('dimension', 'Unknown')}: {pattern.get('avg_score', 0):.2f}/5.0")
+            
+            if "missing_tools" in result:
+                logger.info(f"  🔧 Missing tools identified: {len(result['missing_tools'])}")
+                for tool in result.get('missing_tools', [])[:3]:  # Log top 3
+                    logger.info(f"    - {tool}")
+            
+            if "missing_capabilities" in result:
+                logger.info(f"  ⚠️  Missing capabilities: {len(result['missing_capabilities'])}")
+                for cap in result.get('missing_capabilities', [])[:3]:
+                    logger.info(f"    - {cap}")
+            
+            if "opportunities" in result:
+                logger.info(f"  💡 Improvement opportunities: {len(result['opportunities'])}")
+                for opp in result.get('opportunities', [])[:3]:
+                    sol_type = opp.get('solution_type', 'unknown')
+                    logger.info(f"    - {opp.get('area', 'Unknown')} ({sol_type})")
         
         # Add to history
         self._add_to_history("analyze_evaluations", input_data, result)
@@ -188,40 +185,25 @@ Provide systematic analysis with specific metrics and actionable insights."""
         reflection_json = json.dumps(reflection_results, indent=2)
         baseline_json = json.dumps(current_baseline, indent=2)
         
-        prompt = f"""Design specific, systematic improvements based on the reflection analysis for evolution iteration {iteration_number}.
+        prompt = EvolutionPrompts.get_prompt(
+            'CORE_DESIGN_IMPROVEMENTS',
+            iteration_number=iteration_number,
+            reflection_json=reflection_json,
+            baseline_json=baseline_json
+        )
 
-REFLECTION ANALYSIS:
-{reflection_json}
-
-CURRENT BASELINE PERFORMANCE:
-{baseline_json}
-
-## Improvement Design Requirements:
-
-1. **Systematic Solutions**
-   - Address root causes, not just symptoms
-   - Design improvements that can be applied consistently
-   - Focus on high-impact, feasible changes
-
-2. **Measurable Impact**
-   - Define success criteria for each improvement
-   - Estimate expected score improvements
-   - Consider implementation complexity vs. benefit
-
-3. **Implementation Strategy**
-   - Determine if improvement needs prompts, tools, or system changes
-   - Plan integration with existing generation pipeline
-   - Design validation approach
-
-## Output Format:
-
-Return a JSON object with:
-- improvements: Array of objects with name, target_weakness, solution_type, description, expected_impact, implementation_complexity, success_criteria, priority
-- improvement_summary: total_improvements, high_priority_count, expected_overall_impact
-
-Focus on systematic, measurable improvements with clear implementation paths."""
 
         result = self._call_claude(prompt)
+        
+        # Log improvement proposals
+        if isinstance(result, dict):
+            logger.info("🛠️ IMPROVEMENT DESIGN RESULTS:")
+            if "improvements" in result:
+                logger.info(f"  📋 Improvements designed: {len(result['improvements'])}")
+                for imp in result.get('improvements', [])[:5]:  # Log top 5
+                    imp_type = imp.get('solution_type', 'unknown')
+                    logger.info(f"    - {imp.get('name', 'Unknown')} ({imp_type})")
+                    logger.info(f"      Description: {imp.get('description', 'N/A')[:100]}...")
         
         # Add to history
         self._add_to_history("design_improvements", input_data, result)
@@ -246,40 +228,13 @@ Focus on systematic, measurable improvements with clear implementation paths."""
         improvements_json = json.dumps(improvements, indent=2)
         config_json = json.dumps(current_system_config, indent=2)
         
-        prompt = f"""Implement the following improvements as specific, deployable system changes for evolution iteration {iteration_number}.
+        prompt = EvolutionPrompts.get_prompt(
+            'CORE_IMPLEMENT_IMPROVEMENTS',
+            iteration_number=iteration_number,
+            improvements_json=improvements_json,
+            config_json=config_json
+        )
 
-CURRENT TOOL ECOSYSTEM:
-{tool_context}
-
-IMPROVEMENTS TO IMPLEMENT:
-{improvements_json}
-
-CURRENT SYSTEM CONFIGURATION:
-{config_json}
-
-## Implementation Requirements:
-
-1. **ENHANCED PROMPT GENERATION**
-   For prompt enhancement improvements, create complete enhanced prompts with all improvements integrated.
-
-2. **TOOL PROPOSALS**
-   When improvements can't be solved by prompts alone, propose new tools with:
-   - Clear API specification (input/output)
-   - Implementation template
-   - Integration points
-   - Performance estimates
-
-3. **VALIDATION RULES**
-   Create validation logic for quality improvements.
-
-## Output Format:
-
-Return a JSON object with:
-- prompt_enhancements: Array with improvement_id, prompt_type, enhanced_prompt, key_enhancements, quality_requirements
-- proposed_tools: Array with name, purpose, target_problem, implementation details, expected_impact, complexity, integration_points, speed_impact, cost_estimate
-- validation_rules: Array with improvement_id, rule_type, validation_logic, integration_point
-
-Focus on creating complete, deployable implementations AND innovative tools that expand system capabilities."""
 
         result = self._call_claude(prompt)
         
@@ -309,6 +264,21 @@ Focus on creating complete, deployable implementations AND innovative tools that
         try:
             # Phase 1: Reflection
             logger.info("🔍 Phase 1: Reflection Analysis")
+            logger.info(f"  📊 Analyzing {len(evaluation_data)} evaluation results")
+            
+            # Log what we're passing to reflection
+            if evaluation_data:
+                avg_scores = {}
+                for eval in evaluation_data:
+                    for key, val in eval.get('overall_scores', {}).items():
+                        if key not in avg_scores:
+                            avg_scores[key] = []
+                        avg_scores[key].append(val)
+                
+                for key, vals in avg_scores.items():
+                    if vals:
+                        logger.info(f"  - Average {key}: {sum(vals)/len(vals):.2f}")
+            
             reflection_agent = EvolutionAgent("reflection", self.api_key)
             
             reflection_result = reflection_agent.process({
@@ -355,13 +325,51 @@ Focus on creating complete, deployable implementations AND innovative tools that
             if not improvement_result.get("success"):
                 return self._handle_phase_failure("improvement", improvement_result, coordination_log)
             
-            # Phase 3: Implementation
-            logger.info("⚙️ Phase 3: Implementation")
+            # Phase 3: Tool Proposal (if missing capabilities identified)
+            tool_proposals = []
             implementation_agent = EvolutionAgent("implementation", self.api_key)
+            
+            # Check for missing tools in the reflection analysis result
+            missing_tools = reflection_result.get("missing_tools", [])
+            missing_capabilities = reflection_result.get("missing_capabilities", [])
+            
+            if missing_tools or missing_capabilities:
+                logger.info("🔧 Phase 3a: Tool Proposal")
+                
+                tool_proposal_result = implementation_agent.process({
+                    "action": "propose_tools",
+                    "weaknesses": reflection_result.get("weakness_patterns", []),
+                    "missing_capabilities": missing_tools or missing_capabilities
+                })
+                
+                if tool_proposal_result.get("success"):
+                    tool_proposals = tool_proposal_result.get("proposed_tools", [])
+                    logger.info(f"  📦 Proposed {len(tool_proposals)} new tools")
+                    
+                # Add to phases tracking
+                phases["tool_proposal"] = {
+                    "success": tool_proposal_result.get("success", False),
+                    "proposed_tools": tool_proposals,
+                    "tool_count": len(tool_proposals)
+                }
+                    
+                # Add to coordination log
+                coordination_log.append({
+                    "phase": "tool_proposal",
+                    "agent": "implementation",
+                    "action": "propose_tools",
+                    "success": tool_proposal_result.get("success", False),
+                    "tools_proposed": len(tool_proposals),
+                    "timestamp": datetime.now().isoformat()
+                })
+            
+            # Phase 3b: Implementation
+            logger.info("⚙️ Phase 3b: Implementation")
             
             implementation_result = implementation_agent.process({
                 "action": "implement_improvements",
                 "improvements": improvement_result.get("improvements", []),
+                "proposed_tools": tool_proposals,
                 "current_system_config": {},
                 "iteration_number": iteration_number
             })
@@ -395,6 +403,17 @@ Focus on creating complete, deployable implementations AND innovative tools that
             # Generate evolution summary
             evolution_summary = self._generate_evolution_summary(phases, iteration_number)
             
+            # Extract tool proposals for evolution tracking
+            tools_discovered = []
+            if "tool_proposal" in phases and phases["tool_proposal"].get("proposed_tools"):
+                for tool in phases["tool_proposal"]["proposed_tools"]:
+                    tools_discovered.append({
+                        "name": tool.get("name", "unnamed_tool"),
+                        "purpose": tool.get("purpose", ""),
+                        "phase": "tool_proposal",
+                        "iteration": iteration_number
+                    })
+            
             logger.info("✅ Evolution cycle completed successfully")
             
             return {
@@ -402,7 +421,9 @@ Focus on creating complete, deployable implementations AND innovative tools that
                 "iteration_number": iteration_number,
                 "phases": phases,
                 "agent_coordination_log": coordination_log,
-                "evolution_summary": evolution_summary
+                "evolution_summary": evolution_summary,
+                "tools_discovered": tools_discovered,
+                "tools_adopted": []  # Tools are proposed but not yet adopted/implemented
             }
             
         except Exception as e:
@@ -489,7 +510,9 @@ Focus on creating complete, deployable implementations AND innovative tools that
                 "weaknesses_identified": len(reflection_phase.get("weakness_patterns", [])),
                 "improvements_designed": len(improvement_phase.get("improvements", [])),
                 "implementations_created": len(implementation_phase.get("implementation_package", {}).get("prompt_enhancements", [])),
-                "tools_proposed": len(implementation_phase.get("implementation_package", {}).get("proposed_tools", []))
+                "missing_tools_identified": len(reflection_phase.get("missing_tools", [])),
+                "tools_proposed": len(implementation_phase.get("proposed_tools", []) if "proposed_tools" in implementation_phase else 
+                                     implementation_phase.get("implementation_package", {}).get("proposed_tools", []))
             },
             "agent_performance": {
                 "reflection_agent": "success" if reflection_phase.get("success") else "failed",
@@ -525,11 +548,11 @@ Focus on creating complete, deployable implementations AND innovative tools that
         action = input_data.get("action")
         input_json = json.dumps(input_data, indent=2)
         
-        prompt = f"""As a reflection specialist, perform the following action: {action}
-
-Input data: {input_json}
-
-Provide your analysis and insights."""
+        prompt = EvolutionPrompts.get_prompt(
+            'CORE_GENERIC_REFLECTION',
+            action=action,
+            input_json=input_json
+        )
         
         result = self._call_claude(prompt)
         self._add_to_history(action, input_data, result)
@@ -540,26 +563,74 @@ Provide your analysis and insights."""
         action = input_data.get("action")
         input_json = json.dumps(input_data, indent=2)
         
-        prompt = f"""As an improvement specialist, perform the following action: {action}
-
-Input data: {input_json}
-
-Design systematic improvements and provide detailed recommendations."""
+        prompt = EvolutionPrompts.get_prompt(
+            'CORE_GENERIC_IMPROVEMENT',
+            action=action,
+            input_json=input_json
+        )
         
         result = self._call_claude(prompt)
         self._add_to_history(action, input_data, result)
         return {"success": True, "action": action, "agent_type": self.agent_type, **result}
+    
+    def _propose_tools(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Propose new tools based on identified weaknesses"""
+        
+        weaknesses = input_data.get("weaknesses", [])
+        missing_capabilities = input_data.get("missing_capabilities", [])
+        
+        prompt = f"""Based on the following weaknesses and missing capabilities, propose specific NEW TOOLS that should be created to address these issues.
+
+WEAKNESSES IDENTIFIED:
+{json.dumps(weaknesses, indent=2)}
+
+MISSING CAPABILITIES:
+{json.dumps(missing_capabilities, indent=2)}
+
+Propose specific tools with clear implementation details. Each tool should:
+1. Address a specific weakness
+2. Be implementable as a Python class/function
+3. Have clear inputs and outputs
+4. Integrate with the existing generation pipeline
+
+Return a JSON object with:
+- proposed_tools: array of tool specifications
+- priority_ranking: ordered list of tools by impact
+- implementation_plan: step-by-step plan to create these tools
+"""
+        
+        result = self._call_claude(prompt)
+        
+        # Log tool proposals
+        if isinstance(result, dict):
+            logger.info("🔧 TOOL PROPOSAL RESULTS:")
+            if "proposed_tools" in result:
+                logger.info(f"  📦 Tools proposed: {len(result['proposed_tools'])}")
+                for tool in result.get('proposed_tools', [])[:5]:  # Log top 5
+                    logger.info(f"    - {tool.get('name', 'Unknown')}")
+                    logger.info(f"      Purpose: {tool.get('purpose', 'N/A')[:100]}...")
+                    logger.info(f"      Impact: {tool.get('expected_impact', 'Unknown')}")
+                    logger.info(f"      Complexity: {tool.get('complexity', 'Unknown')}")
+        
+        self._add_to_history("propose_tools", input_data, result)
+        
+        return {
+            "success": True,
+            "action": "propose_tools",
+            "agent_type": self.agent_type,
+            **result
+        }
     
     def _generic_implementation_process(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Generic implementation processing"""
         action = input_data.get("action")
         input_json = json.dumps(input_data, indent=2)
         
-        prompt = f"""As an implementation specialist, perform the following action: {action}
-
-Input data: {input_json}
-
-Create deployable implementations and tool proposals as needed."""
+        prompt = EvolutionPrompts.get_prompt(
+            'CORE_GENERIC_IMPLEMENTATION',
+            action=action,
+            input_json=input_json
+        )
         
         result = self._call_claude(prompt)
         self._add_to_history(action, input_data, result)
@@ -570,11 +641,11 @@ Create deployable implementations and tool proposals as needed."""
         action = input_data.get("action")
         input_json = json.dumps(input_data, indent=2)
         
-        prompt = f"""As an orchestration specialist, perform the following action: {action}
-
-Input data: {input_json}
-
-Coordinate the process and provide systematic management."""
+        prompt = EvolutionPrompts.get_prompt(
+            'CORE_GENERIC_ORCHESTRATION',
+            action=action,
+            input_json=input_json
+        )
         
         result = self._call_claude(prompt)
         self._add_to_history(action, input_data, result)

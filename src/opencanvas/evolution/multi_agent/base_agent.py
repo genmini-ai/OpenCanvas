@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class BaseEvolutionAgent(ABC):
     """Base class for all evolution agents"""
     
-    def __init__(self, name: str, api_key: str = None, model: str = "claude-3-5-sonnet-20241022"):
+    def __init__(self, name: str, api_key: str = None, model: str = "claude-sonnet-4-20250514"):
         """Initialize base agent"""
         self.name = name
         self.api_key = api_key or Config.ANTHROPIC_API_KEY

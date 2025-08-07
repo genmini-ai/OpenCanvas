@@ -1,0 +1,215 @@
+tool_code_generation_prompt: |
+  Generate a complete Python implementation for this tool:
+
+  Specification:
+  {spec_json}{learning_context}
+
+  RESOURCE CONSTRAINTS - ONLY use these available resources:
+  ✅ AVAILABLE:
+  - Anthropic Claude API (multimodal - text + images)
+  - OpenAI GPT API (multimodal - text + images)  
+  - Gemini API (multimodal - text + images)
+  - Brave Search API (for getting implementation specs and domain knowledge)
+  - Python standard library (re, json, math, statistics, etc.)
+  - Python packages: pdfplumber, PIL, base64 (for PDF/image processing)
+  - Text processing, regex, string operations
+  - Local file operations
+  - Built-in data structures
+  - Image processing (via multimodal LLMs)
+
+  ❌ FORBIDDEN - Do NOT use:
+  - External APIs requiring signup/billing/account creation
+  - Services not already configured in Config class
+  - Database services needing separate setup
+  - Third-party services requiring authentication beyond existing APIs
+
+  FEW-SHOT EXAMPLES:
+
+  Example 1: PDF Image Extractor Tool
+  ```python
+  import pdfplumber
+  import base64
+  import logging
+  from anthropic import Anthropic
+  from opencanvas.config import Config
+
+  class PDFImageExtractor(BaseTool):
+      """Extracts images from PDFs and generates captions using VLM"""
+      
+      def __init__(self):
+          super().__init__()
+          self.client = Anthropic(api_key=Config.ANTHROPIC_API_KEY)
+          self.logger = logging.getLogger(__name__)
+      
+      def process(self, pdf_path: str) -> Dict[str, Any]:
+          """Extract images from PDF and generate captions"""
+          try:
+              extracted_images = []
+              
+              with pdfplumber.open(pdf_path) as pdf:
+                  for page_num, page in enumerate(pdf.pages):
+                      # Extract images from page
+                      if hasattr(page, 'images'):
+                          for img_idx, img in enumerate(page.images):
+                              # Get image data
+                              image_obj = page.within_bbox(img['bbox']).to_image()
+                              image_data = base64.b64encode(image_obj.original).decode()
+                              
+                              # Generate caption using VLM
+                              caption = self._generate_caption(image_data)
+                              
+                              extracted_images.append({{
+                                  'page': page_num + 1,
+                                  'image_index': img_idx,
+                                  'bbox': img['bbox'],
+                                  'caption': caption,
+                                  'image_data': image_data
+                              }})
+              
+              return {{
+                  'success': True,
+                  'images_extracted': len(extracted_images),
+                  'images': extracted_images
+              }}
+              
+          except Exception as e:
+              self.logger.error(f"PDF image extraction failed: {{e}}")
+              return {{'success': False, 'error': str(e)}}
+      
+      def _generate_caption(self, image_data: str) -> str:
+          """Generate caption for image using Claude VLM"""
+          try:
+              response = self.client.messages.create(
+                  model="claude-3-7-sonnet-20250219",
+                  max_tokens=200,
+                  messages=[{{
+                      "role": "user",
+                      "content": [
+                          {{"type": "image", "source": {{"type": "base64", "data": image_data}}}},
+                          {{"type": "text", "text": "Generate a descriptive caption for this image from an academic paper."}}
+                      ]
+                  }}]
+              )
+              return response.content[0].text
+          except Exception as e:
+              self.logger.error(f"Caption generation failed: {{e}}")
+              return "Caption generation failed"
+  ```
+
+  Example 2: Citation Validator Tool  
+  ```python
+  import re
+  import logging
+  from typing import Dict, List, Any
+
+  class CitationValidator(BaseTool):
+      """Validates citations in academic content"""
+      
+      PATTERNS = {{
+          'apa': r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s*\((\d{{4}})\)',
+          'suspicious': r'(Smith|Jones|Johnson|Brown)\s*\(20\d{{2}}\)'
+      }}
+      
+      def process(self, content: str) -> Dict[str, Any]:
+          """Validate citations in content"""
+          citations = self._extract_citations(content)
+          validated = []
+          
+          for citation in citations:
+              result = {{
+                  'text': citation,
+                  'valid': self._validate_citation(citation),
+                  'confidence': self._get_confidence(citation),
+                  'type': self._classify_citation(citation)
+              }}
+              
+              if not result['valid']:
+                  result['issues'] = self._identify_issues(citation)
+                  result['suggestion'] = self._suggest_fix(citation)
+              
+              validated.append(result)
+          
+          score = sum(1 for c in validated if c['valid']) / len(validated) if validated else 0
+          
+          return {{
+              'citation_score': score,
+              'total_citations': len(validated),
+              'valid_citations': sum(1 for c in validated if c['valid']),
+              'citations': validated
+          }}
+      
+      def _extract_citations(self, content: str) -> List[str]:
+          # Implementation details...
+          pass
+  ```
+
+  Requirements:
+  1. Create a class that inherits from this base:
+  ```python
+  class BaseTool:
+      def __init__(self):
+          self.name = self.__class__.__name__
+          self.enabled = True
+      
+      def process(self, content):
+          raise NotImplementedError
+  ```
+
+  2. Implement the process() method using ONLY available resources above
+  3. Include comprehensive error handling
+  4. Add logging using logger = logging.getLogger(__name__)
+  5. Include docstrings
+  6. Follow Python best practices
+  7. Make it production-ready
+  8. Use existing Config class for API keys when needed
+
+  CRITICAL CODE FORMATTING RULES:
+  9. NEVER use nested f-strings or complex f-string expressions
+  10. For multi-line strings with variables, use .format() or % formatting instead of f-strings
+  11. For LLM API calls with dynamic content, build strings separately before passing to API
+  12. Example of GOOD formatting:
+     ```python
+     prompt_template = "Analyze this content: {{content}}"
+     prompt = prompt_template.format(content=user_input)
+     ```
+  13. Example of BAD formatting (AVOID):
+     ```python
+     # DON'T DO THIS - will cause f-string nesting errors
+     prompt = f"""Complex {{f"nested {{variable}}"}} string"""
+     ```
+  14. Use YAML for any configuration data that tools might generate, NOT JSON in f-strings
+  15. If you need complex string building, use string concatenation or template libraries
+
+  Generate ONLY the Python code, no explanations.
+
+tool_specification_enhancement_prompt: |
+  Given this tool specification, provide detailed implementation requirements:
+
+  Tool: {tool_name}
+  Purpose: {tool_purpose}
+  Weakness addressed: {target_problem}
+
+  {domain_context}
+
+  RESOURCE CONSTRAINTS - Tool must ONLY use:
+  ✅ Available: Claude/GPT/Gemini APIs (multimodal), Brave Search, Python stdlib, text/image processing
+  ❌ Forbidden: External APIs requiring signup/billing, services needing separate authentication
+
+  Provide a detailed specification including:
+  1. Class name and inheritance (should inherit from BaseTool)
+  2. Required methods (at minimum: __init__ and process)
+  3. Input/output types
+  4. Algorithm approach using ONLY available resources
+  5. Error handling requirements
+  6. Performance requirements
+  7. Integration point in pipeline
+  8. Resource dependencies (from available list only)
+  9. String formatting approach (avoid f-string nesting, use .format() for complex strings)
+
+  IMPORTANT: If the tool will generate LLM prompts or complex strings:
+  - Use template-based string formatting (.format() method)
+  - Avoid nested f-strings completely
+  - Build complex strings step by step rather than in single f-string expressions
+  - Use YAML for any structured data, not JSON in f-strings
+
+  Return as YAML format (NOT JSON due to f-string issues).

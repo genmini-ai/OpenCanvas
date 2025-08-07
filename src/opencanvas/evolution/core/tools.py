@@ -24,9 +24,23 @@ class ToolsManager:
     - Tool testing and adoption decisions
     """
     
-    def __init__(self, registry_file: str = "TOOLS.md"):
+    def __init__(self, registry_file: str = None):
         """Initialize tools manager"""
-        self.registry_file = Path(registry_file)
+        # Use TOOLS.md in project root by default
+        if registry_file:
+            self.registry_file = Path(registry_file)
+        else:
+            # Find TOOLS.md in project root
+            current_dir = Path(__file__).parent
+            while current_dir.parent != current_dir:
+                tools_md = current_dir / "TOOLS.md"
+                if tools_md.exists():
+                    self.registry_file = tools_md
+                    break
+                current_dir = current_dir.parent
+            else:
+                # Default to current directory if not found
+                self.registry_file = Path("TOOLS.md")
         self.current_tools = CURRENT_TOOLS.copy()
         self.rejected_tools = REJECTED_TOOLS.copy()
         self.proposed_tools = PROPOSED_TOOLS.copy()

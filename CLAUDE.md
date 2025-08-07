@@ -38,6 +38,9 @@ python run_tests.py force           # Force regenerate all files
 python run_adversarial_eval_test.py
 python run_adversarial_eval_test.py --regenerate
 
+# Evolution System - Autonomous presentation improvement
+python test_evolution_unified_final.py  # Run complete autonomous evolution system
+
 # Validate configuration
 python -c "from opencanvas.config import Config; Config.validate(); print('✅ Configuration valid')"
 ```
@@ -54,6 +57,14 @@ This is a Python-based presentation generation and evaluation system with both C
 - **HTML-to-PDF Converter** (`src/opencanvas/conversion/html_to_pdf.py`): Converts generated HTML slides to PDF using Selenium/Playwright
 - **AI Evaluator** (`src/opencanvas/evaluation/evaluator.py`): Evaluates presentation quality using Claude, GPT, or Gemini models
 
+**Evolution System** (Autonomous Improvement):
+- **Evolution System** (`src/opencanvas/evolution/core/evolution.py`): Main orchestrator for autonomous presentation quality improvement
+- **Multi-Agent System** (`src/opencanvas/evolution/core/agents.py`): Reflection, improvement, and implementation agents
+- **Auto Tool Implementation** (`src/opencanvas/evolution/core/tool_implementation.py`): Fully autonomous tool creation and deployment system
+- **Evolved Router** (`src/opencanvas/evolution/core/evolved_router.py`): Enhanced generation router with evolved prompts and auto-generated tools
+- **Prompt Evolution** (`src/opencanvas/evolution/core/prompts.py`): Dynamic prompt improvement based on evaluation results
+- **Tools Manager** (`src/opencanvas/evolution/core/tools.py`): Tool discovery, specification, and lifecycle management
+
 **API Layer:**
 - **FastAPI Application** (`src/api/app.py`): REST API with auto-generated documentation
 - **API Routes** (`src/api/routes.py`): Endpoints for generation, conversion, evaluation, and pipeline operations
@@ -67,6 +78,15 @@ This is a Python-based presentation generation and evaluation system with both C
 **Organized Output Structure**: Creates timestamped folders with slides/, evaluation/, and sources/ subdirectories  
 **Multiple Themes**: Professional themes defined in `src/opencanvas/shared/themes.py`  
 **Comprehensive Testing**: E2E test suite with adversarial evaluation testing
+
+**Autonomous Evolution System**: ML-style self-improvement system that automatically:
+- **Evaluates Current Performance**: Uses AI evaluation to identify quality weaknesses and improvement opportunities
+- **Proposes Tools & Prompts**: Multi-agent system designs specific improvements (tools, prompt enhancements) based on evaluation gaps
+- **Implements Tools Automatically**: 9-step pipeline generates, tests, and deploys Python tools without human intervention
+- **Evolves Prompts**: Dynamically improves generation prompts based on evaluation feedback and performance data
+- **Tracks Performance**: Measures tool effectiveness and maintains learning patterns for future iterations
+- **Checkpoint System**: ML-style checkpoints with full experiment reproducibility and continuation capability
+- **Resource-Constrained**: Only uses available APIs (Claude, GPT, Gemini, Brave Search) without requiring external service setup
 
 ### Configuration Management
 
@@ -84,29 +104,84 @@ This is a Python-based presentation generation and evaluation system with both C
 
 ### Pipeline Workflow
 
+**Standard Pipeline:**
 1. **Generation**: Creates HTML slides from topic or PDF input
 2. **Research** (if needed): Fetches additional information via Brave Search
 3. **Conversion**: Renders HTML to PDF using browser automation
 4. **Evaluation**: AI-powered quality assessment with scoring
 5. **Organization**: Saves all outputs in structured directories
 
+**Evolution Pipeline** (Autonomous Improvement):
+1. **Generate**: Create test presentations using current best prompts and tools
+2. **Evaluate**: AI evaluation with reference-required scoring for accuracy gaps
+3. **Reflect**: Multi-agent analysis identifies specific weaknesses and improvement opportunities
+4. **Improve**: Design targeted solutions (new tools, prompt enhancements) using reflection results
+5. **Implement**: Automatically generate, test, and deploy improvements with 9-step validation pipeline
+6. **Apply**: Integrate evolved prompts and auto-generated tools into production pipeline
+7. **Track**: Measure performance improvements and learn from successful/failed patterns
+8. **Checkpoint**: Save complete iteration state for reproducibility and continuation
+
 ### Testing Architecture
 
 **E2E Test Suite** (`tests/test_e2e_pipeline.py`): Comprehensive testing of the full pipeline  
 **Adversarial Testing** (`run_adversarial_eval_test.py`): Tests evaluation robustness with 5 attack methods  
 **Individual Component Tests**: Separate test files for topics, PDFs, and conversion  
-**API Testing** (`test_api.py`): REST API endpoint testing
+**API Testing** (`test_api.py`): REST API endpoint testing  
+**Evolution Testing** (`test_evolution_unified_final.py`): Autonomous evolution system with ML-style unified logging
 
 The testing system supports light mode for faster validation and force regeneration for comprehensive testing.
 
+### Evolution System Details
+
+**Architecture**: ML-inspired autonomous improvement system with multi-agent coordination  
+**Goal**: Systematically improve presentation quality through iterative tool creation and prompt evolution  
+**Approach**: "Offline RL" style learning with complete observability and checkpoint-based training  
+
+**Key Components**:
+- **Multi-Agent System**: Reflection, improvement, and implementation agents working in coordination
+- **Automatic Tool Implementation**: 9-step pipeline (spec → code → test → performance → deploy)  
+- **Evolved Generation Router**: Production router enhanced with evolved prompts and auto-generated tools
+- **Performance Tracking**: Before/after measurement with learning from successful patterns
+- **Checkpoint Management**: ML-style experiment tracking with full reproducibility
+
+**Tool Creation Guidelines**:
+- **Resource Constraints**: Auto-generated tools can ONLY use Claude/GPT/Gemini APIs, Brave Search, Python stdlib, and configured services
+- **YAML Prompts**: All LLM prompts for tool generation use YAML format (NOT JSON) to avoid f-string nesting issues
+- **Centralized Prompts**: Tool generation prompts stored in `src/opencanvas/evolution/prompts/tool_generation.yaml`
+- **F-String Safety**: Generated tools are instructed to avoid nested f-strings and use .format() for complex string building
+- **Template-Based Approach**: Tools that generate LLM prompts use template-based string formatting to prevent syntax errors
+- **Autonomous Pipeline**: Tools are generated, tested, and deployed automatically without human intervention (unless explicitly configured)
+- **Learning System**: Failed and successful tool patterns are tracked to improve future tool creation
+
+**Output Structure**: 
+```
+evolution_runs/experiment_name/
+├── config.json                    # Experiment configuration
+├── training.log                   # Complete evolution log (288+ entries)
+├── iteration_001/                 # Checkpoint with reusable state
+├── summary.json                   # Final results and metrics
+└── auto_generated_tools/          # Deployed tools integrated into pipeline
+```
+
 ## Important File Locations
 
+**Core System**:
 - **Main CLI**: `src/opencanvas/main.py` - Entry point with all command handling
 - **Configuration**: `src/opencanvas/config.py` - Environment variable management and validation
 - **Themes**: `src/opencanvas/shared/themes.py` - Visual theme definitions
 - **Evaluation Prompts**: `src/opencanvas/evaluation/prompts.py` - AI evaluation prompt templates
 - **Test Runner**: `run_tests.py` - Convenient wrapper for running E2E tests
 - **API Documentation**: Available at `/docs` when API server is running
+
+**Evolution System**:
+- **Evolution Orchestrator**: `src/opencanvas/evolution/core/evolution.py` - Main evolution system coordination
+- **Multi-Agent System**: `src/opencanvas/evolution/core/agents.py` - Reflection and improvement agents
+- **Tool Implementation**: `src/opencanvas/evolution/core/tool_implementation.py` - Autonomous tool creation pipeline
+- **Evolved Router**: `src/opencanvas/evolution/core/evolved_router.py` - Enhanced generation with evolved components
+- **Prompt Evolution**: `src/opencanvas/evolution/core/prompts.py` - Dynamic prompt improvement system
+- **Tools Manager**: `src/opencanvas/evolution/core/tools.py` - Tool lifecycle management
+- **Tool Generation Prompts**: `src/opencanvas/evolution/prompts/tool_generation.yaml` - Centralized YAML prompts for tool creation
+- **Evolution Test**: `test_evolution_unified_final.py` - Complete autonomous evolution demonstration
 
 ## Required API Keys
 

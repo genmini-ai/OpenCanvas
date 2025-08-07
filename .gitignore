@@ -75,5 +75,9 @@ test_data/
 test_output/
 output/
 
+# Evolution system outputs
+evolution_runs/
+temp_evolution*/
+
 # local test file
 test_*.py
