@@ -7,9 +7,20 @@ from dataclasses import dataclass
 import base64
 
 from anthropic import Anthropic
-from openai import OpenAI
-from google import genai
-from google.genai import types
+try:
+    from openai import OpenAI
+except ImportError:
+    try:
+        import openai
+        OpenAI = None  # Old version of openai library
+    except ImportError:
+        OpenAI = None
+try:
+    from google import genai
+    from google.genai import types
+except ImportError:
+    genai = None
+    types = None
 from opencanvas.evaluation.prompts import EvaluationPrompts
 
 logger = logging.getLogger(__name__)

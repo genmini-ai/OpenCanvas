@@ -717,7 +717,7 @@ Create a comprehensive plan that maximizes improvement while managing complexity
     # CORE AGENT PROMPTS (from core/agents.py)
     # ============================================================================
     
-    CORE_ANALYZE_EVALUATIONS = """Analyze the following presentation evaluation results to identify systematic weakness patterns and improvement opportunities.
+    CORE_ANALYZE_EVALUATIONS = """Analyze the following presentation evaluation results to identify systematic weakness patterns and determine the best solution approach for each gap.
 
 EVALUATION DATA:
 {evaluations_json}
@@ -725,45 +725,92 @@ EVALUATION DATA:
 TOPICS EVALUATED:
 {topics_str}
 
+REGISTRY CONTEXT (existing tools and lessons learned):
+{registry_context}
+
 ## Analysis Requirements:
 
-1. **Weakness Pattern Identification**
-   - Find dimensions that consistently score below 3.5/5 across ALL evaluation types:
-     * Visual scores (design, layout, aesthetics)
-     * Content-free scores (structure, narrative, clarity)
-     * Content-required scores (accuracy, coverage, alignment with source)
-   - Identify recurring issues across multiple presentations
-   - Calculate average scores by dimension and category
+1. **Gap Identification**
+   For each weakness found (scores below 3.5/5), provide:
+   - Gap Description: Clear statement of what is lacking
+   - Current Score: X.X/5.0 (average across evaluations)
+   - Target Score: Y.Y/5.0 (realistic improvement goal)
+   - Examples: Specific instances from the evaluations
 
-2. **Root Cause Analysis**
-   - Determine why specific dimensions are underperforming
-   - Identify systemic vs. content-specific issues
-   - Look for correlations between different quality dimensions
-   - Analyze gaps between source content and presentation (using content_required_scores)
+2. **Solution Reasoning**
+   For EACH identified gap, analyze:
+   - Can prompt improvements fix this?
+     * Would better instructions resolve it? [Yes/No]
+     * Would format/structure changes help? [Yes/No]
+     * Would additional constraints work? [Yes/No]
+   - Does this need new capabilities?
+     * Missing data processing? [Yes/No - What kind?]
+     * Missing external resources? [Yes/No - Which APIs?]
+     * Missing validation/checking? [Yes/No - What type?]
+   - Check registry: Has this been tried before and failed?
 
-3. **Missing Tool/Capability Identification**
-   - Based on evaluation weaknesses, identify what tools could help:
-     * Citation verification for accuracy issues
-     * Content balancing for text-heavy slides
-     * Chart validation for data visualization issues
-     * Image relevance checker for visual coherence
-   - Specify which weaknesses could be solved by new tools vs prompt improvements
+3. **Solution Type Decision**
+   Based on the reasoning above, classify each gap:
+   - "prompt": Can be fixed with better generation instructions
+     * Examples: slide structure, content organization, formatting rules
+   - "tool": Requires new processing capabilities or external resources
+     * Examples: image enhancement, citation verification, data visualization
+   - "both": Complex issue needing multiple approaches
+   
+   Provide clear decision rationale for each classification.
 
-4. **Impact Assessment**
-   - Prioritize issues by frequency and severity
-   - Estimate improvement potential for each weakness
-   - Consider feasibility of addressing each issue
+4. **Priority Assessment**
+   - Rank gaps by impact (score improvement potential)
+   - Consider implementation complexity
+   - Account for dependencies between gaps
 
 ## Output Format:
 
 Return a JSON object with:
-- baseline_performance: category averages including visual, content_free, content_required
-- weakness_patterns: array with category, dimension, avg_score, frequency, severity, root_causes, improvement_potential
-- missing_tools: array of tools that could address identified weaknesses
-- missing_capabilities: array of system capabilities that are lacking
-- opportunities: array with area, impact, complexity, description, solution_type (tool|prompt|both)
+{{
+  "baseline_performance": {{
+    "visual": X.X,
+    "content_free": X.X,
+    "content_required": X.X,
+    "overall": X.X
+  }},
+  "identified_gaps": [
+    {{
+      "gap_id": "gap_001",
+      "description": "Clear description of the weakness",
+      "dimension": "visual|content|accuracy|etc",
+      "current_score": X.X,
+      "target_score": Y.Y,
+      "examples": ["Example 1", "Example 2"],
+      "solution_reasoning": {{
+        "prompt_can_fix": {{
+          "better_instructions": true/false,
+          "format_changes": true/false,
+          "additional_constraints": true/false,
+          "reasoning": "Why prompt changes would/wouldn't work"
+        }},
+        "needs_new_capability": {{
+          "data_processing": true/false,
+          "external_resources": true/false,
+          "validation_checking": true/false,
+          "reasoning": "What capabilities are missing and why needed"
+        }},
+        "registry_check": "Previous attempts or similar tools that failed"
+      }},
+      "solution_type": "prompt|tool|both",
+      "solution_rationale": "Clear explanation of why this solution type was chosen",
+      "priority": "high|medium|low",
+      "expected_impact": X.X
+    }}
+  ],
+  "routing_summary": {{
+    "prompt_gaps": ["gap_ids that need prompt solutions"],
+    "tool_gaps": ["gap_ids that need tool solutions"],
+    "both_gaps": ["gap_ids that need both approaches"]
+  }}
+}}
 
-Provide systematic analysis with specific metrics and actionable insights."""
+Focus on clear gap identification → reasoning → solution type decision flow."""
 
     CORE_DESIGN_IMPROVEMENTS = """Design specific, systematic improvements based on the reflection analysis for evolution iteration {iteration_number}.
 

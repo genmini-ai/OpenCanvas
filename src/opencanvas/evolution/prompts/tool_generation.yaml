@@ -1,8 +1,36 @@
 tool_code_generation_prompt: |
-  Generate a complete Python implementation for this tool:
+  Generate a complete Python implementation for this evolution tool using the proper base class.
 
   Specification:
   {spec_json}{learning_context}
+
+  CRITICAL: Your tool MUST inherit from the appropriate base class:
+  
+  ```python
+  from opencanvas.evolution.core.base_tool import HTMLProcessingTool, ContentProcessingTool, ValidationTool
+  
+  class YourTool(HTMLProcessingTool):  # or ContentProcessingTool, ValidationTool, etc.
+      name = "YourToolName"
+      stage = "post_html"  # or "post_blog", "pre_evaluation", etc.
+      priority = 0
+      description = "Tool description"
+      
+      def process(self, content, context=None):
+          # Process content here
+          # MUST return processed content as STRING, never None
+          # NEVER add debug messages like "[TOOL ENHANCEMENT]" to content
+          # NEVER return dict/list - ONLY return string
+          
+          processed_content = content  # Your processing logic here
+          
+          # Example: CORRECT return type
+          return processed_content  # ✅ Returns string
+          
+          # Example: WRONG return types (DO NOT DO THIS)
+          # return {"content": processed_content}  # ❌ dict 
+          # return [processed_content]  # ❌ list
+          # return None  # ❌ None
+  ```
 
   RESOURCE CONSTRAINTS - ONLY use these available resources:
   ✅ AVAILABLE:
@@ -25,56 +53,42 @@ tool_code_generation_prompt: |
 
   FEW-SHOT EXAMPLES:
 
-  Example 1: PDF Image Extractor Tool
+  Example 1: Content Enhancement Tool
   ```python
-  import pdfplumber
-  import base64
   import logging
+  import re
   from anthropic import Anthropic
   from opencanvas.config import Config
+  from opencanvas.evolution.core.base_tool import ContentProcessingTool
 
-  class PDFImageExtractor(BaseTool):
-      """Extracts images from PDFs and generates captions using VLM"""
+  class ContentEnhancementTool(ContentProcessingTool):
+      """Enhances HTML content with better formatting"""
       
       def __init__(self):
           super().__init__()
           self.client = Anthropic(api_key=Config.ANTHROPIC_API_KEY)
           self.logger = logging.getLogger(__name__)
       
-      def process(self, pdf_path: str) -> Dict[str, Any]:
-          """Extract images from PDF and generate captions"""
+      def process(self, content: str) -> str:
+          """Process and enhance HTML content - MUST return string"""
           try:
-              extracted_images = []
+              # Example: Add emphasis to key terms
+              enhanced_content = content
               
-              with pdfplumber.open(pdf_path) as pdf:
-                  for page_num, page in enumerate(pdf.pages):
-                      # Extract images from page
-                      if hasattr(page, 'images'):
-                          for img_idx, img in enumerate(page.images):
-                              # Get image data
-                              image_obj = page.within_bbox(img['bbox']).to_image()
-                              image_data = base64.b64encode(image_obj.original).decode()
-                              
-                              # Generate caption using VLM
-                              caption = self._generate_caption(image_data)
-                              
-                              extracted_images.append({{
-                                  'page': page_num + 1,
-                                  'image_index': img_idx,
-                                  'bbox': img['bbox'],
-                                  'caption': caption,
-                                  'image_data': image_data
-                              }})
+              # Find and enhance key terms (example processing)
+              key_terms = ['AI', 'machine learning', 'neural network']
+              for term in key_terms:
+                  pattern = r'\b' + re.escape(term) + r'\b'
+                  replacement = f'<strong>{term}</strong>'
+                  enhanced_content = re.sub(pattern, replacement, enhanced_content, flags=re.IGNORECASE)
               
-              return {{
-                  'success': True,
-                  'images_extracted': len(extracted_images),
-                  'images': extracted_images
-              }}
+              # CRITICAL: Always return the processed content as a STRING
+              return enhanced_content
               
           except Exception as e:
-              self.logger.error(f"PDF image extraction failed: {{e}}")
-              return {{'success': False, 'error': str(e)}}
+              self.logger.error(f"Content enhancement failed: {{e}}")
+              # CRITICAL: Return original content on error (still a string)
+              return content
       
       def _generate_caption(self, image_data: str) -> str:
           """Generate caption for image using Claude VLM"""
@@ -96,77 +110,77 @@ tool_code_generation_prompt: |
               return "Caption generation failed"
   ```
 
-  Example 2: Citation Validator Tool  
+  Example 2: Citation Enhancer Tool  
   ```python
   import re
   import logging
-  from typing import Dict, List, Any
+  from typing import List
 
-  class CitationValidator(BaseTool):
-      """Validates citations in academic content"""
+  class CitationEnhancer(BaseTool):
+      """Enhances citation formatting in HTML content"""
       
       PATTERNS = {{
           'apa': r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s*\((\d{{4}})\)',
-          'suspicious': r'(Smith|Jones|Johnson|Brown)\s*\(20\d{{2}}\)'
+          'doi': r'doi:\s*(10\.\d{{4,}}/[-._;()/:\w]+)'
       }}
       
-      def process(self, content: str) -> Dict[str, Any]:
-          """Validate citations in content"""
-          citations = self._extract_citations(content)
-          validated = []
-          
-          for citation in citations:
-              result = {{
-                  'text': citation,
-                  'valid': self._validate_citation(citation),
-                  'confidence': self._get_confidence(citation),
-                  'type': self._classify_citation(citation)
-              }}
+      def process(self, content: str) -> str:
+          """Enhance citations in HTML content - MUST return string"""
+          try:
+              enhanced_content = content
               
-              if not result['valid']:
-                  result['issues'] = self._identify_issues(citation)
-                  result['suggestion'] = self._suggest_fix(citation)
+              # Find APA citations and make them more prominent
+              for match in re.finditer(self.PATTERNS['apa'], enhanced_content):
+                  original = match.group(0)
+                  author = match.group(1)
+                  year = match.group(2)
+                  # Create enhanced citation with semantic markup
+                  enhanced = f'<cite class="citation">{author} ({year})</cite>'
+                  enhanced_content = enhanced_content.replace(original, enhanced, 1)
               
-              validated.append(result)
-          
-          score = sum(1 for c in validated if c['valid']) / len(validated) if validated else 0
-          
-          return {{
-              'citation_score': score,
-              'total_citations': len(validated),
-              'valid_citations': sum(1 for c in validated if c['valid']),
-              'citations': validated
-          }}
+              # Find DOIs and make them clickable
+              for match in re.finditer(self.PATTERNS['doi'], enhanced_content):
+                  doi = match.group(0)
+                  doi_id = match.group(1)
+                  link = f'<a href="https://doi.org/{doi_id}" class="doi-link">{doi}</a>'
+                  enhanced_content = enhanced_content.replace(doi, link, 1)
+              
+              # CRITICAL: Always return the processed content as a STRING
+              return enhanced_content
+              
+          except Exception as e:
+              self.logger.error(f"Citation enhancement failed: {{e}}")
+              # CRITICAL: Return original content on error (still a string)
+              return content
       
-      def _extract_citations(self, content: str) -> List[str]:
-          # Implementation details...
-          pass
+      def _validate_citation(self, citation: str) -> bool:
+          # Helper method - not called from process()
+          return bool(re.match(self.PATTERNS['apa'], citation))
   ```
 
   Requirements:
-  1. Create a class that inherits from this base:
-  ```python
-  class BaseTool:
-      def __init__(self):
-          self.name = self.__class__.__name__
-          self.enabled = True
-      
-      def process(self, content):
-          raise NotImplementedError
-  ```
+  1. MUST inherit from appropriate base class (HTMLProcessingTool, ContentProcessingTool, or ValidationTool)
+  2. MUST set class attributes: name, stage, priority, description
+  3. MUST implement process(self, content, context=None) method
+  4. CRITICAL: process() method MUST return a STRING (HTML/text content)
+  5. NEVER return dict, list, tuple, or any other type from process()
+  6. MUST return processed content (NEVER None, NEVER add debug messages)
+  7. Include comprehensive error handling - return original content on error
+  8. Add logging using logger = logging.getLogger(__name__)
+  9. Include docstrings
+  10. Use existing Config class for API keys when needed
 
-  2. Implement the process() method using ONLY available resources above
-  3. Include comprehensive error handling
-  4. Add logging using logger = logging.getLogger(__name__)
-  5. Include docstrings
-  6. Follow Python best practices
-  7. Make it production-ready
-  8. Use existing Config class for API keys when needed
+  CRITICAL OUTPUT RULES:
+  9. NEVER add status messages to content like "[TOOL ENHANCEMENT: ...]"
+  10. NEVER add debug output like "validated by", "processed by", etc.
+  11. NEVER modify content to include tool metadata
+  12. ALWAYS return clean, production-ready content
+  13. ValidationTool should NOT modify content, only validate it
 
   CRITICAL CODE FORMATTING RULES:
-  9. NEVER use nested f-strings or complex f-string expressions
-  10. For multi-line strings with variables, use .format() or % formatting instead of f-strings
-  11. For LLM API calls with dynamic content, build strings separately before passing to API
+  14. NEVER use nested f-strings or complex f-string expressions
+  15. For multi-line strings with variables, use .format() or % formatting instead of f-strings
+  16. For LLM API calls with dynamic content, build strings separately before passing to API
   12. Example of GOOD formatting:
      ```python
      prompt_template = "Analyze this content: {{content}}"
@@ -196,7 +210,7 @@ tool_specification_enhancement_prompt: |
   ❌ Forbidden: External APIs requiring signup/billing, services needing separate authentication
 
   Provide a detailed specification including:
-  1. Class name and inheritance (should inherit from BaseTool)
+  1. Class name and inheritance (should inherit from HTMLProcessingTool, ContentProcessingTool, or ValidationTool)
   2. Required methods (at minimum: __init__ and process)
   3. Input/output types
   4. Algorithm approach using ONLY available resources

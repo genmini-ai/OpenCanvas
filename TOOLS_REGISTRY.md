@@ -1,184 +1,84 @@
-# 🛠️ Tools Registry - Evolution System Knowledge Base
+# Tools Registry
 
-*Last Updated: 2025-08-06*
-*This registry persists across all evolution runs to maintain institutional knowledge*
+*Run ID: production_ready | Updated: 2025-08-10*
 
----
+**This registry serves as the long-term memory for the multi-agent evolution system. It tracks:**
+- **Active Tools**: Currently deployed and working tools in production
+- **Proposed Tools**: Tools under consideration for implementation  
+- **Failed Tools**: Previously tested tools that didn't improve quality, with lessons learned
 
-## 📚 Table of Contents
-1. [Active Tools](#active-tools)
-2. [Proposed Tools (Pending)](#proposed-tools-pending)
-3. [Failed Tools (Lessons Learned)](#failed-tools-lessons-learned)
-4. [Tool Performance History](#tool-performance-history)
-5. [Tool Ideas Backlog](#tool-ideas-backlog)
+**Gap-to-Solution Tracking**: Each tool now tracks:
+- `targets_gap`: The specific evaluation gap this tool addresses
+- `solution_type`: Whether this is a tool, prompt, or both solution
+- `baseline_score`: The score before this tool (for measuring improvement)
+- `target_score`: The expected score after deployment
+
+**For LLMs reading this file**: Use this registry to avoid re-implementing failed tools and to build upon successful patterns. Check which gaps have already been addressed before proposing new tools.
 
 ---
 
 ## ✅ Active Tools
 
-### 1. **ImageValidationPipeline**
-- **Status**: PRODUCTION
-- **Added**: Baseline
-- **Purpose**: Validates and replaces broken/placeholder images in presentations
-- **Impact**: +0.3 visual quality improvement
-- **Integration Point**: Post-HTML generation
-- **Success Rate**: 95%
-- **Code Location**: `src/opencanvas/image_validation/`
+### WebSearchTool
+```yaml
+purpose: Retrieve up-to-date information when knowledge is insufficient
+input: query (str), max_results (int)
+output: List[SearchResult] - title, url, snippet, relevance
+usage: generator.web_search("AI healthcare trends", max_results=5)
+```
 
-### 2. **CitationExtractor** 
-- **Status**: PRODUCTION
-- **Added**: Baseline
-- **Purpose**: Extracts citations from source materials for academic presentations
-- **Impact**: +0.2 accuracy improvement
-- **Integration Point**: Blog content processing
-- **Success Rate**: 88%
-- **Code Location**: `src/opencanvas/tools/citation_extractor.py`
+### WebScraperTool
+```yaml
+purpose: Extract clean text content from web pages
+input: url (str), timeout (int)
+output: ScrapedContent - text, success, error
+usage: generator.scrape_web_content("https://example.com", timeout=10)
+```
 
----
+### ImageValidationTool
+```yaml
+purpose: Validate and replace broken or inappropriate images in slides
+input: slide_html (str)
+output: ValidationResult - fixed_html, replacements, issues
+usage: validator.validate_images(slide_html)
+```
 
-## 🔄 Proposed Tools (Pending)
+## 🔄 Proposed Tools
 
-### 1. **VisualComplexityAnalyzer**
-- **Status**: PROPOSED
-- **Proposed By**: Iteration 3 (not yet run)
-- **Purpose**: Analyze slide visual complexity and suggest improvements
-- **Expected Impact**: +0.4 visual quality
-- **Target Problem**: Slides becoming too text-heavy (as seen in iteration 2 regression)
-- **Implementation Strategy**:
-  ```yaml
-  approach: Use Claude Vision API to analyze slide screenshots
-  metrics:
-    - text_to_visual_ratio
-    - white_space_percentage
-    - color_diversity_score
-  output: Specific recommendations for visual enhancements
-  ```
-- **Priority**: HIGH
-- **Estimated Effort**: Medium
+## ❌ Failed Tools
 
-### 2. **SourceFidelityChecker**
-- **Status**: PROPOSED
-- **Proposed By**: Analysis of iteration 1
-- **Purpose**: Verify all claims in presentations trace back to source material
-- **Expected Impact**: +0.3 accuracy improvement
-- **Target Problem**: Adding plausible but unverified details (e.g., "acoustic monitoring for gunshots")
-- **Implementation Strategy**:
-  ```yaml
-  approach: Cross-reference every fact/figure with source content
-  validation:
-    - exact_match: Numbers, percentages, names
-    - semantic_match: Concepts and claims
-  output: Fidelity report with flagged additions
-  ```
-- **Priority**: HIGH
-- **Estimated Effort**: Low
+### MultiStageOutlineGenerator
+```yaml
+purpose: Generate detailed outline before slide creation
+failure_reason: 2x slower, consistency issues between outline and final slides
+lesson_learned: Prefer single-pass generation for consistency
+```
 
-### 3. **ChartDataExtractor**
-- **Status**: PROPOSED
-- **Proposed By**: Iteration 2 regression analysis
-- **Purpose**: Extract data points from text and automatically generate charts
-- **Expected Impact**: +0.5 visual quality
-- **Target Problem**: Loss of data visualizations in evolved iterations
-- **Implementation Strategy**:
-  ```yaml
-  approach: Parse numerical data from blog content
-  chart_types:
-    - bar_charts: Comparisons
-    - line_graphs: Trends
-    - pie_charts: Proportions
-  output: Chart.js or D3.js visualizations
-  ```
-- **Priority**: CRITICAL
-- **Estimated Effort**: High
+### SlideBySlideSequentialGenerator
+```yaml
+purpose: Generate each slide individually with full context
+failure_reason: 3x slower and 3x cost increase for minimal quality gain (+0.2)
+lesson_learned: Parallelism essential, context loading expensive
+```
+
+
+## 📚 Lessons Learned
+
+### Evolution Run: 2025-08-10 17:50
+
+#### 💡 Recommendations for Next Run
+
+3. **Low success rate** - Consider smaller, more targeted improvements
 
 ---
 
-## ❌ Failed Tools (Lessons Learned)
 
-### 1. **SmartLayoutOptimizer**
-- **Status**: FAILED
-- **Attempted**: Iteration 2
-- **Purpose**: Automatically optimize slide layouts
-- **Failure Reason**: Removed visual elements instead of optimizing them
-- **Lesson Learned**: Layout changes should be additive, not subtractive
-- **Impact**: -0.75 visual quality (caused regression)
-- **Recommendation**: Focus on enhancing existing elements rather than restructuring
+### Evolution Run: 2025-08-10 16:54
 
-### 2. **AcademicJargonSimplifier**
-- **Status**: FAILED
-- **Attempted**: Test Run Alpha
-- **Purpose**: Simplify complex academic language
-- **Failure Reason**: Over-simplified, losing technical accuracy
-- **Lesson Learned**: Audience-appropriate language is crucial
-- **Impact**: -0.4 content quality
-- **Recommendation**: Add audience-level parameter instead of blanket simplification
+#### 💡 Recommendations for Next Run
+
+3. **Low success rate** - Consider smaller, more targeted improvements
 
 ---
 
-## 📊 Tool Performance History
 
-| Tool Name | Iteration | Before Score | After Score | Delta | Status |
-|-----------|-----------|--------------|-------------|--------|---------|
-| ImageValidationPipeline | Baseline | 3.8 | 4.1 | +0.3 | ✅ Success |
-| CitationExtractor | Baseline | 4.0 | 4.2 | +0.2 | ✅ Success |
-| SmartLayoutOptimizer | 2 | 4.5 | 3.75 | -0.75 | ❌ Failed |
-
----
-
-## 💡 Tool Ideas Backlog
-
-### High Priority (Address Critical Weaknesses)
-1. **ConsistencyEnforcer** - Ensure visual/textual consistency across all slides
-2. **DataVisualizationGenerator** - Auto-generate charts from numerical data
-3. **EngagementOptimizer** - Add interactive elements and engaging visuals
-4. **ReferenceValidator** - Strict source material adherence checking
-
-### Medium Priority (Quality Enhancements)
-1. **TransitionGenerator** - Create smooth transitions between topics
-2. **IconMatcher** - Find relevant icons for concepts
-3. **ColorPaletteOptimizer** - Suggest optimal color schemes based on topic
-4. **SpeakerNotesGenerator** - Create presenter notes from blog content
-
-### Low Priority (Nice to Have)
-1. **AccessibilityChecker** - Ensure WCAG compliance
-2. **MultimediaEmbedder** - Add relevant videos/animations
-3. **TemplateVariator** - Create multiple layout variations
-4. **BrandingApplier** - Apply organizational branding consistently
-
----
-
-## 🎯 Tool Development Principles
-
-1. **Additive, Not Subtractive**: Tools should enhance, not remove existing good elements
-2. **Measurable Impact**: Each tool must have quantifiable quality metrics
-3. **Fail-Safe Design**: Tools should gracefully degrade if they can't improve
-4. **Source Fidelity**: Never compromise accuracy for other improvements
-5. **Visual-First**: Prioritize visual enhancements (biggest current weakness)
-
----
-
-## 📈 Success Metrics
-
-**Current System Performance:**
-- Best Overall Score: 4.31/5.0 (86%)
-- Visual Quality: 4.5/5.0 (90%)
-- Content Quality: 4.0/5.0 (80%)
-- Accuracy: 4.5/5.0 (90%)
-
-**Target Performance (Next 5 Iterations):**
-- Overall Score: 4.6/5.0 (92%)
-- Visual Quality: 4.8/5.0 (96%)
-- Content Quality: 4.3/5.0 (86%)
-- Accuracy: 4.9/5.0 (98%)
-
----
-
-## 🔄 Update Protocol
-
-This registry should be updated:
-1. After each evolution iteration
-2. When tools are promoted/demoted
-3. When new patterns are discovered
-4. When performance metrics change significantly
-
-*Note: This is a living document that serves as the evolution system's long-term memory*

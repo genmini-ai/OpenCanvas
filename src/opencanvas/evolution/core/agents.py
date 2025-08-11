@@ -130,22 +130,54 @@ class EvolutionAgent:
         evaluations = input_data.get("evaluations", [])
         topics = input_data.get("topics", [])
         
+        # Get registry context for the reflection agent
+        registry_context = self._get_tool_context()
+        
         evaluations_json = json.dumps(evaluations, indent=2)
         topics_str = str(topics)
         
         prompt = EvolutionPrompts.get_prompt(
             'CORE_ANALYZE_EVALUATIONS',
             evaluations_json=evaluations_json,
-            topics_str=topics_str
+            topics_str=topics_str,
+            registry_context=registry_context
         )
 
         result = self._call_claude(prompt)
         
-        # Log key reflection findings
+        # Log key reflection findings with new structure
         if isinstance(result, dict):
             logger.info("📊 REFLECTION ANALYSIS RESULTS:")
+            
+            # Log baseline performance
+            if "baseline_performance" in result:
+                baseline = result["baseline_performance"]
+                logger.info(f"  📈 Baseline Performance:")
+                logger.info(f"    - Visual: {baseline.get('visual', 0):.2f}/5.0")
+                logger.info(f"    - Content Free: {baseline.get('content_free', 0):.2f}/5.0")
+                logger.info(f"    - Content Required: {baseline.get('content_required', 0):.2f}/5.0")
+                logger.info(f"    - Overall: {baseline.get('overall', 0):.2f}/5.0")
+            
+            # Log identified gaps with reasoning
+            if "identified_gaps" in result:
+                gaps = result['identified_gaps']
+                logger.info(f"  🔍 Identified {len(gaps)} gaps:")
+                for gap in gaps[:3]:  # Log top 3
+                    logger.info(f"    - {gap.get('description', 'Unknown gap')}")
+                    logger.info(f"      Score: {gap.get('current_score', 0):.2f} → {gap.get('target_score', 0):.2f}")
+                    logger.info(f"      Solution: {gap.get('solution_type', 'unknown')} - {gap.get('solution_rationale', 'No rationale')[:100]}...")
+            
+            # Log routing summary
+            if "routing_summary" in result:
+                routing = result["routing_summary"]
+                logger.info(f"  🚦 Routing Summary:")
+                logger.info(f"    - Prompt gaps: {len(routing.get('prompt_gaps', []))}")
+                logger.info(f"    - Tool gaps: {len(routing.get('tool_gaps', []))}")
+                logger.info(f"    - Both needed: {len(routing.get('both_gaps', []))}")
+            
+            # Keep backward compatibility - check for old structure too
             if "weakness_patterns" in result:
-                logger.info(f"  🔴 Weaknesses found: {len(result['weakness_patterns'])} patterns")
+                logger.info(f"  🔴 Weaknesses found (old format): {len(result['weakness_patterns'])} patterns")
                 for pattern in result.get('weakness_patterns', [])[:3]:  # Log top 3
                     logger.info(f"    - {pattern.get('dimension', 'Unknown')}: {pattern.get('avg_score', 0):.2f}/5.0")
             
@@ -222,8 +254,11 @@ class EvolutionAgent:
         current_system_config = input_data.get("current_system_config", {})
         iteration_number = input_data.get("iteration_number", 1)
         
-        # Get tool context
-        tool_context = self._get_tool_context()
+        # Get tool context with evaluation weaknesses and missing capabilities
+        tool_context = self._get_tool_context(
+            evaluation_weaknesses=input_data.get("weaknesses", []),
+            missing_capabilities=input_data.get("missing_capabilities", [])
+        )
         
         improvements_json = json.dumps(improvements, indent=2)
         config_json = json.dumps(current_system_config, indent=2)
@@ -325,32 +360,98 @@ class EvolutionAgent:
             if not improvement_result.get("success"):
                 return self._handle_phase_failure("improvement", improvement_result, coordination_log)
             
-            # Phase 3: Tool Proposal (if missing capabilities identified)
+            # Phase 3: Solution Routing based on gap types
             tool_proposals = []
+            prompt_enhancements = []
             implementation_agent = EvolutionAgent("implementation", self.api_key)
             
-            # Check for missing tools in the reflection analysis result
-            missing_tools = reflection_result.get("missing_tools", [])
-            missing_capabilities = reflection_result.get("missing_capabilities", [])
+            # Handle both new and old reflection structures
+            identified_gaps = reflection_result.get("identified_gaps", [])
+            routing_summary = reflection_result.get("routing_summary", {})
             
-            if missing_tools or missing_capabilities:
-                logger.info("🔧 Phase 3a: Tool Proposal")
+            # Fallback to old structure if new structure not present
+            if not identified_gaps and "weakness_patterns" in reflection_result:
+                logger.info("⚠️ Using old reflection structure format")
+                # Convert old structure to new format
+                weakness_patterns = reflection_result.get("weakness_patterns", [])
+                identified_gaps = []
+                for i, pattern in enumerate(weakness_patterns):
+                    gap = {
+                        "gap_id": f"gap_{i+1:03d}",
+                        "description": pattern.get("description", "Unknown weakness"),
+                        "dimension": pattern.get("dimension", "unknown"),
+                        "current_score": pattern.get("avg_score", 0),
+                        "target_score": pattern.get("improvement_potential", 4.0),
+                        "solution_type": pattern.get("solution_type", "tool"),
+                        "solution_rationale": pattern.get("solution_rationale", "Legacy format")
+                    }
+                    identified_gaps.append(gap)
+                
+                # Build routing summary from converted gaps
+                routing_summary = {
+                    "tool_gaps": [g["gap_id"] for g in identified_gaps if g["solution_type"] == "tool"],
+                    "prompt_gaps": [g["gap_id"] for g in identified_gaps if g["solution_type"] == "prompt"],
+                    "both_gaps": [g["gap_id"] for g in identified_gaps if g["solution_type"] == "both"]
+                }
+            
+            # Use the routing summary for clear separation
+            tool_gap_ids = routing_summary.get("tool_gaps", [])
+            prompt_gap_ids = routing_summary.get("prompt_gaps", [])
+            both_gap_ids = routing_summary.get("both_gaps", [])
+            
+            # Get the actual gap objects for routing
+            tool_gaps = [g for g in identified_gaps if g.get("gap_id") in tool_gap_ids + both_gap_ids]
+            prompt_gaps = [g for g in identified_gaps if g.get("gap_id") in prompt_gap_ids + both_gap_ids]
+            
+            # Log routing decision with clear reasoning
+            logger.info(f"🚦 Solution Routing based on gap analysis:")
+            logger.info(f"  📝 Prompt solutions needed: {len(prompt_gap_ids)} gaps")
+            logger.info(f"  🔧 Tool solutions needed: {len(tool_gap_ids)} gaps") 
+            logger.info(f"  🔀 Both approaches needed: {len(both_gap_ids)} gaps")
+            
+            # Route to prompt enhancement if prompt-type gaps exist
+            if prompt_gaps:
+                logger.info("📝 Phase 3a: Prompt Enhancement for prompt-type gaps")
+                
+                # Create prompt enhancement request
+                prompt_enhancement_result = self._enhance_prompts_for_gaps(prompt_gaps)
+                
+                if prompt_enhancement_result.get("success"):
+                    prompt_enhancements = prompt_enhancement_result.get("enhanced_prompts", [])
+                    logger.info(f"  📝 Enhanced {len(prompt_enhancements)} prompts for {len(prompt_gaps)} gaps")
+                    for enhancement in prompt_enhancements[:3]:
+                        logger.info(f"    - {enhancement.get('prompt_section', 'Unknown')}: {enhancement.get('improvement_type', 'Unknown')}")
+                else:
+                    logger.warning("  ⚠️ Prompt enhancement failed, continuing with existing prompts")
+                    prompt_enhancements = []
+            
+            # Route to tool proposal if tool-type gaps exist
+            if tool_gaps:
+                logger.info("🔧 Phase 3b: Tool Proposal for tool-type gaps")
                 
                 tool_proposal_result = implementation_agent.process({
                     "action": "propose_tools",
-                    "weaknesses": reflection_result.get("weakness_patterns", []),
-                    "missing_capabilities": missing_tools or missing_capabilities
+                    "weaknesses": tool_gaps,  # Only pass tool-type gaps
+                    "missing_capabilities": reflection_result.get("missing_tools", [])
                 })
                 
                 if tool_proposal_result.get("success"):
                     tool_proposals = tool_proposal_result.get("proposed_tools", [])
-                    logger.info(f"  📦 Proposed {len(tool_proposals)} new tools")
+                    # Add gap tracking to each tool
+                    for tool in tool_proposals:
+                        # Map tool to the gaps it targets
+                        targeted_gaps = [g for g in tool_gaps 
+                                       if g.get("dimension") in tool.get("addresses", "")]
+                        tool["targets_gaps"] = targeted_gaps
+                        tool["solution_type"] = "tool"
+                    logger.info(f"  📦 Proposed {len(tool_proposals)} new tools for {len(tool_gaps)} gaps")
                     
                 # Add to phases tracking
                 phases["tool_proposal"] = {
                     "success": tool_proposal_result.get("success", False),
                     "proposed_tools": tool_proposals,
-                    "tool_count": len(tool_proposals)
+                    "tool_count": len(tool_proposals),
+                    "targeted_gaps": tool_gaps
                 }
                     
                 # Add to coordination log
@@ -461,12 +562,15 @@ class EvolutionAgent:
             logger.error(f"Claude API call failed: {e}")
             return {"error": str(e)}
     
-    def _get_tool_context(self) -> str:
-        """Get current tool ecosystem context"""
+    def _get_tool_context(self, evaluation_weaknesses: List[Dict] = None, missing_capabilities: List[str] = None) -> str:
+        """Get current tool ecosystem context with evaluation gaps"""
         try:
             from opencanvas.evolution.core.tools import ToolsManager
             tools_manager = ToolsManager()
-            return tools_manager.get_context_for_agents()
+            return tools_manager.get_context_for_agents(
+                evaluation_weaknesses=evaluation_weaknesses,
+                missing_capabilities=missing_capabilities
+            )
         except Exception:
             return "Tool context unavailable"
     
@@ -573,30 +677,130 @@ class EvolutionAgent:
         self._add_to_history(action, input_data, result)
         return {"success": True, "action": action, "agent_type": self.agent_type, **result}
     
-    def _propose_tools(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Propose new tools based on identified weaknesses"""
+    def _enhance_prompts_for_gaps(self, prompt_gaps: List[Dict]) -> Dict[str, Any]:
+        """Enhance generation prompts to address prompt-type gaps"""
         
-        weaknesses = input_data.get("weaknesses", [])
-        missing_capabilities = input_data.get("missing_capabilities", [])
+        gaps_summary = []
+        for gap in prompt_gaps:
+            gap_info = {
+                "gap_id": gap.get("gap_id", "unknown"),
+                "description": gap.get("description", "Unknown gap"),
+                "current_score": gap.get("current_score", 0),
+                "target_score": gap.get("target_score", 4.0),
+                "dimension": gap.get("dimension", "unknown"),
+                "solution_reasoning": gap.get("solution_reasoning", {})
+            }
+            gaps_summary.append(gap_info)
         
-        prompt = f"""Based on the following weaknesses and missing capabilities, propose specific NEW TOOLS that should be created to address these issues.
+        gaps_json = json.dumps(gaps_summary, indent=2)
+        
+        prompt = f"""Based on the identified gaps that can be fixed with better prompts, design specific prompt enhancements.
 
-WEAKNESSES IDENTIFIED:
-{json.dumps(weaknesses, indent=2)}
+GAPS REQUIRING PROMPT SOLUTIONS:
+{gaps_json}
 
-MISSING CAPABILITIES:
-{json.dumps(missing_capabilities, indent=2)}
-
-Propose specific tools with clear implementation details. Each tool should:
-1. Address a specific weakness
-2. Be implementable as a Python class/function
-3. Have clear inputs and outputs
-4. Integrate with the existing generation pipeline
+For each gap, design prompt enhancements that will:
+1. Add specific instructions to prevent the identified issues
+2. Include quality standards and constraints
+3. Provide clear examples of desired output
+4. Add validation criteria within the prompt
 
 Return a JSON object with:
-- proposed_tools: array of tool specifications
-- priority_ranking: ordered list of tools by impact
-- implementation_plan: step-by-step plan to create these tools
+{{
+  "enhanced_prompts": [
+    {{
+      "gap_id": "gap_001",
+      "prompt_section": "blog_generation|slide_creation|formatting",
+      "improvement_type": "instruction|constraint|example|validation",
+      "original_instruction": "Current prompt text (if modifying)",
+      "enhanced_instruction": "Improved prompt text",
+      "expected_impact": "How this addresses the gap"
+    }}
+  ],
+  "integration_plan": "How to integrate these enhancements"
+}}
+"""
+        
+        try:
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=2000,
+                temperature=0.7,
+                system=self.system_prompt,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            
+            response_text = response.content[0].text
+            
+            # Try to parse JSON response
+            try:
+                result = json.loads(response_text)
+                return {"success": True, **result}
+            except json.JSONDecodeError:
+                return {"success": True, "enhanced_prompts": [], "response": response_text}
+                
+        except Exception as e:
+            logger.error(f"Prompt enhancement failed: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def _propose_tools(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Propose new tools based on identified gaps"""
+        
+        gaps = input_data.get("weaknesses", [])  # These are now gap objects
+        missing_capabilities = input_data.get("missing_capabilities", [])
+        
+        # Convert gaps to a format for the prompt
+        gaps_summary = []
+        for gap in gaps:
+            gap_info = {
+                "gap_id": gap.get("gap_id", "unknown"),
+                "description": gap.get("description", "Unknown gap"),
+                "current_score": gap.get("current_score", 0),
+                "target_score": gap.get("target_score", 4.0),
+                "dimension": gap.get("dimension", "unknown"),
+                "solution_rationale": gap.get("solution_rationale", "")
+            }
+            gaps_summary.append(gap_info)
+        
+        # Get full tool context including current ecosystem and evaluation gaps
+        tool_context = self._get_tool_context(
+            evaluation_weaknesses=gaps,
+            missing_capabilities=missing_capabilities
+        )
+        
+        gaps_json = json.dumps(gaps_summary, indent=2)
+        
+        prompt = f"""Based on the identified gaps that require tool solutions, propose specific NEW TOOLS that should be created.
+
+GAPS REQUIRING TOOL SOLUTIONS:
+{gaps_json}
+
+TOOL ECOSYSTEM CONTEXT:
+{tool_context}
+
+Based on the above gaps and context, propose specific tools with clear implementation details. Each tool should:
+1. Target a specific gap identified above (reference gap_id)
+2. Be implementable as a Python class using ONLY available resources (Claude/GPT/Gemini APIs, Python stdlib)
+3. Have clear inputs (HTML/content) and outputs (enhanced HTML/content)
+4. Integrate with the existing generation pipeline
+5. Avoid repeating failed patterns from the registry
+
+Return a JSON object with:
+{{
+  "proposed_tools": [
+    {{
+      "name": "ToolName",
+      "purpose": "Clear purpose statement",
+      "targets_gap_id": "gap_001",
+      "addresses": "dimension (e.g., visual, content, accuracy)",
+      "implementation_approach": "How it will work",
+      "expected_impact": X.X,
+      "priority": "high|medium|low"
+    }}
+  ],
+  "priority_ranking": ["ToolName1", "ToolName2"],
+  "implementation_plan": "Step-by-step plan to create these tools"
+}}
 """
         
         result = self._call_claude(prompt)

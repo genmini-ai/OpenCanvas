@@ -213,11 +213,25 @@ Return as YAML format (NOT JSON due to f-string issues)."""
         for reason in deployment_decision['reasons']:
             logger.info(f"    - {reason}")
         
-        # Step 9: Deploy if approved (automatic or after review)
+        # Step 9: Final validation before deployment
+        logger.info(f"🔒 Step 9A: Final validation before deployment...")
+        validation_result = self._validate_tool_contract(generated_code, tool_name)
+        if not validation_result["valid"]:
+            logger.error(f"  ❌ Tool validation failed: {validation_result['error']}")
+            return {
+                "success": False, 
+                "deployed": False,
+                "error": f"Tool validation failed: {validation_result['error']}",
+                "code": generated_code,
+                "test_results": test_results
+            }
+        logger.info(f"  ✅ Tool validation passed")
+        
+        # Step 9B: Deploy if approved (automatic or after review)
         deployed = False
         if deployment_decision["should_deploy"]:
             if not self.require_human_review:
-                logger.info(f"🚀 Step 9: Auto-deploying {tool_name} (human review disabled)")
+                logger.info(f"🚀 Step 9B: Auto-deploying {tool_name} (human review disabled)")
                 deployed = self._deploy_tool(tool_name, generated_code, iteration_number)
                 if deployed:
                     logger.info(f"  ✅ Deployment successful")
@@ -571,19 +585,24 @@ if __name__ == "__main__":
     def _extract_class_name(self, code: str) -> str:
         """Extract the main class name from code"""
         
-        # Parse AST to find class that inherits from BaseTool
+        # Parse AST to find class that inherits from our base classes
         try:
             tree = ast.parse(code)
+            base_classes = ["BaseTool", "EvolutionTool", "HTMLProcessingTool", "ContentProcessingTool", "ValidationTool"]
+            
             for node in ast.walk(tree):
                 if isinstance(node, ast.ClassDef):
-                    # Check if inherits from BaseTool
+                    # Check if inherits from any of our base classes
                     for base in node.bases:
-                        if isinstance(base, ast.Name) and base.id == "BaseTool":
+                        if isinstance(base, ast.Name) and base.id in base_classes:
                             return node.name
-        except:
-            pass
+                        # Handle module.Class format
+                        elif isinstance(base, ast.Attribute) and base.attr in base_classes:
+                            return node.name
+        except Exception as e:
+            logger.warning(f"Failed to parse code for class name: {e}")
         
-        # Fallback: find first class
+        # Fallback: find first class with 'Tool' in name
         import re
         match = re.search(r'class\s+(\w+)', code)
         if match:
@@ -767,6 +786,121 @@ Focus on leveraging multimodal capabilities and existing configured APIs.
         context += "\nUse successful patterns and avoid failed approaches.\n"
         return context
     
+    def _validate_tool_contract(self, code: str, tool_name: str) -> Dict[str, Any]:
+        """
+        Validate that the tool follows the correct contract before deployment
+        
+        Returns:
+            dict: {"valid": bool, "error": str or None}
+        """
+        try:
+            # Create temporary test file
+            test_file = self.sandbox_dir / f"contract_test_{tool_name}_{datetime.now().timestamp()}.py"
+            
+            # Add test code
+            test_code = code + """
+
+# Contract validation test
+if __name__ == "__main__":
+    import sys
+    import json
+    
+    try:
+        # Find the tool class
+        tool_class = None
+        for name in dir():
+            obj = globals()[name]
+            if (isinstance(obj, type) and 
+                hasattr(obj, 'process') and 
+                obj.__name__ != 'BaseTool'):
+                tool_class = obj
+                break
+        
+        if not tool_class:
+            print(json.dumps({"valid": False, "error": "No tool class found"}))
+            sys.exit(1)
+        
+        # Test instantiation
+        tool = tool_class()
+        
+        # Test process method with sample HTML
+        test_html = "<h1>Test Title</h1><p>Test content with <b>formatting</b>.</p>"
+        result = tool.process(test_html)
+        
+        # Critical validation checks
+        if not isinstance(result, str):
+            print(json.dumps({
+                "valid": False, 
+                "error": f"process() returned {type(result).__name__}, expected str"
+            }))
+            sys.exit(1)
+        
+        if result is None:
+            print(json.dumps({
+                "valid": False, 
+                "error": "process() returned None, expected str"
+            }))
+            sys.exit(1)
+        
+        # Check for debug messages in output (not allowed)
+        debug_patterns = ["[TOOL ENHANCEMENT", "validated by", "processed by", "[DEBUG"]
+        for pattern in debug_patterns:
+            if pattern in result:
+                print(json.dumps({
+                    "valid": False, 
+                    "error": f"Tool output contains debug message: {pattern}"
+                }))
+                sys.exit(1)
+        
+        # Validation passed
+        print(json.dumps({
+            "valid": True, 
+            "error": None, 
+            "result_type": type(result).__name__,
+            "result_length": len(result)
+        }))
+        
+    except Exception as e:
+        print(json.dumps({
+            "valid": False, 
+            "error": f"Tool validation failed: {str(e)}"
+        }))
+        sys.exit(1)
+"""
+            
+            # Write and execute test
+            test_file.write_text(test_code)
+            
+            result = subprocess.run(
+                ["python", str(test_file)],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                cwd=self.sandbox_dir
+            )
+            
+            # Clean up
+            test_file.unlink()
+            
+            if result.returncode == 0:
+                try:
+                    validation_result = json.loads(result.stdout)
+                    logger.info(f"✅ Tool {tool_name} contract validation: {validation_result}")
+                    return validation_result
+                except json.JSONDecodeError:
+                    return {"valid": False, "error": f"Invalid JSON response: {result.stdout}"}
+            else:
+                return {"valid": False, "error": f"Validation failed: {result.stderr}"}
+                
+        except subprocess.TimeoutExpired:
+            if test_file.exists():
+                test_file.unlink()
+            return {"valid": False, "error": "Tool validation timeout"}
+        except Exception as e:
+            if test_file.exists():
+                test_file.unlink()
+            return {"valid": False, "error": f"Validation error: {str(e)}"}
+
     def get_implementation_stats(self) -> Dict[str, Any]:
         """Get statistics about tool implementations"""
         

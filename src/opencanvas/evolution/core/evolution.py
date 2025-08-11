@@ -10,14 +10,22 @@ from datetime import datetime
 
 from opencanvas.config import Config
 from opencanvas.generators.router import GenerationRouter
-from opencanvas.conversion.html_to_pdf import PresentationConverter
 from opencanvas.evaluation.evaluator import PresentationEvaluator
 
 from .agents import EvolutionAgent
 from .tools import ToolsManager, ToolDiscovery
 from .prompts import PromptManager
+from .improvement_tracker import get_improvement_tracker, ImprovementType
+from .agent_wrapper import AgentExecutor, PartialProgressTracker
 
 logger = logging.getLogger(__name__)
+
+# Try to import PresentationConverter after logger is defined
+try:
+    from opencanvas.conversion.html_to_pdf import PresentationConverter
+except ImportError:
+    PresentationConverter = None
+    logger.warning("PresentationConverter not available - PDF conversion disabled")
 
 class EvolutionSystem:
     """
@@ -63,6 +71,14 @@ class EvolutionSystem:
         from .tool_implementation import AutomaticToolImplementation
         self.tool_implementation = AutomaticToolImplementation(require_human_review=False)
         logger.info(f"🤖 Automatic tool implementation enabled (auto-deploy mode)")
+        
+        # Initialize improvement tracker for fine-grained attribution
+        self.tracker = get_improvement_tracker(self.output_dir / "tracking")
+        logger.info(f"📊 Improvement tracker initialized")
+        
+        # Initialize agent executor for robust execution
+        self.agent_executor = AgentExecutor(max_retries=3, retry_delay=2.0)
+        logger.info(f"🛡️ Agent executor initialized with retry support")
         
         # Evolution state
         self.evolution_history = []
@@ -148,13 +164,35 @@ class EvolutionSystem:
         with open(results_path, 'w') as f:
             json.dump(evolution_results, f, indent=2, default=str)
         
+        # Export detailed tracking report
+        tracking_report = self.tracker.export_detailed_report()
+        
+        # Generate final attribution report
+        final_report = self.tracker.get_improvement_report()
+        
+        logger.info("="*70)
         logger.info(f"🎉 Evolution cycle complete!")
         logger.info(f"📁 Results: {results_path}")
+        logger.info(f"📊 Tracking report: {tracking_report}")
+        
+        # Log improvement attribution summary
+        if final_report['summary']['total_improvements'] > 0:
+            logger.info(f"📊 Improvement Attribution Summary:")
+            logger.info(f"  - Total improvements: {final_report['summary']['total_improvements']}")
+            logger.info(f"  - Success rate: {final_report['summary']['success_rate']:.1f}%")
+            logger.info(f"  - Avg score delta: {final_report['impact']['average_delta_per_improvement']:.3f}")
+            
+            if final_report['impact']['category_impacts']:
+                logger.info(f"  - Category impacts:")
+                for cat, delta in final_report['impact']['category_impacts'].items():
+                    logger.info(f"    • {cat}: {delta:+.3f}")
+        
+        logger.info("="*70)
         
         return evolution_results
     
     def _run_single_iteration(self, iteration_number: int, previous_baseline: Optional[Dict] = None) -> Dict[str, Any]:
-        """Run a single evolution iteration"""
+        """Run a single evolution iteration with partial progress tracking"""
         
         logger.info(f"🚀 Starting iteration {iteration_number}")
         
@@ -162,6 +200,9 @@ class EvolutionSystem:
         iteration_dir.mkdir(exist_ok=True)
         
         logger.info(f"📁 Iteration directory: {iteration_dir}")
+        
+        # Initialize progress tracker for this iteration
+        progress = PartialProgressTracker()
         
         try:
             # Step 0: Track performance of tools deployed in previous iterations
@@ -174,37 +215,83 @@ class EvolutionSystem:
             generation_result = self._generate_test_presentations(iteration_dir, iteration_number)
             if not generation_result["success"]:
                 logger.error(f"❌ Generation failed: {generation_result.get('errors', 'No error details')}")
-                return {"success": False, "error": f"Generation failed: {generation_result.get('errors', [])}", "iteration": iteration_number}
+                # Return with partial progress
+                return {
+                    "success": False, 
+                    "error": f"Generation failed: {generation_result.get('errors', [])}",
+                    "iteration": iteration_number,
+                    "partial_progress": progress.get_summary()
+                }
+            progress.mark_completed("generation", generation_result)
             
             # Step 2: Evaluate presentations
             logger.info(f"📊 Step 2: Evaluating {len(generation_result['presentations'])} presentations...")
             evaluation_result = self._evaluate_presentations(iteration_dir, generation_result["presentations"])
             if not evaluation_result["success"]:
                 logger.error(f"❌ Evaluation failed: {evaluation_result.get('errors', 'No error details')}")
-                return {"success": False, "error": f"Evaluation failed: {evaluation_result.get('errors', [])}", "iteration": iteration_number}
+                # Return with partial progress
+                return {
+                    "success": False,
+                    "error": f"Evaluation failed: {evaluation_result.get('errors', [])}",
+                    "iteration": iteration_number,
+                    "partial_progress": progress.get_summary()
+                }
+            progress.mark_completed("evaluation", evaluation_result)
             
-            # Step 3: Run agent-based analysis and improvement
-            logger.info("🤖 Step 3: Running agent-based analysis...")
-            agent_result = self.orchestrator.process({
-                "action": "plan_evolution_cycle",
-                "evaluation_data": evaluation_result["evaluation_data"], 
-                "topics": self.test_topics,
-                "iteration_number": iteration_number,
-                "previous_implementations": []
-            })
+            # Step 3: Run agent-based analysis and improvement with retry support
+            logger.info("🤖 Step 3: Running agent-based analysis with robust execution...")
+            agent_result = self.agent_executor.execute_with_retry(
+                agent_func=self.orchestrator.process,
+                request={
+                    "action": "run_evolution_cycle",
+                    "evaluation_data": evaluation_result["evaluation_data"], 
+                    "topics": self.test_topics,
+                    "iteration_number": iteration_number,
+                    "previous_implementations": []
+                },
+                agent_name="Evolution Orchestrator",
+                allow_partial=True
+            )
             
-            if not agent_result.get("success"):
-                logger.error(f"❌ Agent analysis failed: {agent_result.get('error', 'No error details')}")
+            if not agent_result.get("success") and not agent_result.get("partial"):
+                logger.error(f"❌ Agent analysis failed completely: {agent_result.get('error', 'No error details')}")
                 return {"success": False, "error": f"Agent cycle failed: {agent_result.get('error', 'Unknown')}", "iteration": iteration_number}
+            
+            if agent_result.get("partial"):
+                logger.warning(f"⚠️ Using partial results from agent analysis after {agent_result.get('retry_count', 0)} retries")
+            progress.mark_completed("agent_analysis", agent_result)
             
             # Step 4: Apply improvements (prompts and tools)
             logger.info("🔧 Step 4: Applying improvements...")
             improvements_result = self._apply_improvements(agent_result, iteration_number)
+            progress.mark_completed("improvements", improvements_result)
+            
+            # Track deployed tools for next iteration
+            if improvements_result.get("tools_deployed"):
+                if not hasattr(self, '_tools_to_track'):
+                    self._tools_to_track = []
+                self._tools_to_track.extend(improvements_result["tools_deployed"])
+                logger.info(f"  🔧 Tracking {len(improvements_result['tools_deployed'])} deployed tools for next iteration")
             
             # Step 5: Calculate baseline scores
             logger.info("📊 Step 5: Calculating baseline scores...")
             baseline_scores = self._extract_baseline_scores(evaluation_result["evaluation_data"])
             logger.info(f"  📈 Baseline scores: {json.dumps(baseline_scores, indent=2)}")
+            
+            # Record scores for tracking
+            self.tracker.record_iteration_scores(iteration_number, baseline_scores)
+            
+            # Attribute score changes to improvements from previous iteration
+            if iteration_number > 1 and hasattr(self, '_previous_improvements'):
+                for imp_id in self._previous_improvements:
+                    deltas = self.tracker.attribute_score_changes(imp_id, iteration_number)
+                    if deltas:
+                        logger.info(f"  📊 Attribution for {imp_id[:30]}...")
+                        for delta in deltas:
+                            logger.info(f"    - {delta.category}: {delta.before_score:.2f} → {delta.after_score:.2f} (Δ{delta.delta:+.2f})")
+            
+            # Store current iteration improvements for next attribution
+            self._previous_improvements = improvements_result.get('improvement_ids', [])
             
             # Prepare iteration result
             # Extract tools from agent result (orchestrator returns these)
@@ -280,14 +367,19 @@ class EvolutionSystem:
                 )
                 
                 if result and result.get('html_file'):
-                    # Convert to PDF
-                    converter = PresentationConverter(
-                        html_file=result['html_file'],
-                        output_dir=str(topic_dir),
-                        method="playwright",
-                        zoom_factor=1.2
-                    )
-                    pdf_path = converter.convert(output_filename="presentation.pdf")
+                    # Convert to PDF if available
+                    pdf_path = None
+                    if PresentationConverter is not None:
+                        converter = PresentationConverter(
+                            html_file=result['html_file'],
+                            output_dir=str(topic_dir),
+                            method="playwright",
+                            zoom_factor=1.2
+                        )
+                        pdf_path = converter.convert(output_filename="presentation.pdf")
+                    else:
+                        logger.warning("    ⚠️ PDF conversion skipped - converter not available")
+                        pdf_path = None
                     
                     # Save source content for reference-required evaluation
                     source_content_path = None
@@ -357,9 +449,9 @@ class EvolutionSystem:
                     overall_scores = eval_dict.get('overall_scores', {}) if isinstance(eval_dict, dict) else {}
                     if overall_scores:
                         logger.info(f"    ✅ Evaluation scores for '{presentation['topic'][:30]}':")
-                        logger.info(f"      - Visual Design: {overall_scores.get('visual_design', 0):.2f}/5.0")
-                        logger.info(f"      - Content Quality: {overall_scores.get('content_quality', 0):.2f}/5.0")
-                        logger.info(f"      - Overall Score: {overall_scores.get('overall_score', 0):.2f}/5.0")
+                        logger.info(f"      - Visual Design: {overall_scores.get('visual', 0):.2f}/5.0")
+                        logger.info(f"      - Content Quality: {overall_scores.get('content_combined', 0):.2f}/5.0")
+                        logger.info(f"      - Overall Score: {overall_scores.get('presentation_overall', 0):.2f}/5.0")
                     else:
                         logger.warning(f"    ⚠️  No overall scores available for '{presentation['topic'][:30]}'")
                     
@@ -378,9 +470,9 @@ class EvolutionSystem:
         if evaluation_data:
             avg_scores = self._calculate_average_scores(evaluation_data)
             logger.info("📈 EVALUATION SUMMARY:")
-            logger.info(f"  - Average Visual Design: {avg_scores.get('visual_design', 0):.2f}/5.0")
-            logger.info(f"  - Average Content Quality: {avg_scores.get('content_quality', 0):.2f}/5.0")
-            logger.info(f"  - Average Overall Score: {avg_scores.get('overall_score', 0):.2f}/5.0")
+            logger.info(f"  - Average Visual Design: {avg_scores.get('visual', 0):.2f}/5.0")
+            logger.info(f"  - Average Content Quality: {avg_scores.get('content_combined', 0):.2f}/5.0")
+            logger.info(f"  - Average Overall Score: {avg_scores.get('presentation_overall', 0):.2f}/5.0")
             logger.info(f"  - Total Presentations Evaluated: {len(evaluation_data)}")
             logger.info(f"  - Evaluation Errors: {len(errors)}")
         
@@ -429,7 +521,8 @@ class EvolutionSystem:
             "prompts_evolved": 0,
             "tools_discovered": [],
             "tools_adopted": [],
-            "total_improvements": 0
+            "total_improvements": 0,
+            "improvement_ids": []  # Track IDs for attribution
         }
         
         # Extract improvements from agent results
@@ -445,15 +538,35 @@ class EvolutionSystem:
             for enhancement in prompt_enhancements:
                 prompt_type = enhancement.get('prompt_type', 'unknown')
                 key_enhancements = enhancement.get('key_enhancements', [])
-                logger.info(f"    - {prompt_type} prompt:")
+                target_weakness = enhancement.get('target_weakness', 'general quality')
+                expected_impact = enhancement.get('expected_impact', 'improved presentation quality')
+                
+                # Register with tracker
+                imp_id = self.tracker.register_improvement(
+                    iteration=iteration_number,
+                    type=ImprovementType.PROMPT_EVOLUTION,
+                    name=f"Prompt enhancement: {prompt_type}",
+                    description=" ".join(key_enhancements[:3]) if key_enhancements else "Prompt improvements",
+                    target_weakness=target_weakness,
+                    expected_impact=expected_impact,
+                    implementation_details={
+                        "prompt_type": prompt_type,
+                        "key_enhancements": key_enhancements,
+                        "iteration": iteration_number
+                    }
+                )
+                
+                logger.info(f"    - {prompt_type} prompt (ID: {imp_id[:20]}...):")
                 for enh in key_enhancements[:3]:  # Log first 3 enhancements
                     logger.info(f"      • {enh[:100]}...")
                 
                 improvements.append({
                     "name": f"Prompt enhancement {prompt_type}",
                     "description": key_enhancements,
-                    "solution_type": "prompt_enhancement"
+                    "solution_type": "prompt_enhancement",
+                    "tracker_id": imp_id
                 })
+                results["improvement_ids"].append(imp_id)
             
             baseline_scores = self._extract_baseline_from_agent_result(agent_result)
             self.prompt_manager.create_iteration(iteration_number, improvements, baseline_scores)
@@ -466,7 +579,25 @@ class EvolutionSystem:
         
         for tool_spec in proposed_tools:
             tool_name = tool_spec.get("name", "Unknown")
+            target_weakness = tool_spec.get("target_weakness", "general quality")
+            expected_impact = tool_spec.get("expected_impact", "improved presentation quality")
+            
             logger.info(f"    - Proposing: {tool_name}")
+            
+            # Register tool proposal with tracker
+            imp_id = self.tracker.register_improvement(
+                iteration=iteration_number,
+                type=ImprovementType.TOOL_CREATION,
+                name=f"Tool: {tool_name}",
+                description=tool_spec.get("description", "Auto-generated tool"),
+                target_weakness=target_weakness,
+                expected_impact=expected_impact,
+                implementation_details={
+                    "tool_spec": tool_spec,
+                    "iteration": iteration_number,
+                    "priority": tool_spec.get("priority", "medium")
+                }
+            )
             
             # First, log to TOOLS.md
             discovery_result = self.tools_manager.propose_tool(tool_spec)
@@ -486,6 +617,10 @@ class EvolutionSystem:
                         if implementation_result["deployed"]:
                             logger.info(f"      🚀 DEPLOYED: {tool_name} is now active!")
                             results["tools_adopted"].append(tool_name)
+                            
+                            # Track tool as successful
+                            self.tracker.improvements[imp_id].success = True
+                            results["improvement_ids"].append(imp_id)
                             
                             # Schedule performance tracking for next iteration
                             if not hasattr(self, '_tools_to_track'):

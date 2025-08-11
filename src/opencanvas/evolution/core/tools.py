@@ -22,33 +22,29 @@ class ToolsManager:
     - Proposed tools from evolution
     - Rejected tools with lessons learned
     - Tool testing and adoption decisions
+    
+    Now uses RegistryInitializer for proper TOOLS_REGISTRY.md management
     """
     
     def __init__(self, registry_file: str = None):
-        """Initialize tools manager"""
-        # Use TOOLS.md in project root by default
-        if registry_file:
-            self.registry_file = Path(registry_file)
-        else:
-            # Find TOOLS.md in project root
-            current_dir = Path(__file__).parent
-            while current_dir.parent != current_dir:
-                tools_md = current_dir / "TOOLS.md"
-                if tools_md.exists():
-                    self.registry_file = tools_md
-                    break
-                current_dir = current_dir.parent
-            else:
-                # Default to current directory if not found
-                self.registry_file = Path("TOOLS.md")
+        """Initialize tools manager with registry integration"""
+        # Use TOOLS_REGISTRY.md as default instead of TOOLS.md
+        registry_path = registry_file if registry_file else "TOOLS_REGISTRY.md"
+        
+        # Initialize with RegistryInitializer for proper registry management
+        try:
+            from .registry_initializer import RegistryInitializer
+            self.registry = RegistryInitializer(registry_path)
+            logger.info(f"📚 ToolsManager integrated with RegistryInitializer")
+        except Exception as e:
+            logger.error(f"Failed to initialize RegistryInitializer: {e}")
+            self.registry = None
+        
+        # Keep backward compatibility with existing interface
         self.current_tools = CURRENT_TOOLS.copy()
         self.rejected_tools = REJECTED_TOOLS.copy()
-        self.proposed_tools = PROPOSED_TOOLS.copy()
+        self.proposed_tools = {}  # Start empty, populated during evolution
         self.tool_history = []
-        
-        # Create registry file if it doesn't exist
-        if not self.registry_file.exists():
-            self._create_initial_registry()
     
     def propose_tool(self, tool_spec: Dict[str, Any]) -> Dict[str, Any]:
         """Propose a new tool based on evolution analysis"""
@@ -64,23 +60,54 @@ class ToolsManager:
                 "error": f"Invalid tool specification: {validation_result['issues']}"
             }
         
-        # Check for duplicates
-        if tool_name in self.current_tools or tool_name in self.proposed_tools:
+        # Check for duplicates using registry
+        if self.registry:
+            registry_data = self.registry.parse_registry()
+            failed_tools = registry_data.get("failed_tools", {})
+            active_tools = registry_data.get("active_tools", {})
+            
+            if tool_name in failed_tools:
+                lesson = failed_tools[tool_name].get("lesson_learned", "No lesson recorded")
+                return {
+                    "success": False,
+                    "error": f"Tool {tool_name} was previously tested and failed. Lesson: {lesson}"
+                }
+            if tool_name in active_tools:
+                return {
+                    "success": False,
+                    "error": f"Tool {tool_name} is already an active tool"
+                }
+        
+        # Check local proposed tools
+        if tool_name in self.proposed_tools:
             return {
                 "success": False,
-                "error": f"Tool {tool_name} already exists"
+                "error": f"Tool {tool_name} already proposed in this session"
             }
+        
+        # Extract gap information if available
+        if "targets_gaps" in tool_spec:
+            gaps = tool_spec["targets_gaps"]
+            if gaps and len(gaps) > 0:
+                first_gap = gaps[0]
+                tool_spec["targets_gap"] = first_gap.get("dimension", "Unknown")
+                tool_spec["baseline_score"] = first_gap.get("avg_score", "N/A")
+                tool_spec["target_score"] = first_gap.get("improvement_potential", "N/A")
         
         # Determine priority based on impact and complexity
         priority = self._calculate_priority(tool_spec)
         tool_spec["priority"] = priority
         tool_spec["proposed_at"] = datetime.now().isoformat()
+        tool_spec["solution_type"] = tool_spec.get("solution_type", "tool")
         
-        # Add to proposed tools
+        # Add to proposed tools locally
         self.proposed_tools[tool_name] = tool_spec
         
-        # Update registry
-        self._update_registry()
+        # Update registry using RegistryInitializer
+        if self.registry:
+            registry_success = self.registry.add_proposed_tool(tool_name, tool_spec)
+            if not registry_success:
+                logger.warning(f"Failed to add {tool_name} to registry, but keeping in local proposed tools")
         
         # Record in history
         self.tool_history.append({
@@ -118,19 +145,30 @@ class ToolsManager:
         tool_spec["tested_at"] = datetime.now().isoformat()
         
         if adoption_decision["adopt"]:
-            # Move to current tools
-            self._adopt_tool(tool_name, tool_spec, test_results)
+            # Tool passed testing - would be adopted
+            # For now, just log success (actual adoption would integrate with system)
             status = "adopted"
+            logger.info(f"🎉 Tool {tool_name} passed testing and would be adopted")
         else:
-            # Move to rejected tools
-            self._reject_tool(tool_name, tool_spec, test_results, adoption_decision["reason"])
+            # Tool failed testing - add to failed tools in registry  
             status = "rejected"
+            failure_reason = adoption_decision["reason"]
+            lesson_learned = f"Failed due to: {failure_reason}. Consider alternative approaches."
+            
+            if self.registry:
+                self.registry.mark_tool_failed(tool_name, failure_reason, lesson_learned)
+            
+            # Also add to local rejected tools
+            self.rejected_tools[tool_name] = {
+                "purpose": tool_spec.get("purpose", "Unknown"),
+                "failure_reason": failure_reason,
+                "test_period": datetime.now().strftime("%Y-%m-%d"),
+                "pattern": "Evolution-discovered tool that failed testing",
+                "lesson": lesson_learned
+            }
         
-        # Remove from proposed
+        # Remove from proposed tools
         del self.proposed_tools[tool_name]
-        
-        # Update registry
-        self._update_registry()
         
         # Record in history
         self.tool_history.append({
@@ -151,33 +189,65 @@ class ToolsManager:
             "metrics": test_results
         }
     
-    def get_context_for_agents(self) -> str:
-        """Get concise tool ecosystem context for agent prompts"""
+    def get_context_for_agents(self, evaluation_weaknesses: List[Dict] = None, missing_capabilities: List[str] = None) -> str:
+        """Get concise tool ecosystem context for agent prompts, including evaluation gaps"""
         
         context = "CURRENT TOOL ECOSYSTEM:\n\n"
         
-        # Current tools
-        context += "Production Tools:\n"
-        for name, spec in list(self.current_tools.items())[:5]:  # Top 5
-            context += f"- {name}: {spec['purpose']}\n"
-            context += f"  Input: {spec['input_spec']}\n"
-            context += f"  Performance: {spec['performance']}\n\n"
+        # Read from registry instead of hardcoded data
+        if self.registry:
+            registry_data = self.registry.parse_registry()
+            
+            # Active tools from registry
+            context += "Production Tools:\n"
+            for name, spec in list(registry_data.get("active_tools", {}).items())[:5]:  # Top 5
+                context += f"- {name}: {spec.get('purpose', 'No description')}\n"
+                if 'input' in spec:
+                    context += f"  Input: {spec['input']}\n"
+                if 'output' in spec:
+                    context += f"  Output: {spec['output']}\n"
+                if 'usage' in spec:
+                    context += f"  Usage: {spec['usage']}\n"
+                context += "\n"
+            
+            # Failed tools and lessons learned from registry
+            context += "AVOID THESE FAILED PATTERNS (from registry):\n"
+            for name, spec in registry_data.get("failed_tools", {}).items():
+                if 'lesson_learned' in spec:
+                    context += f"- {spec['lesson_learned']}\n"
+            
+            # Proposed tools from registry
+            proposed_tools = registry_data.get("proposed_tools", {})
+            if proposed_tools:
+                context += f"\nPROPOSED TOOLS IN PIPELINE: {', '.join(list(proposed_tools.keys())[:3])}\n"
+        else:
+            # Fallback to hardcoded if registry not available
+            context += "Production Tools:\n"
+            for name, spec in list(self.current_tools.items())[:5]:  # Top 5
+                context += f"- {name}: {spec['purpose']}\n"
+                context += f"  Input: {spec['input_spec']}\n"
+                context += f"  Performance: {spec['performance']}\n\n"
         
-        # Failed patterns to avoid
-        context += "AVOID THESE FAILED PATTERNS:\n"
-        for pattern in FAILED_PATTERNS:
-            context += f"- {pattern}\n"
+        # Add evaluation-driven context - THIS IS THE KEY ADDITION
+        if evaluation_weaknesses:
+            context += "\n🎯 QUALITY GAPS IDENTIFIED FROM EVALUATION:\n"
+            for weakness in evaluation_weaknesses[:5]:  # Top 5 weaknesses
+                dimension = weakness.get('dimension', 'Unknown')
+                score = weakness.get('avg_score', 0)
+                gap = weakness.get('description', 'No description')
+                context += f"- {dimension} (Score: {score:.2f}/5.0): {gap}\n"
+            context += "\n"
         
-        # Successful patterns to follow
-        context += "\nFOLLOW THESE SUCCESSFUL PATTERNS:\n"
+        if missing_capabilities:
+            context += "🔧 MISSING CAPABILITIES TO ADDRESS:\n"
+            for capability in missing_capabilities[:5]:  # Top 5 missing capabilities
+                context += f"- {capability}\n"
+            context += "\n"
+        
+        # Add patterns from config (these can stay hardcoded as general guidelines)
+        context += "FOLLOW THESE SUCCESSFUL PATTERNS:\n"
         for pattern in SUCCESSFUL_PATTERNS:
             context += f"- {pattern}\n"
-        
-        # High-priority proposed tools
-        high_priority_tools = [name for name, spec in self.proposed_tools.items() 
-                              if spec.get("priority") == "high"]
-        if high_priority_tools:
-            context += f"\nHIGH-PRIORITY TOOLS IN PIPELINE: {', '.join(high_priority_tools[:3])}\n"
         
         return context
     
@@ -470,11 +540,24 @@ Tools that were tested but not adopted - learn from these failures.
 
 
 class ToolDiscovery:
-    """Helper class for discovering new tools during evolution"""
+    """Helper class for discovering new tools during evolution with registry awareness"""
     
     @staticmethod
-    def discover_from_weaknesses(weakness_patterns: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Discover potential tools based on weakness patterns"""
+    def discover_from_weaknesses(weakness_patterns: List[Dict[str, Any]], registry_path: str = "TOOLS_REGISTRY.md") -> List[Dict[str, Any]]:
+        """Discover potential tools based on weakness patterns with registry awareness"""
+        
+        # Get registry information to avoid suggesting failed/existing tools
+        try:
+            from .registry_initializer import RegistryInitializer
+            registry = RegistryInitializer(registry_path)
+            failed_tools = registry.get_failed_tools()
+            active_tools = registry.get_active_tools()
+            
+            logger.info(f"🔍 Registry awareness: avoiding {len(failed_tools)} failed tools and {len(active_tools)} active tools")
+        except Exception as e:
+            logger.warning(f"Registry awareness disabled due to error: {e}")
+            failed_tools = []
+            active_tools = []
         
         discoveries = []
         
@@ -482,39 +565,118 @@ class ToolDiscovery:
             category = weakness.get("category", "")
             dimension = weakness.get("dimension", "")
             avg_score = weakness.get("avg_score", 0)
+            root_causes = weakness.get("root_causes", [])
             
-            # Map common weakness patterns to tool opportunities
+            # Generate diverse tool suggestions based on weaknesses
+            candidate_tools = []
+            
+            # Visual quality issues
             if dimension == "clarity_readability" and avg_score < 3.0:
-                discoveries.append({
-                    "name": "ChartReadabilityValidator",
-                    "purpose": "Ensure charts and visualizations are readable",
-                    "target_problem": f"Clarity/readability scoring {avg_score:.2f}/5",
-                    "expected_impact": "high",
-                    "complexity": "medium"
-                })
+                candidate_tools.extend([
+                    {
+                        "name": "ChartReadabilityValidator",
+                        "purpose": "Ensure charts and visualizations are readable",
+                        "target_problem": f"Clarity/readability scoring {avg_score:.2f}/5",
+                        "expected_impact": "high",
+                        "complexity": "medium"
+                    },
+                    {
+                        "name": "FontSizeOptimizer", 
+                        "purpose": "Automatically optimize font sizes for readability",
+                        "target_problem": f"Poor readability with score {avg_score:.2f}/5",
+                        "expected_impact": "medium",
+                        "complexity": "low"
+                    }
+                ])
             
-            if "fake" in str(weakness.get("root_causes", [])).lower():
-                discoveries.append({
-                    "name": "CitationVerificationTool", 
-                    "purpose": "Detect and prevent fake citations",
-                    "target_problem": "Fake citations in generated content",
-                    "expected_impact": "high",
-                    "complexity": "low"
-                })
+            # Citation and accuracy issues (diverse approaches, not hardcoded)
+            if any("fake" in str(cause).lower() or "citation" in str(cause).lower() or "accuracy" in str(cause).lower() 
+                   for cause in root_causes):
+                candidate_tools.extend([
+                    {
+                        "name": "SourceVerificationTool",
+                        "purpose": "Verify information against source materials",
+                        "target_problem": "Accuracy issues in generated content",
+                        "expected_impact": "high", 
+                        "complexity": "medium"
+                    },
+                    {
+                        "name": "FactCheckingValidator",
+                        "purpose": "Cross-reference facts with reliable sources",
+                        "target_problem": "Potential fake or unverified information",
+                        "expected_impact": "high",
+                        "complexity": "high"
+                    },
+                    {
+                        "name": "ReferenceTracker",
+                        "purpose": "Track source material for every claim",
+                        "target_problem": "Missing source attribution",
+                        "expected_impact": "medium",
+                        "complexity": "low"
+                    }
+                ])
             
+            # Visual-textual balance issues
             if dimension == "visual_textual_balance" and avg_score < 3.5:
-                discoveries.append({
-                    "name": "ContentBalanceAnalyzer",
-                    "purpose": "Detect and fix text walls and content imbalance",
-                    "target_problem": f"Visual-textual balance scoring {avg_score:.2f}/5",
-                    "expected_impact": "medium", 
-                    "complexity": "low"
-                })
+                candidate_tools.extend([
+                    {
+                        "name": "ContentBalanceAnalyzer",
+                        "purpose": "Detect and fix text walls and content imbalance",
+                        "target_problem": f"Visual-textual balance scoring {avg_score:.2f}/5",
+                        "expected_impact": "medium",
+                        "complexity": "low"
+                    },
+                    {
+                        "name": "VisualElementInjector",
+                        "purpose": "Automatically add visual elements to text-heavy slides",
+                        "target_problem": f"Text-heavy slides with balance score {avg_score:.2f}/5",
+                        "expected_impact": "high",
+                        "complexity": "medium"
+                    }
+                ])
+            
+            # Engagement and presentation issues
+            if any("engagement" in str(cause).lower() or "boring" in str(cause).lower() 
+                   for cause in root_causes) or avg_score < 3.2:
+                candidate_tools.extend([
+                    {
+                        "name": "InteractivityEnhancer",
+                        "purpose": "Add interactive elements to presentations",
+                        "target_problem": "Low engagement scores",
+                        "expected_impact": "high",
+                        "complexity": "high"
+                    },
+                    {
+                        "name": "ColorSchemeOptimizer", 
+                        "purpose": "Optimize color schemes for visual appeal",
+                        "target_problem": "Visual appeal issues",
+                        "expected_impact": "medium",
+                        "complexity": "low"
+                    }
+                ])
+            
+            # Filter out failed and active tools before adding to discoveries
+            for tool in candidate_tools:
+                tool_name = tool["name"]
+                if tool_name not in failed_tools and tool_name not in active_tools:
+                    discoveries.append(tool)
+                else:
+                    logger.info(f"🚫 Skipping {tool_name}: already in {'failed' if tool_name in failed_tools else 'active'} tools")
         
-        # Remove duplicates
+        # Remove duplicates and prioritize by expected impact
         seen_names = set()
         unique_discoveries = []
-        for discovery in discoveries:
+        
+        # Sort by expected impact (high -> medium -> low) and complexity (low -> medium -> high)
+        impact_priority = {"high": 3, "medium": 2, "low": 1}
+        complexity_priority = {"low": 3, "medium": 2, "high": 1}
+        
+        sorted_discoveries = sorted(discoveries, key=lambda x: (
+            impact_priority.get(x.get("expected_impact", "low"), 1),
+            complexity_priority.get(x.get("complexity", "high"), 1)
+        ), reverse=True)
+        
+        for discovery in sorted_discoveries:
             if discovery["name"] not in seen_names:
                 seen_names.add(discovery["name"])
                 unique_discoveries.append(discovery)

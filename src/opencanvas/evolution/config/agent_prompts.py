@@ -34,7 +34,7 @@ AGENT_ACTIONS = {
         "create_tools"
     ],
     "orchestrator": [
-        "plan_evolution_cycle",
+        "run_evolution_cycle",
         "coordinate_agents",
         "track_progress",
         "evaluate_results"

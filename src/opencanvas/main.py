@@ -211,43 +211,61 @@ def handle_convert(args, logger):
     return 0
 
 def handle_evaluate(args, logger):
-    """Handle evaluate command"""
+    """Handle evaluate command - uses Config for provider consistency"""
     logger.info(f"📊 Evaluating presentation: {args.eval_folder}")
     
-    # Determine API key and model based on provider
-    if args.eval_provider == "claude":
+    # Use Config for provider consistency (same as pipeline)
+    from opencanvas.config import Config
+    
+    # Override from args if provided, otherwise use Config defaults
+    provider = args.eval_provider if args.eval_provider else Config.EVALUATION_PROVIDER
+    model = args.model if args.model else Config.EVALUATION_MODEL
+    
+    # Get API key based on provider
+    if provider == "claude":
         api_key = Config.ANTHROPIC_API_KEY
         if not api_key:
             logger.error("ANTHROPIC_API_KEY is required for Claude evaluation")
             return 1
-        
-        # Use Claude model if provider is Claude, regardless of what's specified in args.model
-        if args.model.startswith('gpt-') or args.model.startswith('o1-'):
-            # If user specified a GPT model but wants Claude provider, use default Claude model
-            model = Config.EVALUATION_MODEL  # Default Claude model
-            logger.warning(f"Using Claude provider but GPT model specified. Using default Claude model: {model}")
-        else:
-            model = args.model
             
-    elif args.eval_provider == "gpt":
+    elif provider == "gpt":
         api_key = Config.OPENAI_API_KEY
         if not api_key:
             logger.error("OPENAI_API_KEY is required for GPT evaluation")
             return 1
-        
-        # Use GPT model if provider is GPT
-        if args.model.startswith('claude-'):
-            # If user specified a Claude model but wants GPT provider, use a default GPT model
-            model = "gpt-4o-mini"  # Default GPT model
-            logger.warning(f"Using GPT provider but Claude model specified. Using default GPT model: {model}")
-        else:
-            model = args.model
             
+    elif provider == "gemini":
+        api_key = Config.GEMINI_API_KEY
+        if not api_key:
+            logger.error("GEMINI_API_KEY is required for Gemini evaluation")
+            return 1
     else:
-        logger.error(f"Unsupported evaluation provider: {args.eval_provider}. Use 'claude' or 'gpt'")
+        logger.error(f"Unknown provider: {provider}. Use 'claude', 'gpt', or 'gemini'")
         return 1
     
-    logger.info(f"Using {args.eval_provider} provider with model {model} for evaluation")
+    # Validate model matches provider
+    model_provider_map = {
+        'claude': ['claude-'],
+        'gpt': ['gpt-', 'o1-'],
+        'gemini': ['gemini-']
+    }
+    
+    # Check if model matches provider
+    provider_prefixes = model_provider_map.get(provider, [])
+    model_matches = any(model.startswith(prefix) for prefix in provider_prefixes)
+    
+    if not model_matches:
+        # Model doesn't match provider, use default
+        default_models = {
+            'claude': 'claude-3-5-sonnet-20241022',
+            'gpt': 'gpt-4o-mini',
+            'gemini': 'gemini-2.5-flash'
+        }
+        old_model = model
+        model = default_models.get(provider, model)
+        logger.warning(f"Model '{old_model}' doesn't match provider '{provider}'. Using '{model}'")
+    
+    logger.info(f"Using {provider} provider with model {model} for evaluation")
     
     # Check if we have an organized structure or flat structure
     eval_path = Path(args.eval_folder)
@@ -260,7 +278,7 @@ def handle_evaluate(args, logger):
         evaluator = PresentationEvaluator(
             api_key=api_key,
             model=model,
-            provider=args.eval_provider
+            provider=provider  # Use resolved provider, not args
         )
         
         # Find the files in organized structure
@@ -290,7 +308,7 @@ def handle_evaluate(args, logger):
         evaluator = PresentationEvaluator(
             api_key=api_key,
             model=model,
-            provider=args.eval_provider
+            provider=provider  # Use resolved provider, not args
         )
         
         result = evaluator.evaluate_presentation(args.eval_folder)

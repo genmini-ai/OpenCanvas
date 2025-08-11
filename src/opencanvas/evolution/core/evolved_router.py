@@ -57,10 +57,21 @@ class EvolvedGenerationRouter(GenerationRouter):
             self._use_baseline_generators()
     
     def _load_auto_generated_tools(self, iteration: Optional[int]) -> List:
-        """Load auto-generated tools from previous iterations"""
+        """Load auto-generated tools from previous iterations, checking registry for failures"""
         tools = []
         if not iteration or iteration <= 1:
             return tools
+        
+        # Load registry to check for failed tools
+        try:
+            from .registry_initializer import RegistryInitializer
+            registry = RegistryInitializer("TOOLS_REGISTRY.md")
+            registry_data = registry.parse_registry()
+            failed_tools = registry_data.get("failed_tools", {})
+            logger.info(f"📚 Loaded registry with {len(failed_tools)} failed tools to avoid")
+        except Exception as e:
+            logger.warning(f"Could not load registry: {e}")
+            failed_tools = {}
         
         # Load tools from all previous iterations
         logger.info(f"🔍 Loading auto-generated tools from iterations 1 to {iteration-1}")
@@ -82,9 +93,21 @@ class EvolvedGenerationRouter(GenerationRouter):
                             # Find tool classes
                             for name in dir(module):
                                 obj = getattr(module, name)
-                                if isinstance(obj, type) and name != "BaseTool":
-                                    tools.append(obj())
-                                    logger.info(f"  🔧 Loaded auto-generated tool: {name}")
+                                # Check if it's a class that has a process method (tool signature)
+                                if isinstance(obj, type) and hasattr(obj, 'process') and name not in ["BaseTool", "EvolutionTool", "HTMLProcessingTool", "ContentProcessingTool", "ValidationTool"]:
+                                    # Check if this tool is in failed list
+                                    if name in failed_tools:
+                                        logger.warning(f"  ⚠️ Skipping failed tool: {name} - {failed_tools[name].get('failure_reason', 'Unknown reason')}")
+                                    else:
+                                        try:
+                                            # Instantiate the tool
+                                            tool_instance = obj()
+                                            # Set iteration info
+                                            tool_instance.iteration_added = i
+                                            tools.append(tool_instance)
+                                            logger.info(f"  🔧 Loaded auto-generated tool: {name} (stage: {getattr(tool_instance, 'stage', 'unknown')})")
+                                        except Exception as e:
+                                            logger.error(f"  ❌ Failed to instantiate {name}: {e}")
             else:
                 logger.info(f"  📂 No tools found in iteration {i}")
         
@@ -100,112 +123,122 @@ class EvolvedGenerationRouter(GenerationRouter):
 class EvolvedTopicGenerator(TopicGenerator):
     """
     Topic generator that uses evolved prompts while keeping all other tools
+    FIXED: Now properly uses ToolPipeline for all tool execution
     """
     
     def __init__(self, api_key, brave_api_key=None, evolved_prompt: str = None, auto_generated_tools: List = None):
         """Initialize with evolved prompt and auto-generated tools"""
-        super().__init__(api_key, brave_api_key)
+        # Initialize parent with evolution tools ENABLED
+        super().__init__(api_key, brave_api_key, enable_evolution_tools=True)
         self.evolved_prompt = evolved_prompt
         self.auto_generated_tools = auto_generated_tools or []
         
         if evolved_prompt:
             logger.info(f"📝 EvolvedTopicGenerator using custom prompt ({len(evolved_prompt)} chars)")
-        if self.auto_generated_tools:
-            logger.info(f"🔧 EvolvedTopicGenerator using {len(self.auto_generated_tools)} auto-generated tools")
+        
+        # CRITICAL FIX: Register auto-generated tools with the pipeline
+        if self.auto_generated_tools and self.enable_evolution_tools and self.tool_pipeline:
+            logger.info(f"🔧 Registering {len(self.auto_generated_tools)} auto-generated tools with pipeline")
+            self._register_tools_with_pipeline()
     
-    def _apply_auto_generated_tools(self, content: str, stage: str = "blog") -> str:
-        """Apply auto-generated tools to content at specified stage"""
-        
-        if not self.auto_generated_tools:
-            return content
-        
-        processed_content = content
-        tools_applied = 0
-        
-        logger.info(f"🔧 Applying {len(self.auto_generated_tools)} tools at {stage} stage...")
+    def _register_tools_with_pipeline(self):
+        """Register auto-generated tools with the validation pipeline"""
+        from opencanvas.evolution.core.tool_pipeline import ToolStage
+        from opencanvas.evolution.core.base_tool import EvolutionTool
         
         for tool in self.auto_generated_tools:
             try:
-                logger.info(f"  🛠️  Applying tool: {tool.name}")
+                # Determine appropriate stage
+                stage = ToolStage.POST_HTML  # Default
+                if hasattr(tool, 'stage'):
+                    stage_map = {
+                        'post_blog': ToolStage.POST_BLOG,
+                        'post_html': ToolStage.POST_HTML,
+                        'pre_evaluation': ToolStage.PRE_EVALUATION
+                    }
+                    stage = stage_map.get(tool.stage, ToolStage.POST_HTML)
                 
-                # Apply tool to current content
-                result = tool.process(processed_content)
-                
-                # Handle different result formats
-                if isinstance(result, str):
-                    # Simple string result - replace content
-                    processed_content = result
-                    tools_applied += 1
-                    logger.info(f"    ✅ {tool.name}: Applied (string result)")
-                    
-                elif isinstance(result, dict):
-                    # Dictionary result - check for various formats
-                    if result.get('success') and result.get('processed_content'):
-                        processed_content = result['processed_content']
-                        tools_applied += 1
-                        logger.info(f"    ✅ {tool.name}: Applied (dict result)")
-                    elif result.get('fixes_applied'):
-                        processed_content = result['fixes_applied']
-                        tools_applied += 1
-                        logger.info(f"    ✅ {tool.name}: Applied fixes")
-                    elif 'enhanced_content' in result:
-                        processed_content = result['enhanced_content']
-                        tools_applied += 1
-                        logger.info(f"    ✅ {tool.name}: Applied enhancement")
-                    else:
-                        logger.info(f"    ⚠️  {tool.name}: No actionable result")
-                        
+                # Wrap tool process method to ensure it inherits from base class validation
+                if isinstance(tool, EvolutionTool):
+                    # Tool already has proper validation
+                    process_func = tool.safe_process
                 else:
-                    logger.info(f"    ⚠️  {tool.name}: Unknown result format: {type(result)}")
+                    # Legacy tool - wrap with validation
+                    def make_safe_wrapper(t):
+                        def safe_wrapper(content, context=None):
+                            try:
+                                result = t.process(content)
+                                
+                                # CRITICAL: Type validation - must return string
+                                if not isinstance(result, str):
+                                    logger.error(f"Tool {t.name} returned {type(result).__name__}, expected str. Blocking tool output.")
+                                    logger.error(f"Tool {t.name} result preview: {str(result)[:100]}...")
+                                    return content  # Return original content
+                                
+                                # Check for debug messages
+                                if any(marker in result for marker in ['[TOOL', '[DEBUG', 'ENHANCEMENT:']):
+                                    logger.warning(f"Tool {t.name} tried to add debug message - blocked")
+                                    return content  # Return original
+                                    
+                                return result
+                            except Exception as e:
+                                logger.error(f"Tool {t.name} failed: {e}")
+                                return content  # Return original on error
+                        return safe_wrapper
+                    process_func = make_safe_wrapper(tool)
+                
+                # Register with pipeline
+                success = self.tool_pipeline.register_tool(
+                    name=getattr(tool, 'name', tool.__class__.__name__),
+                    stage=stage,
+                    function=process_func,
+                    priority=getattr(tool, 'priority', 0),
+                    iteration_added=getattr(tool, 'iteration_added', 0)
+                )
+                
+                if success:
+                    logger.info(f"  ✅ Registered {tool.name} with pipeline at stage {stage.value}")
+                else:
+                    logger.warning(f"  ❌ Failed to register {tool.name}")
                     
             except Exception as e:
-                logger.error(f"    ❌ Tool {tool.name} failed: {e}")
-                # Continue with other tools even if one fails
-                continue
-        
-        logger.info(f"✅ Applied {tools_applied}/{len(self.auto_generated_tools)} tools successfully")
-        return processed_content
+                logger.error(f"  ❌ Error registering tool {getattr(tool, 'name', 'unknown')}: {e}")
+    
+    def _apply_auto_generated_tools(self, content: str, stage: str = "blog") -> str:
+        """DEPRECATED: Tools are now applied through the pipeline in generate_from_topic"""
+        logger.warning("_apply_auto_generated_tools called but tools should use pipeline now")
+        return content  # Just return content unchanged
     
     def generate_blog(self, user_text, additional_context=None):
-        """Generate blog content with auto-generated tools applied"""
+        """Generate blog content - tools are applied via pipeline in generate_from_topic"""
         
-        # First generate blog using parent method
+        # Just generate blog using parent method
+        # Tools will be applied through the pipeline in generate_from_topic
         blog_content = super().generate_blog(user_text, additional_context)
         
-        # Then apply auto-generated tools to improve the content
-        if self.auto_generated_tools and blog_content:
-            logger.info("🔧 Applying auto-generated tools to blog content...")
-            enhanced_blog_content = self._apply_auto_generated_tools(blog_content, stage="blog")
-            
-            if enhanced_blog_content != blog_content:
-                logger.info("✅ Blog content enhanced by auto-generated tools")
-                return enhanced_blog_content
-            else:
-                logger.info("ℹ️  Blog content unchanged after tool processing")
+        if self.auto_generated_tools:
+            logger.info(f"ℹ️ {len(self.auto_generated_tools)} tools registered - will be applied via pipeline")
         
         return blog_content
     
     def generate_slides_html(self, blog_content, purpose, theme):
-        """Generate HTML slide deck using evolved prompt and auto-generated tools"""
+        """Generate HTML slide deck using evolved prompt - tools applied via pipeline"""
         
-        # Apply auto-generated tools to blog content before slide generation
-        processed_blog_content = blog_content
-        if self.auto_generated_tools:
-            logger.info("🔧 Applying auto-generated tools before slide generation...")
-            processed_blog_content = self._apply_auto_generated_tools(blog_content, stage="slides")
+        # Tools are now applied through the pipeline in generate_from_topic
+        # No need to manually apply them here
         
         if self.evolved_prompt:
-            # Use evolved prompt with tool-processed content
+            # Use evolved prompt
             slide_prompt = self.evolved_prompt.format(
-                blog_content=processed_blog_content,  # Use processed content!
+                blog_content=blog_content,
                 purpose=purpose,
                 theme=theme
             )
             
             logger.info(f"🧬 Using EVOLVED slide generation prompt with processed content")
         else:
-            # Fall back to parent's implementation with processed content
-            return super().generate_slides_html(processed_blog_content, purpose, theme)
+            # Fall back to parent's implementation
+            return super().generate_slides_html(blog_content, purpose, theme)
         
         try:
             logger.info("📡 Using streaming for slide generation with evolved prompt...")

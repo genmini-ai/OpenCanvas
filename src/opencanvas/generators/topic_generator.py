@@ -17,8 +17,26 @@ from opencanvas.image_validation import ImageValidationPipeline
 
 logger = logging.getLogger(__name__)
 
+# Import evolution tool pipeline (lazy import to avoid circular dependencies)
+TOOL_PIPELINE_AVAILABLE = False
+ToolStage = None
+get_tool_pipeline = None
+
+def _import_tool_pipeline():
+    """Lazy import of tool pipeline to avoid circular dependencies"""
+    global TOOL_PIPELINE_AVAILABLE, ToolStage, get_tool_pipeline
+    if not TOOL_PIPELINE_AVAILABLE:
+        try:
+            from opencanvas.evolution.core.tool_pipeline import get_tool_pipeline as _get_pipeline, ToolStage as _ToolStage
+            get_tool_pipeline = _get_pipeline
+            ToolStage = _ToolStage
+            TOOL_PIPELINE_AVAILABLE = True
+            logger.info("Evolution tool pipeline imported successfully")
+        except ImportError as e:
+            logger.info(f"Evolution tool pipeline not available: {e}")
+
 class TopicGenerator(BaseGenerator):
-    def __init__(self, api_key, brave_api_key=None, enable_image_validation=True):
+    def __init__(self, api_key, brave_api_key=None, enable_image_validation=True, enable_evolution_tools=True):
         """Initialize the topic-based slide generator with Anthropic API key and optional Brave API key"""
         super().__init__(api_key)
         self.client = Anthropic(api_key=api_key)
@@ -34,6 +52,45 @@ class TopicGenerator(BaseGenerator):
             except Exception as e:
                 logger.warning(f"⚠️ Image validation disabled due to error: {e}")
                 self.enable_image_validation = False
+        
+        # Initialize evolution tool pipeline
+        self.enable_evolution_tools = enable_evolution_tools
+        if self.enable_evolution_tools:
+            try:
+                # Lazy import to avoid circular dependencies
+                _import_tool_pipeline()
+                if TOOL_PIPELINE_AVAILABLE:
+                    self.tool_pipeline = get_tool_pipeline()
+                    # Load evolution tools if they exist
+                    self._load_evolution_tools()
+                    logger.info("✅ Evolution tool pipeline initialized")
+                else:
+                    self.enable_evolution_tools = False
+            except Exception as e:
+                logger.warning(f"⚠️ Evolution tools disabled due to error: {e}")
+                self.enable_evolution_tools = False
+    
+    def _load_evolution_tools(self):
+        """Load evolution tools from available iterations"""
+        if not self.enable_evolution_tools:
+            return
+        
+        # Check for evolution tools directories
+        from pathlib import Path
+        tools_base = Path("src/opencanvas/evolution/tools")
+        
+        if tools_base.exists():
+            # Load tools from each iteration directory
+            for iteration_dir in sorted(tools_base.glob("iteration_*")):
+                if iteration_dir.is_dir():
+                    iteration_num = int(iteration_dir.name.split("_")[-1])
+                    tools_loaded = self.tool_pipeline.load_evolution_tools(iteration_num)
+                    if tools_loaded > 0:
+                        logger.info(f"  Loaded {tools_loaded} tools from iteration {iteration_num}")
+        
+        # Log pipeline status
+        status = self.tool_pipeline.get_pipeline_status()
+        logger.info(f"  Total tools in pipeline: {status['total_tools']}")
         
     def assess_knowledge_depth(self, user_text):
         """Check if Claude has enough knowledge to write an in-depth blog post"""
@@ -508,12 +565,30 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
             logger.error("❌ Failed to generate blog content")
             return None
         
+        # Apply evolution tools to blog content if available
+        if self.enable_evolution_tools and self.tool_pipeline:
+            context = {'topic': user_text, 'purpose': purpose}
+            blog_content = self.tool_pipeline.execute_stage(
+                ToolStage.POST_BLOG, 
+                blog_content,
+                context
+            )
+        
         # Step 4: Generate HTML slides
         logger.info("🎭 Creating HTML slide deck...")
         html_content = self.generate_slides_html(blog_content, purpose, theme)
         if not html_content:
             logger.error("❌ Failed to generate slides")
             return None
+        
+        # Apply evolution tools to HTML content if available
+        if self.enable_evolution_tools and self.tool_pipeline:
+            context = {'topic': user_text, 'purpose': purpose, 'theme': theme}
+            html_content = self.tool_pipeline.execute_stage(
+                ToolStage.POST_HTML,
+                html_content,
+                context
+            )
         
         # Step 4.5: Validate and fix images
         validation_report = None
