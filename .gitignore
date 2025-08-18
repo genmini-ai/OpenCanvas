@@ -74,6 +74,7 @@ playwright-report/
 test_data/
 test_output/
 output/
+pdf_zoom_tests/
 
 # Evolution system outputs
 evolution_runs/

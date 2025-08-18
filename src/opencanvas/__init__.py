@@ -6,10 +6,7 @@ __description__ = "Generate, convert, and evaluate presentations from topics or 
 
 from opencanvas.config import Config
 from opencanvas.generators.router import GenerationRouter
-try:
-    from opencanvas.conversion.html_to_pdf import PresentationConverter
-except ImportError:
-    PresentationConverter = None
+from opencanvas.conversion.html_to_pdf import PresentationConverter
 from opencanvas.evaluation.evaluator import PresentationEvaluator
 from opencanvas.editing.assist_mode import AssistModeStyleEditor
 
