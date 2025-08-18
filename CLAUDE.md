@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## CRITICAL GLOBAL RULES
+
+### NEVER Create Synthetic/Fallback Data
+- **NEVER** create synthetic gaps, scores, or results as fallbacks
+- **NEVER** use fake data to mask real issues or keep systems running
+- If evaluation fails → Stop evolution, don't analyze error data
+- If no gaps found → This is SUCCESS (system optimized), not failure
+- Real failures should propagate and be fixed, not hidden with synthetic data
+- This applies to ALL components: evaluation, reflection, improvement, implementation
+
 ## Development Commands
 
 ```bash
@@ -39,7 +49,13 @@ python run_adversarial_eval_test.py
 python run_adversarial_eval_test.py --regenerate
 
 # Evolution System - Autonomous presentation improvement
-python test_evolution_unified_final.py  # Run complete autonomous evolution system
+python test_evolution_unified_final.py --run  # Run complete autonomous evolution system (default: 2 iterations)
+python test_evolution_unified_final.py --run --max-iterations 1  # Single iteration test to verify tool/prompt changes
+python test_evolution_unified_final.py --run --max-iterations 1 --topic "AI in healthcare"  # Custom topic single iteration
+python test_evolution_unified_final.py --run --diagnostic  # Run with diagnostic output for debugging
+python test_evolution_unified_final.py --run --prompt-only  # Focus only on prompt optimization, skip tool creation
+python test_evolution_unified_final.py --run --initial-prompt evolution_runs/evolved_prompts/generation_prompt_v3.txt  # Start with custom prompt
+python test_evolution_unified_final.py --run --resume evolution_runs/tracked_evolution_20250815_162354  # Resume from existing experiment
 
 # Validate configuration
 python -c "from opencanvas.config import Config; Config.validate(); print('✅ Configuration valid')"
@@ -153,12 +169,22 @@ The testing system supports light mode for faster validation and force regenerat
 - **Autonomous Pipeline**: Tools are generated, tested, and deployed automatically without human intervention (unless explicitly configured)
 - **Learning System**: Failed and successful tool patterns are tracked to improve future tool creation
 
-**Output Structure**: 
+**Output Structure** (matches successful 0815 runs): 
 ```
 evolution_runs/experiment_name/
 ├── config.json                    # Experiment configuration
 ├── training.log                   # Complete evolution log (288+ entries)
-├── iteration_001/                 # Checkpoint with reusable state
+├── evolution/
+│   ├── iteration_1/
+│   │   ├── evaluation_results.json      # Iteration evaluation results
+│   │   └── presentations/               # Generated presentations for evaluation
+│   ├── iteration_2/
+│   │   ├── evaluation_results.json
+│   │   └── presentations/
+│   └── evolved_prompts/
+│       ├── generation_prompt_v1.txt     # Evolved prompts (iteration 1 → 2)
+│       ├── generation_prompt_v2.txt     # Evolved prompts (iteration 2 → 3)
+│       └── ...
 ├── summary.json                   # Final results and metrics
 └── auto_generated_tools/          # Deployed tools integrated into pipeline
 ```

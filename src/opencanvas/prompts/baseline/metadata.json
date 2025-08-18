@@ -1,0 +1,21 @@
+{
+  "version": "baseline",
+  "created": "2025-08-13",
+  "description": "Original baseline prompt for HTML presentation generation",
+  "estimated_score": 3.2,
+  "variables": [
+    "blog_content",
+    "purpose", 
+    "theme"
+  ],
+  "xml_sections": [
+    "presentation_task",
+    "design_philosophy",
+    "visual_requirements",
+    "content_presentation",
+    "content_enhancements",
+    "technical_excellence",
+    "motion_design",
+    "output_requirements"
+  ]
+}

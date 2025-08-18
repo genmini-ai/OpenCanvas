@@ -19,8 +19,15 @@ class EvolutionAgent:
     Unified agent that can act as any evolution specialist based on agent_type
     """
     
-    def __init__(self, agent_type: str, api_key: str = None, model: str = None):
-        """Initialize evolution agent with specific type"""
+    def __init__(self, agent_type: str, api_key: str = None, model: str = None, prompts_registry = None):
+        """Initialize evolution agent with specific type
+        
+        Args:
+            agent_type: Type of agent (reflection, improvement, implementation, orchestrator)
+            api_key: API key for Claude
+            model: Model to use
+            prompts_registry: PromptsRegistryManager instance for accessing prompt history
+        """
         
         if agent_type not in AGENT_PROMPTS:
             raise ValueError(f"Unknown agent type: {agent_type}. Valid types: {list(AGENT_PROMPTS.keys())}")
@@ -29,6 +36,7 @@ class EvolutionAgent:
         self.name = f"{agent_type.title()} Agent"
         self.api_key = api_key or Config.ANTHROPIC_API_KEY
         self.model = model or AGENT_CONFIG["model"]
+        self.prompts_registry = prompts_registry
         
         if not self.api_key:
             raise ValueError(f"API key required for {self.name}")
@@ -38,7 +46,10 @@ class EvolutionAgent:
         self.valid_actions = AGENT_ACTIONS[agent_type]
         self.history = []
         
-        logger.info(f"✅ {self.name} initialized")
+        if self.prompts_registry:
+            logger.info(f"✅ {self.name} initialized with prompts registry")
+        else:
+            logger.info(f"✅ {self.name} initialized")
     
     def process(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process input using agent-specific logic"""
@@ -109,6 +120,8 @@ class EvolutionAgent:
             return self._implement_improvements(input_data)
         elif action == "propose_tools":
             return self._propose_tools(input_data)
+        elif action == "generate_adaptive_prompt_enhancements":
+            return self._generate_adaptive_prompt_enhancements(input_data)
         else:
             return self._generic_implementation_process(input_data)
     
@@ -129,9 +142,29 @@ class EvolutionAgent:
         
         evaluations = input_data.get("evaluations", [])
         topics = input_data.get("topics", [])
+        prompt_only = input_data.get("prompt_only", False)
         
         # Get registry context for the reflection agent
         registry_context = self._get_tool_context()
+        
+        # Add prompt-only mode context
+        if prompt_only:
+            prompt_only_context = """
+
+IMPORTANT: PROMPT-ONLY MODE ACTIVE
+- Focus primarily on gaps that can be addressed through prompt improvements
+- Still identify tool-required gaps but classify them as "deferred_tool_required"
+- For each gap, prioritize prompt-based solutions over tool-based solutions
+- Consider creative prompt-based workarounds for complex issues
+- Examples of prompt-addressable gaps:
+  * Content organization and structure
+  * Source adherence and accuracy
+  * Formatting and visual hierarchy
+  * Clarity and readability improvements
+  * Engagement through better content framing
+"""
+        else:
+            prompt_only_context = ""
         
         evaluations_json = json.dumps(evaluations, indent=2)
         topics_str = str(topics)
@@ -141,7 +174,7 @@ class EvolutionAgent:
             evaluations_json=evaluations_json,
             topics_str=topics_str,
             registry_context=registry_context
-        )
+        ) + prompt_only_context
 
         result = self._call_claude(prompt)
         
@@ -158,11 +191,22 @@ class EvolutionAgent:
                 logger.info(f"    - Content Required: {baseline.get('content_required', 0):.2f}/5.0")
                 logger.info(f"    - Overall: {baseline.get('overall', 0):.2f}/5.0")
             
+            # Log gap identification results
+            gaps = result.get('identified_gaps', [])
+            
+            if len(gaps) == 0:
+                logger.info("📊 No gaps identified in this reflection attempt")
+                # Don't modify result - let orchestrator handle retries
+            elif len(gaps) < 3:
+                logger.warning(f"⚠️ Only {len(gaps)} gaps identified - fewer than optimal but continuing")
+            else:
+                logger.info(f"✅ {len(gaps)} gaps identified by reflection agent")
+            
             # Log identified gaps with reasoning
             if "identified_gaps" in result:
                 gaps = result['identified_gaps']
                 logger.info(f"  🔍 Identified {len(gaps)} gaps:")
-                for gap in gaps[:3]:  # Log top 3
+                for gap in gaps[:5]:  # Log top 5
                     logger.info(f"    - {gap.get('description', 'Unknown gap')}")
                     logger.info(f"      Score: {gap.get('current_score', 0):.2f} → {gap.get('target_score', 0):.2f}")
                     logger.info(f"      Solution: {gap.get('solution_type', 'unknown')} - {gap.get('solution_rationale', 'No rationale')[:100]}...")
@@ -213,16 +257,33 @@ class EvolutionAgent:
         reflection_results = input_data.get("reflection_results", {})
         current_baseline = input_data.get("current_baseline", {})
         iteration_number = input_data.get("iteration_number", 1)
+        prompt_only = input_data.get("prompt_only", False)
         
         reflection_json = json.dumps(reflection_results, indent=2)
         baseline_json = json.dumps(current_baseline, indent=2)
+        
+        # If in prompt-only mode, add context to focus on prompt improvements
+        if prompt_only:
+            prompt_context = "\n\nIMPORTANT: PROMPT-ONLY MODE ACTIVE\n"
+            prompt_context += "Focus exclusively on prompt improvements. Do NOT propose any tools.\n"
+            prompt_context += "Consider these proven prompt patterns:\n"
+            prompt_context += "- Explicit source adherence instructions\n"
+            prompt_context += "- Structured, numbered steps\n"
+            prompt_context += "- Specific examples of desired output\n"
+            prompt_context += "- Balance between constraints and creativity\n"
+            
+            # Get prompts registry context if available
+            if hasattr(self, 'prompts_registry') and self.prompts_registry:
+                prompt_context += "\n" + self.prompts_registry.get_context_for_agents()
+        else:
+            prompt_context = ""
         
         prompt = EvolutionPrompts.get_prompt(
             'CORE_DESIGN_IMPROVEMENTS',
             iteration_number=iteration_number,
             reflection_json=reflection_json,
             baseline_json=baseline_json
-        )
+        ) + prompt_context
 
 
         result = self._call_claude(prompt)
@@ -253,6 +314,33 @@ class EvolutionAgent:
         improvements = input_data.get("improvements", [])
         current_system_config = input_data.get("current_system_config", {})
         iteration_number = input_data.get("iteration_number", 1)
+        
+        # Check for similar failed edits if prompts registry is available
+        if self.prompts_registry and improvements:
+            logger.info("🔍 Checking for similar failed prompt edits...")
+            for improvement in improvements:
+                if improvement.get('category') == 'prompt' or improvement.get('type') == 'prompt_enhancement':
+                    # Extract proposed changes from improvement
+                    proposed_changes = []
+                    if 'implementation' in improvement:
+                        details = improvement['implementation'].get('details', '')
+                        if details:
+                            proposed_changes.append(details)
+                    
+                    if proposed_changes:
+                        similar = self.prompts_registry.check_similar_edits(proposed_changes)
+                        
+                        if similar['exact_matches']:
+                            logger.warning(f"  ⚠️ Found exact matches for proposed changes in {improvement.get('name', 'Unknown')}")
+                            for match in similar['exact_matches']:
+                                logger.warning(f"    - Previously failed: {match['edit_name']} (degradation: {match['degradation']:.3f})")
+                                logger.warning(f"      Lesson: {match['lesson']}")
+                        
+                        if similar['pattern_warnings']:
+                            logger.warning(f"  ⚠️ Pattern warnings for {improvement.get('name', 'Unknown')}:")
+                            for warning in similar['pattern_warnings']:
+                                logger.warning(f"    - Pattern: {warning['pattern']} (failure rate: {warning['failure_rate']:.2f})")
+                                logger.warning(f"      Warning: {warning['warning']}")
         
         # Get tool context with evaluation weaknesses and missing capabilities
         tool_context = self._get_tool_context(
@@ -297,7 +385,7 @@ class EvolutionAgent:
         phases = {}
         
         try:
-            # Phase 1: Reflection
+            # Phase 1: Reflection with retry mechanism
             logger.info("🔍 Phase 1: Reflection Analysis")
             logger.info(f"  📊 Analyzing {len(evaluation_data)} evaluation results")
             
@@ -314,29 +402,136 @@ class EvolutionAgent:
                     if vals:
                         logger.info(f"  - Average {key}: {sum(vals)/len(vals):.2f}")
             
-            reflection_agent = EvolutionAgent("reflection", self.api_key)
+            reflection_agent = EvolutionAgent("reflection", self.api_key, prompts_registry=self.prompts_registry)
             
-            reflection_result = reflection_agent.process({
-                "action": "analyze_evaluations",
-                "evaluations": evaluation_data,
-                "topics": topics
-            })
+            # Retry up to 3 times if no gaps are found
+            max_reflection_retries = 3
+            reflection_result = None
+            
+            for attempt in range(max_reflection_retries):
+                logger.info(f"  🔄 Reflection attempt {attempt + 1}/{max_reflection_retries}")
+                
+                reflection_result = reflection_agent.process({
+                    "action": "analyze_evaluations",
+                    "evaluations": evaluation_data,
+                    "topics": topics,
+                    "attempt_number": attempt + 1,  # Pass attempt number for context
+                    "instruction": "Be thorough in identifying areas for improvement" if attempt > 0 else None,
+                    "prompt_only": input_data.get("prompt_only", False)  # Pass prompt_only flag
+                })
+                
+                if not reflection_result.get("success"):
+                    phases["reflection"] = reflection_result
+                    coordination_log.append({
+                        "phase": "reflection",
+                        "agent": "reflection",
+                        "action": "analyze_evaluations",
+                        "attempt": attempt + 1,
+                        "success": False,
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    return self._handle_phase_failure("reflection", reflection_result, coordination_log)
+                
+                # Check if gaps were identified
+                identified_gaps = reflection_result.get("identified_gaps", [])
+                if len(identified_gaps) > 0:
+                    logger.info(f"  ✅ Found {len(identified_gaps)} gaps on attempt {attempt + 1}")
+                    break
+                else:
+                    logger.info(f"  ⚠️ No gaps found on attempt {attempt + 1}")
+                    if attempt < max_reflection_retries - 1:
+                        logger.info(f"  🔄 Retrying reflection analysis...")
+                        import time
+                        time.sleep(2)  # Brief pause between retries
             
             phases["reflection"] = reflection_result
             coordination_log.append({
                 "phase": "reflection",
                 "agent": "reflection",
-                "action": "analyze_evaluations", 
+                "action": "analyze_evaluations",
+                "attempts": attempt + 1,
                 "success": reflection_result.get("success", False),
+                "gaps_found": len(reflection_result.get("identified_gaps", [])),
                 "timestamp": datetime.now().isoformat()
             })
             
-            if not reflection_result.get("success"):
-                return self._handle_phase_failure("reflection", reflection_result, coordination_log)
+            # After all retries, check if no gaps were identified
+            identified_gaps = reflection_result.get("identified_gaps", [])
+            
+            # Filter gaps if in prompt-only mode
+            prompt_only = input_data.get("prompt_only", False)
+            if prompt_only and identified_gaps:
+                logger.info(f"  📝 PROMPT-ONLY MODE: Filtering gaps...")
+                original_count = len(identified_gaps)
+                
+                # Filter to keep only prompt-addressable gaps
+                prompt_addressable_gaps = []
+                deferred_tool_gaps = []
+                
+                for gap in identified_gaps:
+                    solution_type = gap.get("solution_type", "unknown")
+                    if solution_type in ["prompt", "both"]:
+                        # For "both" type, emphasize prompt solution in prompt-only mode
+                        if solution_type == "both":
+                            gap["solution_type"] = "prompt"
+                            gap["original_type"] = "both"
+                            gap["note"] = "Originally required both prompt and tool, focusing on prompt solution"
+                        prompt_addressable_gaps.append(gap)
+                    elif solution_type == "tool":
+                        gap["deferred"] = True
+                        gap["reason"] = "Tool required - deferred in prompt-only mode"
+                        deferred_tool_gaps.append(gap)
+                
+                logger.info(f"    - Original gaps: {original_count}")
+                logger.info(f"    - Prompt-addressable: {len(prompt_addressable_gaps)}")
+                logger.info(f"    - Deferred (tool-required): {len(deferred_tool_gaps)}")
+                
+                # Log deferred gaps for reference
+                if deferred_tool_gaps:
+                    logger.info(f"  📋 Deferred tool-required gaps:")
+                    for gap in deferred_tool_gaps[:3]:  # Log first 3
+                        logger.info(f"    - {gap.get('description', 'Unknown')[:80]}...")
+                
+                # Update reflection result with filtered gaps
+                reflection_result["identified_gaps"] = prompt_addressable_gaps
+                reflection_result["deferred_gaps"] = deferred_tool_gaps
+                identified_gaps = prompt_addressable_gaps
+                
+                # If no prompt-addressable gaps but have tool gaps, explain the situation
+                if len(prompt_addressable_gaps) == 0 and len(deferred_tool_gaps) > 0:
+                    logger.info("📝 PROMPT-ONLY MODE: No prompt-addressable gaps found")
+                    logger.info(f"  ℹ️ {len(deferred_tool_gaps)} tool-required gaps were deferred")
+                    logger.info("✅ Prompt optimization has reached its limit")
+                    return {
+                        "success": True,
+                        "early_termination": True,
+                        "reason": "prompt_optimization_exhausted",
+                        "phases": phases,
+                        "coordination_log": coordination_log,
+                        "message": f"Prompt optimization complete - {len(deferred_tool_gaps)} remaining gaps require tools",
+                        "deferred_gaps": deferred_tool_gaps
+                    }
+            
+            if len(identified_gaps) == 0:
+                if prompt_only:
+                    message = "No gaps identified - prompt optimization complete"
+                else:
+                    message = "No quality gaps identified after 3 reflection attempts - system has reached optimal state"
+                
+                logger.info("🎉 NO GAPS IDENTIFIED - SYSTEM IS OPTIMIZED!")
+                logger.info(f"✅ {message}")
+                return {
+                    "success": True,
+                    "early_termination": True,
+                    "reason": "optimal_state_reached",
+                    "phases": phases,
+                    "coordination_log": coordination_log,
+                    "message": message
+                }
             
             # Phase 2: Improvement Design
             logger.info("🛠️ Phase 2: Improvement Design")
-            improvement_agent = EvolutionAgent("improvement", self.api_key)
+            improvement_agent = EvolutionAgent("improvement", self.api_key, prompts_registry=self.prompts_registry)
             
             # Extract baseline from evaluation data
             current_baseline = self._extract_baseline_from_evaluations(evaluation_data)
@@ -345,7 +540,8 @@ class EvolutionAgent:
                 "action": "design_improvements",
                 "reflection_results": reflection_result,
                 "current_baseline": current_baseline,
-                "iteration_number": iteration_number
+                "iteration_number": iteration_number,
+                "prompt_only": input_data.get("prompt_only", False)  # Pass prompt_only flag
             })
             
             phases["improvement"] = improvement_result
@@ -363,7 +559,7 @@ class EvolutionAgent:
             # Phase 3: Solution Routing based on gap types
             tool_proposals = []
             prompt_enhancements = []
-            implementation_agent = EvolutionAgent("implementation", self.api_key)
+            implementation_agent = EvolutionAgent("implementation", self.api_key, prompts_registry=self.prompts_registry)
             
             # Handle both new and old reflection structures
             identified_gaps = reflection_result.get("identified_gaps", [])
@@ -411,18 +607,47 @@ class EvolutionAgent:
             
             # Route to prompt enhancement if prompt-type gaps exist
             if prompt_gaps:
-                logger.info("📝 Phase 3a: Prompt Enhancement for prompt-type gaps")
+                logger.info("📝 Phase 3a: Adaptive Prompt Enhancement for prompt-type gaps")
                 
-                # Create prompt enhancement request
-                prompt_enhancement_result = self._enhance_prompts_for_gaps(prompt_gaps)
+                # Check if we're in prompt-only mode
+                prompt_only = input_data.get("prompt_only", False)
+                max_iterations = getattr(self, 'max_iterations', 10)
+                
+                # Use adaptive enhancement via implementation agent
+                prompt_enhancement_result = implementation_agent.process({
+                    "action": "generate_adaptive_prompt_enhancements",
+                    "gaps": prompt_gaps,
+                    "iteration_number": iteration_number,
+                    "max_iterations": max_iterations,
+                    "temperature_schedule": "adaptive",
+                    "current_prompts": self._get_current_prompts(),
+                    "prompt_only": prompt_only,
+                    "force_creative_solutions": True
+                })
                 
                 if prompt_enhancement_result.get("success"):
-                    prompt_enhancements = prompt_enhancement_result.get("enhanced_prompts", [])
-                    logger.info(f"  📝 Enhanced {len(prompt_enhancements)} prompts for {len(prompt_gaps)} gaps")
+                    successful_count = prompt_enhancement_result.get("successful_enhancements", 0)
+                    failed_count = prompt_enhancement_result.get("failed_enhancements", 0)
+                    temperature = prompt_enhancement_result.get("temperature", 0.5)
+                    creativity = prompt_enhancement_result.get("creativity_level", "unknown")
+                    
+                    logger.info(f"  🌡️ Temperature: {temperature:.3f} ({creativity} creativity)")
+                    logger.info(f"  📝 Enhanced: {successful_count}/{len(prompt_gaps)} gaps successfully")
+                    
+                    if failed_count > 0:
+                        logger.info(f"  ⚠️ Failed: {failed_count} enhancements failed validation")
+                    
+                    prompt_enhancements = prompt_enhancement_result.get("enhancements", [])
+                    
+                    # Log details of successful enhancements
                     for enhancement in prompt_enhancements[:3]:
-                        logger.info(f"    - {enhancement.get('prompt_section', 'Unknown')}: {enhancement.get('improvement_type', 'Unknown')}")
+                        gap_id = enhancement.get('gap_id', 'unknown')
+                        gap_type = enhancement.get('gap_type', 'unknown')
+                        enh_count = len(enhancement.get('enhancements', []))
+                        logger.info(f"    - Gap {gap_id} ({gap_type}): {enh_count} enhancements generated")
+                    
                 else:
-                    logger.warning("  ⚠️ Prompt enhancement failed, continuing with existing prompts")
+                    logger.warning(f"  ❌ Adaptive prompt enhancement failed: {prompt_enhancement_result.get('error', 'Unknown error')}")
                     prompt_enhancements = []
             
             # Route to tool proposal if tool-type gaps exist
@@ -537,42 +762,154 @@ class EvolutionAgent:
                 "agent_coordination_log": coordination_log
             }
     
-    def _call_claude(self, prompt: str) -> Dict[str, Any]:
-        """Make API call to Claude"""
+    def _call_claude(self, prompt: str, max_retries: int = 3) -> Dict[str, Any]:
+        """Make API call to Claude with JSON validation and retry logic"""
         
-        try:
-            message = self.client.messages.create(
-                model=self.model,
-                max_tokens=AGENT_CONFIG["max_tokens"],
-                temperature=AGENT_CONFIG["temperature"],
-                system=self.system_prompt,
-                messages=[{"role": "user", "content": prompt}]
-            )
-            
-            response_text = message.content[0].text
-            
-            # Try to parse JSON response
+        # Diagnostic logging - log prompt length and key sections
+        logger.debug(f"🔍 DIAGNOSTIC: Calling Claude with prompt length: {len(prompt)} chars")
+        if "CRITICAL INSTRUCTION: ALWAYS IDENTIFY GAPS" in prompt:
+            logger.info("📝 Using enhanced gap identification prompt")
+        
+        for attempt in range(max_retries):
             try:
-                return json.loads(response_text)
-            except json.JSONDecodeError:
-                # If not JSON, return as text
-                return {"response": response_text}
+                # Add JSON format emphasis for retry attempts
+                final_prompt = prompt
+                if attempt > 0:
+                    logger.warning(f"⚠️ Retry attempt {attempt + 1}/{max_retries} - emphasizing JSON format")
+                    final_prompt = prompt + "\n\nIMPORTANT: You MUST respond with valid JSON only. Do not include any text before or after the JSON object."
                 
-        except Exception as e:
-            logger.error(f"Claude API call failed: {e}")
-            return {"error": str(e)}
+                message = self.client.messages.create(
+                    model=self.model,
+                    max_tokens=AGENT_CONFIG["max_tokens"],
+                    temperature=AGENT_CONFIG["temperature"],
+                    system=self.system_prompt + "\n\nYou MUST always respond with valid JSON format only.",
+                    messages=[{"role": "user", "content": final_prompt}]
+                )
+                
+                response_text = message.content[0].text.strip()
+                
+                # Log raw response for diagnostic purposes
+                logger.debug(f"🔍 DIAGNOSTIC: Raw Claude response length: {len(response_text)} chars")
+                logger.debug(f"🔍 DIAGNOSTIC: Response preview: {response_text[:500]}...")
+                
+                # Extract and validate JSON
+                json_response = self._extract_and_validate_json(response_text, attempt + 1)
+                
+                if json_response is not None:
+                    # Additional validation for gap identification responses
+                    if "analyze_evaluations" in prompt and "identified_gaps" in json_response:
+                        gaps = json_response["identified_gaps"]
+                        if len(gaps) == 0:
+                            if attempt < max_retries - 1:
+                                logger.warning(f"⚠️ Attempt {attempt + 1}: No gaps identified, retrying with stronger prompt")
+                                continue
+                            else:
+                                logger.error(f"❌ FAILED: Claude refused to identify gaps after {max_retries} attempts")
+                                return {"error": "Claude failed to identify any gaps despite multiple attempts"}
+                        else:
+                            logger.info(f"✅ DIAGNOSTIC: Found {len(gaps)} gaps in response (attempt {attempt + 1})")
+                    
+                    return json_response
+                else:
+                    if attempt < max_retries - 1:
+                        logger.warning(f"⚠️ Attempt {attempt + 1}: Invalid JSON, retrying...")
+                        continue
+                        
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    logger.warning(f"⚠️ Attempt {attempt + 1}: API call failed ({e}), retrying...")
+                    continue
+                else:
+                    logger.error(f"❌ Claude API call failed after {max_retries} attempts: {e}")
+                    return {"error": str(e)}
+        
+        logger.error(f"❌ Failed to get valid JSON response after {max_retries} attempts")
+        return {"error": "Failed to get valid JSON response from Claude"}
+    
+    def _extract_and_validate_json(self, response_text: str, attempt: int) -> Dict[str, Any]:
+        """Extract and validate JSON from Claude response"""
+        
+        # Try direct parsing first
+        try:
+            parsed = json.loads(response_text)
+            logger.debug(f"✅ Direct JSON parsing successful (attempt {attempt})")
+            return parsed
+        except json.JSONDecodeError:
+            pass
+        
+        # Try extracting JSON from code blocks
+        import re
+        json_patterns = [
+            r'```json\s*(\{.*?\})\s*```',
+            r'```\s*(\{.*?\})\s*```',
+            r'(\{[^{}]*"identified_gaps"[^{}]*\})',
+            r'(\{.*\})'
+        ]
+        
+        for pattern in json_patterns:
+            matches = re.findall(pattern, response_text, re.DOTALL)
+            for match in matches:
+                try:
+                    parsed = json.loads(match)
+                    if isinstance(parsed, dict):
+                        logger.debug(f"✅ JSON extracted with pattern (attempt {attempt})")
+                        return parsed
+                except json.JSONDecodeError:
+                    continue
+        
+        # Try to find any JSON-like structure
+        lines = response_text.split('\n')
+        json_lines = []
+        in_json = False
+        brace_count = 0
+        
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith('{') or in_json:
+                in_json = True
+                json_lines.append(line)
+                brace_count += line.count('{') - line.count('}')
+                if brace_count == 0 and stripped.endswith('}'):
+                    break
+        
+        if json_lines:
+            try:
+                json_text = '\n'.join(json_lines)
+                parsed = json.loads(json_text)
+                logger.debug(f"✅ JSON extracted by brace counting (attempt {attempt})")
+                return parsed
+            except json.JSONDecodeError:
+                pass
+        
+        logger.warning(f"⚠️ Could not extract valid JSON from response (attempt {attempt})")
+        logger.debug(f"🔍 Response text: {response_text[:1000]}...")
+        return None
     
     def _get_tool_context(self, evaluation_weaknesses: List[Dict] = None, missing_capabilities: List[str] = None) -> str:
-        """Get current tool ecosystem context with evaluation gaps"""
+        """Get current tool ecosystem context with evaluation gaps and prompts history"""
+        context_parts = []
+        
+        # Get tools context
         try:
             from opencanvas.evolution.core.tools import ToolsManager
             tools_manager = ToolsManager()
-            return tools_manager.get_context_for_agents(
+            tools_context = tools_manager.get_context_for_agents(
                 evaluation_weaknesses=evaluation_weaknesses,
                 missing_capabilities=missing_capabilities
             )
+            context_parts.append(tools_context)
         except Exception:
-            return "Tool context unavailable"
+            context_parts.append("Tool context unavailable")
+        
+        # Add prompts registry context if available
+        if self.prompts_registry:
+            try:
+                prompts_context = self.prompts_registry.get_context_for_agents()
+                context_parts.append("\n" + prompts_context)
+            except Exception as e:
+                logger.debug(f"Failed to get prompts registry context: {e}")
+        
+        return "\n".join(context_parts)
     
     def _add_to_history(self, action: str, input_data: Dict, result: Dict):
         """Add interaction to agent history"""
@@ -608,10 +945,16 @@ class EvolutionAgent:
         improvement_phase = phases.get("improvement", {})
         implementation_phase = phases.get("implementation", {})
         
+        # Count weaknesses from both old and new formats
+        weakness_count = len(reflection_phase.get("identified_gaps", []))
+        if weakness_count == 0:
+            # Fallback to old format
+            weakness_count = len(reflection_phase.get("weakness_patterns", []))
+        
         return {
             "iteration_summary": {
                 "iteration_number": iteration_number,
-                "weaknesses_identified": len(reflection_phase.get("weakness_patterns", [])),
+                "weaknesses_identified": weakness_count,
                 "improvements_designed": len(improvement_phase.get("improvements", [])),
                 "implementations_created": len(implementation_phase.get("implementation_package", {}).get("prompt_enhancements", [])),
                 "missing_tools_identified": len(reflection_phase.get("missing_tools", [])),
@@ -677,70 +1020,73 @@ class EvolutionAgent:
         self._add_to_history(action, input_data, result)
         return {"success": True, "action": action, "agent_type": self.agent_type, **result}
     
+    def _get_current_prompts(self) -> Dict[str, str]:
+        """Get current prompts for enhancement
+        
+        This method should be overridden by the orchestrator to provide
+        the actual current prompts from the generation system.
+        """
+        
+        # Import prompts from the centralized location
+        from ..prompts.evolution_prompts import EvolutionPrompts
+        
+        return {
+            "generation_prompt": EvolutionPrompts.TOPIC_GENERATION_BASE,
+            "slide_generation_prompt": EvolutionPrompts.TOPIC_GENERATION_BASE,
+            "pdf_generation_prompt": EvolutionPrompts.PDF_GENERATION_BASE
+        }
+    
     def _enhance_prompts_for_gaps(self, prompt_gaps: List[Dict]) -> Dict[str, Any]:
-        """Enhance generation prompts to address prompt-type gaps"""
+        """Legacy method - replaced by adaptive enhancement
         
-        gaps_summary = []
-        for gap in prompt_gaps:
-            gap_info = {
-                "gap_id": gap.get("gap_id", "unknown"),
-                "description": gap.get("description", "Unknown gap"),
-                "current_score": gap.get("current_score", 0),
-                "target_score": gap.get("target_score", 4.0),
-                "dimension": gap.get("dimension", "unknown"),
-                "solution_reasoning": gap.get("solution_reasoning", {})
-            }
-            gaps_summary.append(gap_info)
+        This method is kept for backward compatibility but now delegates
+        to the new adaptive enhancement system.
+        """
         
-        gaps_json = json.dumps(gaps_summary, indent=2)
+        logger.info("Using legacy prompt enhancement method - consider upgrading to adaptive enhancement")
         
-        prompt = f"""Based on the identified gaps that can be fixed with better prompts, design specific prompt enhancements.
-
-GAPS REQUIRING PROMPT SOLUTIONS:
-{gaps_json}
-
-For each gap, design prompt enhancements that will:
-1. Add specific instructions to prevent the identified issues
-2. Include quality standards and constraints
-3. Provide clear examples of desired output
-4. Add validation criteria within the prompt
-
-Return a JSON object with:
-{{
-  "enhanced_prompts": [
-    {{
-      "gap_id": "gap_001",
-      "prompt_section": "blog_generation|slide_creation|formatting",
-      "improvement_type": "instruction|constraint|example|validation",
-      "original_instruction": "Current prompt text (if modifying)",
-      "enhanced_instruction": "Improved prompt text",
-      "expected_impact": "How this addresses the gap"
-    }}
-  ],
-  "integration_plan": "How to integrate these enhancements"
-}}
-"""
-        
+        # Convert to adaptive enhancement call
         try:
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=2000,
-                temperature=0.7,
-                system=self.system_prompt,
-                messages=[{"role": "user", "content": prompt}]
-            )
+            # Use the first gap's iteration context if available
+            iteration_number = getattr(self, 'current_iteration', 1)
             
-            response_text = response.content[0].text
+            # Create a minimal implementation agent for this
+            implementation_agent = EvolutionAgent("implementation", self.api_key, prompts_registry=self.prompts_registry)
             
-            # Try to parse JSON response
-            try:
-                result = json.loads(response_text)
-                return {"success": True, **result}
-            except json.JSONDecodeError:
-                return {"success": True, "enhanced_prompts": [], "response": response_text}
+            result = implementation_agent.process({
+                "action": "generate_adaptive_prompt_enhancements",
+                "gaps": prompt_gaps,
+                "iteration_number": iteration_number,
+                "max_iterations": 10,
+                "temperature_schedule": "conservative",  # Use conservative for legacy
+                "current_prompts": self._get_current_prompts(),
+                "prompt_only": True
+            })
+            
+            if result.get("success"):
+                # Convert new format to legacy format
+                enhanced_prompts = []
+                for enhancement in result.get("enhancements", []):
+                    gap_id = enhancement.get("gap_id")
+                    for enh in enhancement.get("enhancements", []):
+                        enhanced_prompts.append({
+                            "gap_id": gap_id,
+                            "prompt_section": "generation",
+                            "improvement_type": enh.get("type", "unknown"),
+                            "enhanced_instruction": enh.get("content", ""),
+                            "expected_impact": enh.get("justification", "")
+                        })
+                
+                return {
+                    "success": True,
+                    "enhanced_prompts": enhanced_prompts,
+                    "integration_plan": "Apply enhancements to generation prompts"
+                }
+            else:
+                return {"success": False, "error": result.get("error", "Unknown error")}
                 
         except Exception as e:
-            logger.error(f"Prompt enhancement failed: {e}")
+            logger.error(f"Legacy prompt enhancement failed: {e}")
             return {"success": False, "error": str(e)}
     
     def _propose_tools(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -825,6 +1171,205 @@ Return a JSON object with:
             **result
         }
     
+    def _generate_adaptive_prompt_enhancements(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate prompt enhancements with adaptive temperature control
+        
+        This method uses temperature-based creativity to generate prompt enhancements
+        that address identified gaps while preserving prompt structure integrity.
+        """
+        
+        try:
+            # Import the adaptive enhancer
+            from ..core.adaptive_enhancer import AdaptivePromptEnhancer
+            
+            # Extract input parameters
+            gaps = input_data.get("gaps", [])
+            iteration_number = input_data.get("iteration_number", 1)
+            max_iterations = input_data.get("max_iterations", 10)
+            temperature_schedule = input_data.get("temperature_schedule", "adaptive")
+            current_prompts = input_data.get("current_prompts", {})
+            prompt_only = input_data.get("prompt_only", True)
+            force_creative_solutions = input_data.get("force_creative_solutions", False)
+            
+            if not gaps:
+                logger.warning("No gaps provided for prompt enhancement")
+                return {
+                    "success": False,
+                    "error": "No gaps provided",
+                    "enhancements": []
+                }
+            
+            # Initialize adaptive enhancer
+            enhancer = AdaptivePromptEnhancer(
+                iteration=iteration_number,
+                max_iterations=max_iterations,
+                temperature_schedule=temperature_schedule
+            )
+            
+            logger.info(f"🌡️ Adaptive enhancement at temperature {enhancer.temperature:.3f} ({enhancer.get_creativity_level()} creativity)")
+            
+            # Get current prompts - need to determine relevant prompt types
+            if not current_prompts:
+                current_prompts = self._get_default_prompts()
+            
+            # Generate enhancements for each gap
+            all_enhancements = []
+            successful_enhancements = 0
+            failed_enhancements = 0
+            
+            for gap in gaps:
+                gap_id = gap.get("gap_id", f"gap_{len(all_enhancements)}")
+                logger.info(f"    🎯 Enhancing for gap: {gap_id} ({gap.get('dimension', 'unknown')})")
+                
+                # Determine which prompt to enhance based on gap type
+                prompt_key = self._determine_prompt_key_for_gap(gap)
+                current_prompt = current_prompts.get(prompt_key, "")
+                
+                if not current_prompt:
+                    logger.warning(f"No current prompt found for key: {prompt_key}")
+                    # Create a basic prompt to enhance
+                    current_prompt = self._create_basic_prompt_for_gap(gap)
+                
+                # Generate enhancement
+                enhancement_result = enhancer.generate_enhancement(
+                    gap=gap,
+                    current_prompt=current_prompt,
+                    prompt_registry=self.prompts_registry
+                )
+                
+                if enhancement_result.get("success"):
+                    enhancement_result["prompt_key"] = prompt_key
+                    enhancement_result["original_prompt_preview"] = current_prompt[:150] + "..." if len(current_prompt) > 150 else current_prompt
+                    all_enhancements.append(enhancement_result)
+                    successful_enhancements += 1
+                    logger.info(f"      ✅ Generated {len(enhancement_result.get('enhancements', []))} enhancements")
+                else:
+                    failed_enhancements += 1
+                    logger.warning(f"      ❌ Enhancement failed: {enhancement_result.get('error', 'Unknown error')}")
+                    # Still add failed attempts for tracking
+                    all_enhancements.append(enhancement_result)
+            
+            # Generate summary
+            enhancement_summary = enhancer.get_enhancement_summary()
+            
+            logger.info(f"🎨 Enhancement Summary:")
+            logger.info(f"    - Temperature: {enhancer.temperature:.3f}")
+            logger.info(f"    - Creativity: {enhancer.get_creativity_level()}")
+            logger.info(f"    - Successful: {successful_enhancements}/{len(gaps)}")
+            logger.info(f"    - Failed: {failed_enhancements}/{len(gaps)}")
+            
+            # Validate all successful enhancements preserve structure
+            validated_enhancements = []
+            for enhancement in all_enhancements:
+                if enhancement.get("success") and self._validate_enhancement_structure(enhancement):
+                    validated_enhancements.append(enhancement)
+                elif enhancement.get("success"):
+                    logger.warning(f"Enhancement {enhancement.get('gap_id')} failed structure validation")
+            
+            result = {
+                "success": True,
+                "action": "generate_adaptive_prompt_enhancements",
+                "agent_type": self.agent_type,
+                "enhancements": validated_enhancements,
+                "total_gaps_processed": len(gaps),
+                "successful_enhancements": len(validated_enhancements),
+                "failed_enhancements": len(gaps) - len(validated_enhancements),
+                "temperature": enhancer.temperature,
+                "creativity_level": enhancer.get_creativity_level(),
+                "iteration": iteration_number,
+                "enhancement_summary": enhancement_summary,
+                "validation_passed": len(validated_enhancements) > 0
+            }
+            
+            # Add to history
+            self._add_to_history("generate_adaptive_prompt_enhancements", input_data, result)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to generate adaptive prompt enhancements: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            
+            return {
+                "success": False,
+                "error": str(e),
+                "action": "generate_adaptive_prompt_enhancements",
+                "agent_type": self.agent_type,
+                "enhancements": []
+            }
+    
+    def _determine_prompt_key_for_gap(self, gap: Dict[str, Any]) -> str:
+        """Determine which prompt key to use based on gap characteristics"""
+        
+        gap_dimension = gap.get("dimension", "unknown").lower()
+        gap_description = gap.get("description", "").lower()
+        
+        # Map gap types to prompt keys
+        if "accuracy" in gap_dimension or "source" in gap_description:
+            return "generation_prompt"  # Main generation prompt for source accuracy
+        elif "content" in gap_dimension or "coverage" in gap_description:
+            return "generation_prompt"  # Main generation prompt for content coverage
+        elif "visual" in gap_dimension or "design" in gap_description:
+            return "slide_generation_prompt"  # Slide-specific prompt for visual issues
+        else:
+            return "generation_prompt"  # Default to main generation prompt
+    
+    def _create_basic_prompt_for_gap(self, gap: Dict[str, Any]) -> str:
+        """Create a basic prompt when none exists for the gap type"""
+        
+        gap_type = gap.get("dimension", "unknown")
+        
+        basic_prompts = {
+            "accuracy": "Generate content that strictly adheres to the source material. Topic: {topic}, Purpose: {purpose}, Theme: {theme}",
+            "content": "Generate comprehensive content covering all important aspects. Topic: {topic}, Purpose: {purpose}, Theme: {theme}", 
+            "visual": "Generate well-designed, visually appealing content. Topic: {topic}, Purpose: {purpose}, Theme: {theme}",
+            "overall": "Generate high-quality content optimized for excellence. Topic: {topic}, Purpose: {purpose}, Theme: {theme}"
+        }
+        
+        return basic_prompts.get(gap_type, basic_prompts["overall"])
+    
+    def _get_default_prompts(self) -> Dict[str, str]:
+        """Get default prompts when none are provided"""
+        
+        # Import prompts from the centralized location
+        from ..prompts.evolution_prompts import EvolutionPrompts
+        
+        return {
+            "generation_prompt": EvolutionPrompts.TOPIC_GENERATION_BASE,
+            "slide_generation_prompt": EvolutionPrompts.TOPIC_GENERATION_BASE,
+            "pdf_generation_prompt": EvolutionPrompts.PDF_GENERATION_BASE
+        }
+    
+    def _validate_enhancement_structure(self, enhancement: Dict[str, Any]) -> bool:
+        """Validate that enhancement preserves prompt structure"""
+        
+        try:
+            # Check if enhancement has required fields
+            required_fields = ["gap_id", "enhancements"]
+            for field in required_fields:
+                if field not in enhancement:
+                    logger.warning(f"Enhancement missing required field: {field}")
+                    return False
+            
+            # Check if enhancements are valid
+            enhancements = enhancement.get("enhancements", [])
+            if not enhancements:
+                logger.warning("Enhancement contains no enhancements")
+                return False
+            
+            # Validate each individual enhancement
+            for enh in enhancements:
+                if not enh.get("validated", False):
+                    logger.warning(f"Enhancement not validated: {enh.get('type', 'unknown')}")
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            logger.warning(f"Enhancement structure validation failed: {e}")
+            return False
+    
     def _generic_implementation_process(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Generic implementation processing"""
         action = input_data.get("action")
@@ -854,7 +1399,7 @@ Return a JSON object with:
         result = self._call_claude(prompt)
         self._add_to_history(action, input_data, result)
         return {"success": True, "action": action, "agent_type": self.agent_type, **result}
-
+    
 
 class AgentFactory:
     """Factory for creating evolution agents"""
@@ -865,11 +1410,11 @@ class AgentFactory:
         return EvolutionAgent(agent_type, api_key)
     
     @staticmethod
-    def create_all_agents(api_key: str = None) -> Dict[str, EvolutionAgent]:
+    def create_all_agents(api_key: str = None, prompts_registry = None) -> Dict[str, EvolutionAgent]:
         """Create all agent types"""
         agents = {}
         for agent_type in AGENT_PROMPTS.keys():
-            agents[agent_type] = EvolutionAgent(agent_type, api_key)
+            agents[agent_type] = EvolutionAgent(agent_type, api_key, prompts_registry=prompts_registry)
         return agents
     
     @staticmethod

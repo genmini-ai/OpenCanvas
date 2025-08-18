@@ -52,12 +52,19 @@ class ToolsManager:
         tool_name = tool_spec.get("name", "UnnamedTool")
         logger.info(f"🔧 Proposing new tool: {tool_name}")
         
-        # Validate tool specification
-        validation_result = self._validate_tool_spec(tool_spec)
-        if not validation_result["valid"]:
+        # Validate tool specification with error handling
+        try:
+            validation_result = self._validate_tool_spec(tool_spec)
+            if not validation_result["valid"]:
+                return {
+                    "success": False,
+                    "error": f"Invalid tool specification: {validation_result['issues']}"
+                }
+        except Exception as e:
+            logger.error(f"Tool validation failed for {tool_name}: {e}")
             return {
                 "success": False,
-                "error": f"Invalid tool specification: {validation_result['issues']}"
+                "error": f"Tool validation error: {str(e)}"
             }
         
         # Check for duplicates using registry
@@ -94,8 +101,8 @@ class ToolsManager:
                 tool_spec["baseline_score"] = first_gap.get("avg_score", "N/A")
                 tool_spec["target_score"] = first_gap.get("improvement_potential", "N/A")
         
-        # Determine priority based on impact and complexity
-        priority = self._calculate_priority(tool_spec)
+        # Set default priority for MCP tools (can be overridden by tool specification)
+        priority = tool_spec.get("priority", "medium")
         tool_spec["priority"] = priority
         tool_spec["proposed_at"] = datetime.now().isoformat()
         tool_spec["solution_type"] = tool_spec.get("solution_type", "tool")
@@ -280,14 +287,15 @@ class ToolsManager:
         
         queue = []
         for name, spec in self.proposed_tools.items():
-            priority = spec.get("priority", "low")
+            priority = spec.get("priority", "medium")
             queue.append({
                 "name": name,
                 "priority": priority,
-                "priority_score": priority_order.get(priority, 1),
+                "priority_score": priority_order.get(priority, 2),
                 "purpose": spec.get("purpose", ""),
-                "expected_impact": spec.get("expected_impact", ""),
-                "complexity": spec.get("complexity", ""),
+                "input": spec.get("input", ""),
+                "output": spec.get("output", ""),
+                "usage": spec.get("usage", ""),
                 "proposed_at": spec.get("proposed_at", "")
             })
         
@@ -297,24 +305,46 @@ class ToolsManager:
         return queue
     
     def _validate_tool_spec(self, tool_spec: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate tool specification completeness"""
+        """Validate tool specification against MCP tool format"""
         
-        required_fields = ["name", "purpose", "expected_impact", "complexity"]
+        # Required fields for MCP tool specification (based on TOOLS_REGISTRY.md)
+        required_fields = ["name", "purpose", "input", "output", "usage"]
         issues = []
         
+        # Check required fields
         for field in required_fields:
             if field not in tool_spec or not tool_spec[field]:
-                issues.append(f"Missing {field}")
+                issues.append(f"Missing required MCP field: {field}")
         
-        # Validate expected_impact values
-        if "expected_impact" in tool_spec:
-            if tool_spec["expected_impact"].lower() not in ["high", "medium", "low"]:
-                issues.append("expected_impact must be high, medium, or low")
+        # Validate specific field formats
+        if "purpose" in tool_spec:
+            purpose = tool_spec["purpose"]
+            if not isinstance(purpose, str) or len(purpose.strip()) < 10:
+                issues.append("purpose must be a descriptive string (at least 10 characters)")
         
-        # Validate complexity values  
-        if "complexity" in tool_spec:
-            if tool_spec["complexity"].lower() not in ["high", "medium", "low"]:
-                issues.append("complexity must be high, medium, or low")
+        if "input" in tool_spec:
+            input_spec = tool_spec["input"]
+            if not isinstance(input_spec, str):
+                issues.append("input must be a string describing parameters")
+        
+        if "output" in tool_spec:
+            output_spec = tool_spec["output"]
+            if not isinstance(output_spec, str):
+                issues.append("output must be a string describing return value")
+        
+        if "usage" in tool_spec:
+            usage_example = tool_spec["usage"]
+            if not isinstance(usage_example, str) or "(" not in usage_example:
+                issues.append("usage must be a string with example function call")
+        
+        # Optional fields validation
+        if "failure_reason" in tool_spec:
+            if not isinstance(tool_spec["failure_reason"], str):
+                issues.append("failure_reason must be a string")
+        
+        if "lesson_learned" in tool_spec:
+            if not isinstance(tool_spec["lesson_learned"], str):
+                issues.append("lesson_learned must be a string")
         
         return {
             "valid": len(issues) == 0,
@@ -322,22 +352,10 @@ class ToolsManager:
         }
     
     def _calculate_priority(self, tool_spec: Dict[str, Any]) -> str:
-        """Calculate tool priority based on impact and complexity"""
+        """Calculate tool priority - simplified for MCP tools"""
         
-        impact = tool_spec.get("expected_impact", "low").lower()
-        complexity = tool_spec.get("complexity", "high").lower()
-        
-        priority_key = (impact, complexity)
-        priority_label = PRIORITY_MATRIX.get(priority_key, "🔶 DO NEXT")
-        
-        if "DO FIRST" in priority_label:
-            return "high"
-        elif "DO NEXT" in priority_label:
-            return "medium"
-        elif "DO LATER" in priority_label:
-            return "low"
-        else:
-            return "low"  # DON'T DO -> low priority for now
+        # For MCP tools, priority can be explicitly set or defaults to medium
+        return tool_spec.get("priority", "medium")
     
     def _analyze_test_results(self, test_results: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze test results against adoption criteria"""

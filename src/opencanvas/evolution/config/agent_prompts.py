@@ -31,7 +31,8 @@ AGENT_ACTIONS = {
         "create_validation",
         "test_implementation",
         "propose_tools",
-        "create_tools"
+        "create_tools",
+        "generate_adaptive_prompt_enhancements"  # NEW: Adaptive temperature-based enhancement
     ],
     "orchestrator": [
         "run_evolution_cycle",

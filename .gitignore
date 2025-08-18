@@ -79,5 +79,8 @@ output/
 evolution_runs/
 temp_evolution*/
 
+# Analysis outputs
+evolution_analysis/
+
 # local test file
 test_*.py

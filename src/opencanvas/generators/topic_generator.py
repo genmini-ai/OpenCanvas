@@ -36,11 +36,18 @@ def _import_tool_pipeline():
             logger.info(f"Evolution tool pipeline not available: {e}")
 
 class TopicGenerator(BaseGenerator):
-    def __init__(self, api_key, brave_api_key=None, enable_image_validation=True, enable_evolution_tools=True):
+    def __init__(self, api_key, brave_api_key=None, enable_image_validation=True, enable_evolution_tools=True, prompt_version=None, skip_prompt_loading=False):
         """Initialize the topic-based slide generator with Anthropic API key and optional Brave API key"""
         super().__init__(api_key)
         self.client = Anthropic(api_key=api_key)
         self.brave_api_key = brave_api_key or os.getenv('BRAVE_API_KEY')
+        
+        # Load the appropriate prompt (evolved or baseline) unless skipped
+        if not skip_prompt_loading:
+            self.generation_prompt = self._load_generation_prompt(prompt_version)
+        else:
+            logger.info("⏭️ Skipping automatic prompt loading (will be set by evolved router)")
+            self.generation_prompt = None  # Will be set by EvolvedTopicGenerator
         
         # Initialize image validation pipeline
         self.enable_image_validation = enable_image_validation
@@ -383,9 +390,40 @@ Please write a complete educational blog post that stays focused on the user's t
             logger.error(f"Error generating blog: {e}")
             return None
 
-    def generate_slides_html(self, blog_content, purpose, theme):
-        """Generate HTML slide deck from blog content"""
-        slide_prompt = f"""<presentation_task>
+    def _load_generation_prompt(self, prompt_version=None):
+        """Load generation prompt from file (evolved or baseline)"""
+        try:
+            # If specific version requested, try to load it
+            if prompt_version:
+                version_file = Path(f"evolution_runs/evolved_prompts/generation_prompt_v{prompt_version}.txt")
+                if version_file.exists():
+                    prompt = version_file.read_text()
+                    logger.info(f"📝 Loaded specific prompt version v{prompt_version}")
+                    return prompt
+                else:
+                    logger.warning(f"Requested prompt version v{prompt_version} not found, falling back to latest")
+            
+            # No random loading from global evolved prompts during evolution
+            # Evolution system manages prompt loading explicitly
+            
+            # Fall back to baseline prompt
+            baseline_file = Path("src/opencanvas/prompts/baseline/generation_prompt.txt")
+            if baseline_file.exists():
+                prompt = baseline_file.read_text()
+                logger.info("📝 Loaded baseline prompt from file")
+                return prompt
+            
+            # Final fallback to hardcoded prompt
+            logger.warning("No prompt files found, using hardcoded fallback")
+            return self._get_hardcoded_prompt()
+            
+        except Exception as e:
+            logger.error(f"Failed to load generation prompt: {e}")
+            return self._get_hardcoded_prompt()
+    
+    def _get_hardcoded_prompt(self):
+        """Get the hardcoded prompt as final fallback"""
+        return """<presentation_task>
 Create a stunning, visually captivating HTML presentation that makes viewers stop and say "wow" based on this content:
 
 {blog_content}
@@ -458,9 +496,35 @@ CREATE EMOTIONAL IMPACT:
 IMPORTANT: The HTML must be a complete, self-contained file that opens directly in a browser and immediately impresses with its visual sophistication.
 
 IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and end with </html>. No explanations, no markdown formatting around the code.
-</output_requirements>
-"""
+</output_requirements>"""
+    
+    def _load_evolved_prompt(self):
+        """Load the latest evolved prompt if available (legacy method for backward compatibility)"""
+        try:
+            evolved_dir = Path("evolution_runs") / "evolved_prompts"
+            if not evolved_dir.exists():
+                return None
+            
+            # Legacy method - should not randomly load evolved prompts
+            logger.warning("_load_evolved_prompt called - this should be managed by evolution system")
+            return None
+            
+            logger.info(f"📝 Using evolved prompt from {latest_file.name}")
+            return evolved_prompt
+            
+        except Exception as e:
+            logger.warning(f"Could not load evolved prompt: {e}")
+            return None
+    
+    def generate_slides_html(self, blog_content, purpose, theme):
+        """Generate HTML slide deck from blog content"""
         
+        # Use the prompt loaded during initialization
+        slide_prompt = self.generation_prompt.format(
+            blog_content=blog_content,
+            purpose=purpose,
+            theme=theme
+        )
         try:
             logger.info("📡 Using streaming for slide generation...")
             

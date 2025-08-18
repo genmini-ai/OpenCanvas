@@ -717,7 +717,7 @@ Create a comprehensive plan that maximizes improvement while managing complexity
     # CORE AGENT PROMPTS (from core/agents.py)
     # ============================================================================
     
-    CORE_ANALYZE_EVALUATIONS = """Analyze the following presentation evaluation results to identify systematic weakness patterns and determine the best solution approach for each gap.
+    CORE_ANALYZE_EVALUATIONS = """Analyze the following presentation evaluation results to identify ALL improvement opportunities. IMPORTANT: We aim for excellence (5.0/5.0), not just adequacy. Find gaps even in areas scoring 4.0/5.0.
 
 EVALUATION DATA:
 {evaluations_json}
@@ -728,13 +728,21 @@ TOPICS EVALUATED:
 REGISTRY CONTEXT (existing tools and lessons learned):
 {registry_context}
 
+## CRITICAL INSTRUCTION: ALWAYS IDENTIFY GAPS
+Even if overall scores seem acceptable, you MUST identify at least 3-5 improvement opportunities. Any score below 4.5/5.0 represents a significant gap. Even 4.5+ scores can be improved.
+
 ## Analysis Requirements:
 
 1. **Gap Identification**
-   For each weakness found (scores below 3.5/5), provide:
+   Identify ALL areas for improvement (target: 5.0/5.0 excellence):
+   - **Priority 1**: Any dimension scoring below 4.0/5.0 (major gaps)
+   - **Priority 2**: Dimensions scoring 4.0-4.5/5.0 (moderate gaps)  
+   - **Priority 3**: Dimensions scoring 4.5-4.9/5.0 (refinement opportunities)
+   
+   For each gap provide:
    - Gap Description: Clear statement of what is lacking
    - Current Score: X.X/5.0 (average across evaluations)
-   - Target Score: Y.Y/5.0 (realistic improvement goal)
+   - Target Score: Y.Y/5.0 (aim for 4.8+ minimum)
    - Examples: Specific instances from the evaluations
 
 2. **Solution Reasoning**
@@ -764,9 +772,13 @@ REGISTRY CONTEXT (existing tools and lessons learned):
    - Consider implementation complexity
    - Account for dependencies between gaps
 
+## CRITICAL: JSON OUTPUT REQUIRED
+
+You MUST respond with ONLY a valid JSON object. Do not include any text before or after the JSON. No explanations, no markdown code blocks, no additional commentary.
+
 ## Output Format:
 
-Return a JSON object with:
+Return EXACTLY this JSON structure:
 {{
   "baseline_performance": {{
     "visual": X.X,
@@ -807,10 +819,21 @@ Return a JSON object with:
     "prompt_gaps": ["gap_ids that need prompt solutions"],
     "tool_gaps": ["gap_ids that need tool solutions"],
     "both_gaps": ["gap_ids that need both approaches"]
+  }},
+  "minimum_gaps_check": {{
+    "gaps_found": <number>,
+    "message": "If < 3 gaps found, analyzed lowest-scoring dimensions to ensure progress"
   }}
 }}
 
-Focus on clear gap identification → reasoning → solution type decision flow."""
+IMPORTANT REQUIREMENTS:
+1. You MUST identify at least 3 gaps, even if scores seem good
+2. Any dimension below 4.5/5.0 should be considered a gap
+3. If all dimensions are above 4.5, identify the 3 lowest-scoring areas as gaps
+4. Target scores should be ambitious (4.8-5.0 range)
+5. Never return empty identified_gaps array
+
+Focus on continuous improvement - there's ALWAYS room to enhance quality."""
 
     CORE_DESIGN_IMPROVEMENTS = """Design specific, systematic improvements based on the reflection analysis for evolution iteration {iteration_number}.
 

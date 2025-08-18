@@ -1,0 +1,118 @@
+<presentation_task>
+Create a visually stunning and FACTUALLY ACCURATE HTML presentation based on this content:
+
+{blog_content}
+
+Purpose of presentation: {purpose}
+Visual theme: {theme}
+</presentation_task>
+
+<critical_accuracy_requirements>
+MANDATORY CONTENT FIDELITY RULES - THESE OVERRIDE ALL OTHER INSTRUCTIONS:
+1. NEVER add numerical data, statistics, or percentages not explicitly stated in the source
+2. If source says "improved" or "increased" without numbers, DO NOT invent percentages
+3. Include ALL major sections from the source, even if condensing details
+4. Preserve the exact hierarchy and structure of information from source
+5. Include all steps of multi-step processes (never skip intermediate steps)
+6. Cover ALL ethical considerations mentioned in the source
+7. Do not reorganize content in ways that change its meaning or context
+8. If creating visual representations of data, only use data explicitly provided
+9. Preserve technical details and methodological context from source
+10. When source lists examples, maintain them as examples (not main categories)
+</critical_accuracy_requirements>
+
+<design_philosophy>
+CREATE VISUAL EXCELLENCE WITH ACCURACY:
+- Prioritize the "wow factor" through sophisticated visual storytelling
+- Make every slide feel alive with purposeful animations that enhance content
+- Use bold, vibrant colors with strategic contrast for visual hierarchy
+- Implement modern design techniques (glassmorphism, neumorphism, subtle 3D)
+- Balance visual excitement with professional polish and readability
+- Create a premium, cutting-edge experience with cohesive visual language
+- Transform abstract concepts into accurate visual metaphors
+- Ensure visual enhancements never compromise factual accuracy
+</design_philosophy>
+
+<visual_requirements>
+1. Create a self-contained HTML file with embedded CSS and JavaScript
+2. Use consistent slide transitions with ONLY opacity-based methods (opacity: 0 to opacity: 1)
+3. Implement a sophisticated color palette with primary/secondary/accent colors for "{theme}"
+4. Include purposeful micro-interactions: hover effects, animated reveals, subtle parallax
+5. Use no more than 2 complementary font families with varied weights for hierarchy
+6. Add depth through 3-5 distinct layers (background, mid-ground, foreground)
+7. Design 10-15 slides following a visual grid system (6 or 12 column)
+8. Use progressive reveal animations for bullet points (3-5 points per slide maximum)
+9. Create an impactful title slide with brand-aligned animations
+10. Optimize for 1280px × 720px with responsive scaling
+11. Implement frosted glass effects for content containers (backdrop-filter: blur(8px))
+12. Use high-contrast color combinations for maximum readability
+13. Apply the golden ratio (1:1.618) for proportional element sizing
+14. Create visual rhythm through consistent spacing and alignment patterns
+15. Use variable opacity levels (20%, 40%, 60%, 80%, 100%) for visual hierarchy
+16. Add dimensional lighting effects with consistent light source direction
+17. Implement cinematic composition techniques (rule of thirds, leading lines)
+18. Create custom animated transitions between major sections (max 800ms)
+</visual_requirements>
+
+<content_presentation>
+ACCURACY-FIRST CONTENT STRUCTURING:
+- Transform complex concepts into visual metaphors WITHOUT adding information
+- Limit text to 3-5 bullet points per slide from actual source content
+- Create clear visual hierarchy through size, weight, color, and positioning
+- Structure content following source's narrative arc (don't reorganize)
+- Include elegant progress indicators showing presentation context
+- Implement scannable headings (4-7 words) using source's terminology
+- Create visual anchors for key concepts using source's emphasis
+- Use progressive disclosure for complex information from source
+- Ensure every claim can be traced back to the source material
+- Mark any necessary interpretations clearly as such
+</content_presentation>
+
+<content_verification_checklist>
+Before finalizing each slide, verify:
+□ All numerical data comes directly from source (no invented statistics)
+□ All major sections from source are represented
+□ Multi-step processes include all steps
+□ Examples remain as examples (not elevated to main points)
+□ Ethical considerations are fully covered if present in source
+□ Technical terminology matches source exactly
+□ No claims beyond what source explicitly states
+□ Visual representations only use provided data
+</content_verification_checklist>
+
+<slide_structure_guidelines>
+For different content types FROM SOURCE:
+- Statistics/Data: Only visualize numbers explicitly provided in source
+- Processes: Include ALL steps mentioned, maintain exact sequence
+- Comparisons: Only compare items explicitly compared in source
+- Benefits/Challenges: Include all points mentioned, don't add new ones
+- Technical concepts: Preserve full technical accuracy and context
+- Case studies: Maintain exact details and outcomes as stated
+- Future projections: Only include predictions explicitly made in source
+- Quotes: Preserve exact wording and attribution
+</slide_structure_guidelines>
+
+<technical_implementation>
+1. Ensure smooth 60fps animations using CSS transforms and will-change
+2. Implement keyboard navigation (arrow keys, spacebar, ESC)
+3. Add touch/swipe support for mobile devices
+4. Optimize for performance with requestAnimationFrame
+5. Use CSS Grid and Flexbox for responsive layouts
+6. Implement proper z-index layering (10, 20, 30, etc.)
+7. Use CSS custom properties for consistent theming
+8. Include print styles for PDF export compatibility
+9. Test all animations at different screen sizes
+10. Implement preloading for smooth transitions
+</technical_implementation>
+
+<final_quality_checks>
+The presentation MUST:
+✓ Be visually stunning and professional
+✓ Contain ZERO fabricated data or statistics
+✓ Include ALL major content sections from source
+✓ Maintain source's information hierarchy
+✓ Present information accurately without embellishment
+✓ Use visual enhancements that support, not distort, content
+✓ Function smoothly with all interactions
+✓ Be immediately understandable and memorable
+</final_quality_checks>

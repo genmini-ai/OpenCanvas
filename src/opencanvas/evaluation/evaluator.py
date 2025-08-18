@@ -57,6 +57,15 @@ class PresentationEvaluator:
         elif provider == "gpt":
             self.client = OpenAI(api_key=api_key)
         elif provider == "gemini":
+            # Check if google-genai SDK is installed
+            if genai is None:
+                raise ImportError(
+                    "google-genai SDK is not installed. "
+                    "Please install it with: pip install google-genai\n"
+                    "Or switch to a different evaluation provider in .env:\n"
+                    "  EVALUATION_PROVIDER=claude  # if you have ANTHROPIC_API_KEY\n"
+                    "  EVALUATION_PROVIDER=gpt     # if you have OPENAI_API_KEY"
+                )
             # Set the API key for Gemini
             self.client = genai.Client(api_key=api_key)
         else:
@@ -215,36 +224,44 @@ class PresentationEvaluator:
 
     def call_gemini_api_with_pdfs(self, prompt: str, presentation_pdf_data: str, source_pdf_data: Optional[str] = None) -> Dict[str, Any]:
         """Make API call to Gemini with presentation PDF and optional source PDF"""
+        # Check if SDK is available
+        if genai is None or types is None:
+            return {
+                "error": "google-genai SDK not installed. Please run: pip install google-genai"
+            }
+        
         try:
-            # Build the content array for Gemini
-            content = []
+            # Build the content array for Gemini - all items must be Part objects
+            content_parts = []
             
             # Add source PDF if available (for reference-required evaluation)
             if source_pdf_data:
                 source_pdf_bytes = base64.b64decode(source_pdf_data)
-                content.append(types.Part.from_bytes(
+                content_parts.append(types.Part.from_bytes(
                     data=source_pdf_bytes,
                     mime_type='application/pdf'
                 ))
-                content.append("Above is the source document. Below is the presentation to evaluate:")
+                content_parts.append(types.Part.from_text(text="Above is the source document. Below is the presentation to evaluate:"))
             
             # Add presentation PDF
             presentation_pdf_bytes = base64.b64decode(presentation_pdf_data)
-            content.append(types.Part.from_bytes(
+            content_parts.append(types.Part.from_bytes(
                 data=presentation_pdf_bytes,
                 mime_type='application/pdf'
             ))
             
-            # Add the evaluation prompt
-            content.append(f"{prompt}\n\nThis is the presentation to evaluate. Please assess it according to the evaluation criteria and return your response as valid JSON.")
+            # Add the evaluation prompt as a text part
+            content_parts.append(types.Part.from_text(text=f"{prompt}\n\nThis is the presentation to evaluate. Please assess it according to the evaluation criteria and return your response as valid JSON."))
             
-            # Make the API call
+            # Make the API call with properly formatted content
             response = self.client.models.generate_content(
                 model=self.model,
-                contents=content
+                contents=[types.Content(parts=content_parts)]
             )
             
             response_text = response.text
+            logger.debug(f"Gemini response length: {len(response_text)} chars")
+            logger.debug(f"Gemini response preview: {response_text[:500]}...")
             
             # Extract JSON from response
             start_idx = response_text.find('{')
@@ -252,10 +269,12 @@ class PresentationEvaluator:
             
             if start_idx != -1 and end_idx != -1:
                 json_str = response_text[start_idx:end_idx]
-                return json.loads(json_str)
+                parsed_json = json.loads(json_str)
+                logger.info(f"✅ Gemini API call successful, parsed JSON with {len(parsed_json)} keys")
+                return parsed_json
             else:
-                logger.error("No JSON found in response")
-                logger.debug(f"Full response: {response_text}")
+                logger.error("No JSON found in Gemini response")
+                logger.debug(f"Full Gemini response: {response_text}")
                 # Return a basic structure if JSON parsing fails
                 return {
                     "error": "Failed to parse JSON response",
@@ -266,7 +285,8 @@ class PresentationEvaluator:
                 }
                 
         except Exception as e:
-            logger.error(f"Gemini API call failed: {e}")
+            logger.error(f"❌ Gemini API call failed: {e}")
+            logger.error(f"Model: {self.model}, Content parts: {len(content_parts) if 'content_parts' in locals() else 'unknown'}")
             return {"error": str(e)}
     
     def call_api_with_pdfs(self, prompt: str, presentation_pdf_data: str, source_pdf_data: Optional[str] = None) -> Dict[str, Any]:
@@ -329,18 +349,27 @@ class PresentationEvaluator:
         if not presentation_pdf_data:
             raise ValueError("Could not read presentation.pdf file")
         
-        # Run evaluations using PDFs
+        # Run evaluations using PDFs - no fallback, let errors propagate
         result = EvaluationResult()
         
         # Visual evaluation (always possible with presentation PDF)
         result.visual_scores = self.evaluate_visual(presentation_pdf_data)
+        if "error" in result.visual_scores:
+            logger.error(f"Visual evaluation failed: {result.visual_scores['error']}")
+            # Let the error propagate - don't use fallback scores
         
         # Content evaluation - reference-free (using presentation PDF)
         result.content_free_scores = self.evaluate_content_free(presentation_pdf_data)
+        if "error" in result.content_free_scores:
+            logger.error(f"Content-free evaluation failed: {result.content_free_scores['error']}")
+            # Let the error propagate - don't use fallback scores
         
         # Content evaluation - reference-required (only if source PDF available)
         if source_pdf_data:
             result.content_required_scores = self.evaluate_content_required(presentation_pdf_data, source_pdf_data)
+            if "error" in result.content_required_scores:
+                logger.error(f"Content-required evaluation failed: {result.content_required_scores['error']}")
+                # Let the error propagate - don't use fallback scores
         
         # Calculate overall scores
         result.overall_scores = self._calculate_overall_scores(result)
@@ -577,3 +606,4 @@ Focus on how well the presentation captures, organizes, and presents the key inf
             print("-" * 40)
             for category, score in result.overall_scores.items():
                 print(f"{category.replace('_', ' ').title()}: {score:.2f}/5")
+    

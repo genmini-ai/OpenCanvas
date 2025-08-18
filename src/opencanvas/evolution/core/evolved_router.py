@@ -19,41 +19,55 @@ class EvolvedGenerationRouter(GenerationRouter):
     while maintaining all production tools and pipeline
     """
     
-    def __init__(self, api_key=None, brave_api_key=None, evolution_iteration: Optional[int] = None):
+    def __init__(self, api_key=None, brave_api_key=None, evolution_iteration: Optional[int] = None, prompt_only: bool = False, evolution_output_dir: Optional[str] = None, initial_prompt: Optional[str] = None):
         """Initialize router with evolved generators"""
         
         # Don't call parent __init__ yet - we need to set up evolved generators first
         self.api_key = api_key
         self.brave_api_key = brave_api_key
         
-        # Load evolved prompts if available
-        self.prompt_manager = PromptManager()
+        # Store evolution directory for direct prompt loading (like 0815 run)
+        self.evolution_output_dir = evolution_output_dir
         self.evolution_iteration = evolution_iteration
+        self.prompt_only = prompt_only
+        self.initial_prompt = initial_prompt
         
-        # Load auto-generated tools from previous iterations
-        self.auto_generated_tools = self._load_auto_generated_tools(evolution_iteration)
-        
-        if evolution_iteration and evolution_iteration > 1:
-            # Check if evolved prompts exist for previous iteration
-            evolved_prompts = self.prompt_manager.get_prompts(evolution_iteration - 1)
-            if evolved_prompts and 'topic_generation' in evolved_prompts:
-                logger.info(f"🧬 Loading EVOLVED prompts from iteration {evolution_iteration - 1}")
-                
-                # Create patched generators with evolved prompts and tools
-                self.topic_generator = EvolvedTopicGenerator(
-                    api_key, 
-                    brave_api_key,
-                    evolved_prompt=evolved_prompts.get('topic_generation'),
-                    auto_generated_tools=self.auto_generated_tools
-                )
-                self.pdf_generator = PDFGenerator(api_key)  # Keep PDF generator standard for now
-                
-                logger.info(f"✅ Using evolved prompts for generation")
-            else:
-                logger.info(f"⚠️  No evolved prompts found, using baseline")
-                self._use_baseline_generators()
+        # Load auto-generated tools from previous iterations (skip in prompt-only mode)
+        if prompt_only:
+            logger.info("📝 Prompt-only mode: Skipping tool loading")
+            self.auto_generated_tools = []
         else:
-            logger.info(f"📦 Using baseline prompts (first iteration)")
+            self.auto_generated_tools = self._load_auto_generated_tools(evolution_iteration)
+        
+        # Determine which prompt to use
+        evolved_prompt_text = None
+        
+        if initial_prompt:
+            # Use provided initial prompt (for iteration 1)
+            evolved_prompt_text = initial_prompt
+            logger.info(f"🎯 Using provided initial prompt for iteration {evolution_iteration} ({len(initial_prompt)} chars)")
+        elif evolution_iteration and evolution_iteration > 1:
+            # Load evolved prompt from previous iteration (like 0815 run)
+            evolved_prompt_text = self._load_evolved_prompt_direct(evolution_iteration - 1)
+            if evolved_prompt_text:
+                logger.info(f"🧬 Loading EVOLVED prompt from iteration {evolution_iteration - 1}")
+                logger.info(f"📝 Evolved prompt preview: {evolved_prompt_text[:100]}...")
+            else:
+                logger.info(f"⚠️  No evolved prompts found from iteration {evolution_iteration - 1}")
+        
+        if evolved_prompt_text:
+            # Create patched generators with evolved/initial prompts and tools
+            self.topic_generator = EvolvedTopicGenerator(
+                api_key, 
+                brave_api_key,
+                evolved_prompt=evolved_prompt_text,
+                auto_generated_tools=self.auto_generated_tools
+            )
+            self.pdf_generator = PDFGenerator(api_key)  # Keep PDF generator standard for now
+            
+            logger.info(f"✅ Using evolved/initial prompts for generation")
+        else:
+            logger.info(f"📦 Using baseline prompts (no evolved/initial prompt available)")
             self._use_baseline_generators()
     
     def _load_auto_generated_tools(self, iteration: Optional[int]) -> List:
@@ -114,6 +128,28 @@ class EvolvedGenerationRouter(GenerationRouter):
         logger.info(f"✅ Total auto-generated tools loaded: {len(tools)}")
         return tools
     
+    def _load_evolved_prompt_direct(self, iteration_number: int) -> Optional[str]:
+        """Load evolved prompt directly from evolved_prompts directory (like 0815 run)"""
+        if not self.evolution_output_dir:
+            logger.warning("⚠️ No evolution output directory specified")
+            return None
+        
+        try:
+            evolved_dir = Path(self.evolution_output_dir) / "evolved_prompts"
+            prompt_file = evolved_dir / f"generation_prompt_v{iteration_number}.txt"
+            
+            if prompt_file.exists():
+                evolved_prompt = prompt_file.read_text()
+                logger.info(f"📝 Loaded evolved prompt: {prompt_file.relative_to(Path(self.evolution_output_dir))} ({len(evolved_prompt)} chars)")
+                return evolved_prompt
+            else:
+                logger.warning(f"⚠️ Evolved prompt not found: {prompt_file}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Failed to load evolved prompt: {e}")
+            return None
+    
     def _use_baseline_generators(self):
         """Use standard production generators"""
         self.topic_generator = TopicGenerator(self.api_key, self.brave_api_key)
@@ -128,13 +164,19 @@ class EvolvedTopicGenerator(TopicGenerator):
     
     def __init__(self, api_key, brave_api_key=None, evolved_prompt: str = None, auto_generated_tools: List = None):
         """Initialize with evolved prompt and auto-generated tools"""
-        # Initialize parent with evolution tools ENABLED
-        super().__init__(api_key, brave_api_key, enable_evolution_tools=True)
+        # Initialize parent with evolution tools ENABLED and skip prompt loading
+        super().__init__(api_key, brave_api_key, enable_evolution_tools=True, skip_prompt_loading=True)
         self.evolved_prompt = evolved_prompt
         self.auto_generated_tools = auto_generated_tools or []
         
         if evolved_prompt:
-            logger.info(f"📝 EvolvedTopicGenerator using custom prompt ({len(evolved_prompt)} chars)")
+            logger.info(f"📝 EvolvedTopicGenerator using provided prompt ({len(evolved_prompt)} chars)")
+            # Set the prompt ourselves (parent skipped loading)
+            self.generation_prompt = evolved_prompt
+        else:
+            logger.error(f"❌ EvolvedTopicGenerator initialized without prompt!")
+            # This should not happen - fallback to None
+            self.generation_prompt = None
         
         # CRITICAL FIX: Register auto-generated tools with the pipeline
         if self.auto_generated_tools and self.enable_evolution_tools and self.tool_pipeline:
@@ -228,54 +270,11 @@ class EvolvedTopicGenerator(TopicGenerator):
         # No need to manually apply them here
         
         if self.evolved_prompt:
-            # Use evolved prompt
-            slide_prompt = self.evolved_prompt.format(
-                blog_content=blog_content,
-                purpose=purpose,
-                theme=theme
-            )
-            
-            logger.info(f"🧬 Using EVOLVED slide generation prompt with processed content")
-        else:
-            # Fall back to parent's implementation
+            logger.info(f"🧬 Using EVOLVED slide generation prompt ({len(self.evolved_prompt)} chars)")
+            # Since we set self.generation_prompt = evolved_prompt in __init__, 
+            # just call parent method which will use the evolved prompt
             return super().generate_slides_html(blog_content, purpose, theme)
-        
-        try:
-            logger.info("📡 Using streaming for slide generation with evolved prompt...")
-            
-            # Use streaming for long operations
-            stream = self.client.messages.create(
-                model="claude-3-7-sonnet-20250219",
-                max_tokens=50000,
-                temperature=0.5,
-                stream=True,
-                messages=[{"role": "user", "content": slide_prompt}]
-            )
-            
-            # Collect the streamed response
-            html_content = ""
-            for chunk in stream:
-                if chunk.type == "content_block_delta":
-                    html_content += chunk.delta.text
-                    # Log progress every 1000 characters
-                    if len(html_content) % 1000 == 0:
-                        logger.info(f"📝 Generated {len(html_content)} characters...")
-            
-            logger.info(f"✅ Completed generation with evolved prompt: {len(html_content)} characters")
-            
-            # Clean up HTML if wrapped in code blocks
-            cleaned_html = self.clean_html_content(html_content)
-            
-            # Apply auto-generated tools to final HTML if applicable
-            if self.auto_generated_tools:
-                logger.info("🔧 Applying auto-generated tools to final HTML output...")
-                final_html = self._apply_auto_generated_tools(cleaned_html, stage="html")
-                if final_html != cleaned_html:
-                    logger.info("✅ HTML output enhanced by auto-generated tools")
-                    return final_html
-            
-            return cleaned_html
-        except Exception as e:
-            logger.error(f"Error generating slides with evolved prompt: {e}")
-            # Fall back to parent implementation
+        else:
+            logger.info(f"📦 Using BASELINE slide generation prompt")
+            # Fall back to parent's implementation with baseline prompt
             return super().generate_slides_html(blog_content, purpose, theme)
