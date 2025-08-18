@@ -661,7 +661,8 @@ class EvolutionSystem:
                             html_file=result['html_file'],
                             output_dir=str(topic_dir),
                             method="playwright",
-                            zoom_factor=0.5
+                            zoom_factor=1.0,
+                            compress_images=True
                         )
                         pdf_path = converter.convert(output_filename="presentation.pdf")
                     else:

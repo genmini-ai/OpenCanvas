@@ -73,7 +73,8 @@ class PresentationConverter:
     """Enhanced PresentationConverter with native PDF generation capabilities and fixed 4:3 aspect ratio."""
     
     def __init__(self, html_file: str, output_dir: str = "output", 
-                 method: str = "playwright", zoom_factor: float = 1.2):
+                 method: str = "playwright", zoom_factor: float = 1.2, 
+                 compress_images: bool = False):
         """
         Initialize the converter.
         
@@ -83,13 +84,16 @@ class PresentationConverter:
             method: Conversion method - 'playwright' (default), 'chrome_headless', 
                    'selenium_cdp', or 'selenium' (original screenshot method)
             zoom_factor: Zoom level for PDF content (used in all methods)
+            compress_images: Whether to compress Unsplash images for smaller PDFs (default: False)
         """
         self.html_file = Path(html_file)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
         self.method = method
         self.zoom_factor = zoom_factor
+        self.compress_images = compress_images
         self.temp_images = []  # Kept for compatibility
+        self.temp_html_file = None  # For compressed HTML cleanup
         
         # Validate inputs
         is_valid, msg = InputValidator.validate_html_file(str(self.html_file))
@@ -126,11 +130,54 @@ class PresentationConverter:
         
         return driver
 
+    def _compress_images_in_html(self) -> Path:
+        """Create a temporary HTML file with compressed Unsplash images"""
+        import re
+        import tempfile
+        
+        # Read original HTML
+        with open(self.html_file, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        
+        # Apply aggressive compression: w=1350→w=400, q=80→q=40
+        compressed_content = re.sub(r'w=1350', 'w=400', html_content)
+        compressed_content = re.sub(r'q=80', 'q=40', compressed_content)
+        
+        # Create temporary HTML file
+        temp_fd, temp_path = tempfile.mkstemp(suffix='.html', prefix='compressed_')
+        self.temp_html_file = Path(temp_path)
+        
+        try:
+            with os.fdopen(temp_fd, 'w', encoding='utf-8') as f:
+                f.write(compressed_content)
+        except:
+            os.close(temp_fd)
+            raise
+        
+        logger.info(f"Created compressed HTML: {self.temp_html_file}")
+        return self.temp_html_file
+
+    def _cleanup_temp_html(self):
+        """Clean up temporary compressed HTML file"""
+        if self.temp_html_file and self.temp_html_file.exists():
+            try:
+                self.temp_html_file.unlink()
+                logger.info(f"Cleaned up temporary HTML: {self.temp_html_file}")
+                self.temp_html_file = None
+            except Exception as e:
+                logger.warning(f"Failed to cleanup temporary HTML: {e}")
+
     def convert_with_playwright(self, output_filename: str) -> str:
         """Convert using Playwright - produces selectable PDF with proper multi-slide support."""
         logger.info("Converting with Playwright...")
         
         pdf_path = self.output_dir / output_filename
+        
+        # Use compressed HTML if image compression is enabled
+        html_file_to_use = self.html_file
+        if self.compress_images:
+            html_file_to_use = self._compress_images_in_html()
+            logger.info("Using compressed images for PDF generation")
         
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -138,7 +185,7 @@ class PresentationConverter:
             page = context.new_page()
             
             # Navigate to file
-            file_url = f"file://{self.html_file.absolute()}"
+            file_url = f"file://{html_file_to_use.absolute()}"
             page.goto(file_url, wait_until='networkidle')
             page.wait_for_timeout(3000)
             
@@ -255,6 +302,10 @@ class PresentationConverter:
                         pass
             
             browser.close()
+            
+            # Clean up compressed HTML if it was created
+            if self.compress_images:
+                self._cleanup_temp_html()
             
             logger.info(f"PDF generated with Playwright (16:9 format): {pdf_path}")
             return str(pdf_path)
