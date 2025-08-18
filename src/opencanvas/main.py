@@ -56,6 +56,7 @@ Examples:
     gen_parser.add_argument('--purpose', default=Config.DEFAULT_PURPOSE, help='Purpose of presentation')
     gen_parser.add_argument('--theme', default=Config.DEFAULT_THEME, help='Visual theme')
     gen_parser.add_argument('--output-dir', default=str(Config.OUTPUT_DIR), help='Output directory')
+    gen_parser.add_argument('--extract-images', action='store_true', help='Extract and include images from PDF (PDF input only)')
     
     # Convert command  
     conv_parser = subparsers.add_parser('convert', help='Convert HTML presentation to PDF')
@@ -87,6 +88,7 @@ Examples:
     pipe_parser.add_argument('--zoom', type=float, default=Config.DEFAULT_ZOOM, help='PDF zoom factor')
     pipe_parser.add_argument('--method', choices=['selenium', 'playwright'], 
                            default=Config.DEFAULT_CONVERSION_METHOD, help='Conversion method')
+    pipe_parser.add_argument('--extract-images', action='store_true', help='Extract and include images from PDF (PDF input only)')
     
     # API command
     api_parser = subparsers.add_parser('api', help='Start the REST API server')
@@ -152,7 +154,8 @@ def handle_generate(args, logger):
         input_source=args.input,
         purpose=args.purpose,
         theme=args.theme,
-        output_dir=args.output_dir
+        output_dir=args.output_dir,
+        extract_images=args.extract_images
     )
     
     if result:
@@ -313,7 +316,8 @@ def handle_pipeline(args, logger):
         input_source=args.input,
         purpose=args.purpose,
         theme=args.theme,
-        output_dir=args.output_dir
+        output_dir=args.output_dir,
+        extract_images=args.extract_images
     )
     
     if not gen_result:

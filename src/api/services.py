@@ -39,7 +39,8 @@ class GenerationService:
         input_source: str, 
         purpose: str, 
         theme: str, 
-        output_dir: str = "output"
+        output_dir: str = "output",
+        extract_images: bool = False
     ) -> GenerateResponse:
         """Generate presentation from topic or PDF"""
         try:
@@ -53,7 +54,8 @@ class GenerationService:
                 input_source,
                 purpose,
                 theme,
-                output_dir
+                output_dir,
+                extract_images
             )
             
             if result:
@@ -233,7 +235,8 @@ class PipelineService:
         evaluate: bool = False,
         output_dir: str = "output",
         zoom_factor: float = 1.2,
-        method: str = "selenium"
+        method: str = "selenium",
+        extract_images: bool = False
     ) -> PipelineResponse:
         """Run complete pipeline: generate → convert → evaluate"""
         try:
@@ -245,7 +248,8 @@ class PipelineService:
                 input_source=input_source,
                 purpose=purpose,
                 theme=theme,
-                output_dir=output_dir
+                output_dir=output_dir,
+                extract_images=extract_images
             )
             
             if not gen_response.success:
