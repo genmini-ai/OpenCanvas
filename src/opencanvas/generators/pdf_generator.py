@@ -151,18 +151,20 @@ class PDFGenerator(BaseGenerator):
             else:
                 logger.info("📸 No images found in PDF")
         
-        # Build image context for prompt
+        # Build image context for prompt - integrated format
         image_context = ""
         if image_captions:
-            image_context = "\n\n<extracted_images>\n"
-            image_context += "The following images have been extracted from the PDF with their captions and dimensions:\n"
+            image_context = "\n**Visual Assets:** The following images have been extracted from the PDF with their captions and dimensions:\n"
             for image_id, info in image_captions.items():
                 dimensions = info.get('dimensions', 'unknown')
                 image_context += f"- {image_id}: {info['caption']} (file: {info['path']}, size: {dimensions})\n"
-            image_context += "\nPlease incorporate these images into the presentation using their file paths.\n"
-            image_context += "Use <img src='../extracted_images/image_id.png' alt='caption'> format.\n"
-            image_context += "Consider the image dimensions when placing them in the layout to ensure proper fit.\n"
-            image_context += "</extracted_images>\n"
+            image_context += "\n**Integration Instructions:**\n"
+            image_context += "- Incorporate these images strategically throughout the presentation\n"
+            image_context += "- Use format: `<img src='../extracted_images/image_id.png' alt='caption'>`\n"
+            image_context += "- Consider image dimensions for proper layout and positioning\n"
+            image_context += "- Place images where they enhance understanding and visual impact\n"
+        else:
+            image_context = "\n**Visual Assets:** No images were found in the source PDF."
         
         # Updated academic generation prompt
         academic_gen_prompt = f'''<presentation_task>
@@ -171,6 +173,10 @@ Create a stunning, visually captivating HTML presentation that makes viewers sto
 **Purpose of presentation:** {presentation_focus}
 **Visual theme:** {theme}
 </presentation_task>
+
+<source_materials>
+**PDF Content:** The PDF document has been provided and analyzed for content extraction.{image_context}
+</source_materials>
 
 <design_philosophy>
 CREATE EMOTIONAL IMPACT:
@@ -293,7 +299,6 @@ IMPORTANT: The HTML must be a complete, self-contained file that opens directly 
 
 IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and end with </html>. No explanations, no markdown formatting around the code.
 </output_requirements>
-{image_context}
 '''
         try:
             logger.info("🔍 Analyzing PDF and generating slides in one step...")

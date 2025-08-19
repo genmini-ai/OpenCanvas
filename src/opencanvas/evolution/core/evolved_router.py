@@ -19,7 +19,7 @@ class EvolvedGenerationRouter(GenerationRouter):
     while maintaining all production tools and pipeline
     """
     
-    def __init__(self, api_key=None, brave_api_key=None, evolution_iteration: Optional[int] = None, prompt_only: bool = False, evolution_output_dir: Optional[str] = None, initial_prompt: Optional[str] = None):
+    def __init__(self, api_key=None, brave_api_key=None, evolution_iteration: Optional[int] = None, prompt_only: bool = False, evolution_output_dir: Optional[str] = None, initial_prompt: Optional[str] = None, pdf_mode: bool = False):
         """Initialize router with evolved generators"""
         
         # Don't call parent __init__ yet - we need to set up evolved generators first
@@ -31,6 +31,7 @@ class EvolvedGenerationRouter(GenerationRouter):
         self.evolution_iteration = evolution_iteration
         self.prompt_only = prompt_only
         self.initial_prompt = initial_prompt
+        self.pdf_mode = pdf_mode
         
         # Load auto-generated tools from previous iterations (skip in prompt-only mode)
         if prompt_only:
@@ -48,24 +49,33 @@ class EvolvedGenerationRouter(GenerationRouter):
             logger.info(f"🎯 Using provided initial prompt for iteration {evolution_iteration} ({len(initial_prompt)} chars)")
         elif evolution_iteration and evolution_iteration > 1:
             # Load evolved prompt from previous iteration (like 0815 run)
-            evolved_prompt_text = self._load_evolved_prompt_direct(evolution_iteration - 1)
+            evolved_prompt_text = self._load_evolved_prompt_direct(evolution_iteration - 1, pdf_mode)
             if evolved_prompt_text:
-                logger.info(f"🧬 Loading EVOLVED prompt from iteration {evolution_iteration - 1}")
+                mode_text = "PDF" if pdf_mode else "topic"
+                logger.info(f"🧬 Loading EVOLVED {mode_text} prompt from iteration {evolution_iteration - 1}")
                 logger.info(f"📝 Evolved prompt preview: {evolved_prompt_text[:100]}...")
             else:
-                logger.info(f"⚠️  No evolved prompts found from iteration {evolution_iteration - 1}")
+                mode_text = "PDF" if pdf_mode else "topic"
+                logger.info(f"⚠️  No evolved {mode_text} prompts found from iteration {evolution_iteration - 1}")
         
         if evolved_prompt_text:
-            # Create patched generators with evolved/initial prompts and tools
-            self.topic_generator = EvolvedTopicGenerator(
-                api_key, 
-                brave_api_key,
-                evolved_prompt=evolved_prompt_text,
-                auto_generated_tools=self.auto_generated_tools
-            )
-            self.pdf_generator = PDFGenerator(api_key)  # Keep PDF generator standard for now
-            
-            logger.info(f"✅ Using evolved/initial prompts for generation")
+            # Create appropriate evolved generators based on mode
+            if pdf_mode:
+                self.topic_generator = TopicGenerator(api_key, brave_api_key)
+                self.pdf_generator = EvolvedPDFGenerator(
+                    api_key,
+                    evolved_prompt=evolved_prompt_text
+                )
+                logger.info(f"✅ Using evolved PDF generator with evolved prompts")
+            else:
+                self.topic_generator = EvolvedTopicGenerator(
+                    api_key, 
+                    brave_api_key,
+                    evolved_prompt=evolved_prompt_text,
+                    auto_generated_tools=self.auto_generated_tools
+                )
+                self.pdf_generator = PDFGenerator(api_key)
+                logger.info(f"✅ Using evolved topic generator with evolved prompts")
         else:
             logger.info(f"📦 Using baseline prompts (no evolved/initial prompt available)")
             self._use_baseline_generators()
@@ -128,7 +138,7 @@ class EvolvedGenerationRouter(GenerationRouter):
         logger.info(f"✅ Total auto-generated tools loaded: {len(tools)}")
         return tools
     
-    def _load_evolved_prompt_direct(self, iteration_number: int) -> Optional[str]:
+    def _load_evolved_prompt_direct(self, iteration_number: int, pdf_mode: bool = False) -> Optional[str]:
         """Load evolved prompt directly from evolved_prompts directory (like 0815 run)"""
         if not self.evolution_output_dir:
             logger.warning("⚠️ No evolution output directory specified")
@@ -136,7 +146,12 @@ class EvolvedGenerationRouter(GenerationRouter):
         
         try:
             evolved_dir = Path(self.evolution_output_dir) / "evolved_prompts"
-            prompt_file = evolved_dir / f"generation_prompt_v{iteration_number}.txt"
+            
+            # Choose appropriate prompt file based on mode
+            if pdf_mode:
+                prompt_file = evolved_dir / f"pdf_generation_prompt_v{iteration_number}.txt"
+            else:
+                prompt_file = evolved_dir / f"generation_prompt_v{iteration_number}.txt"
             
             if prompt_file.exists():
                 evolved_prompt = prompt_file.read_text()
@@ -278,3 +293,154 @@ class EvolvedTopicGenerator(TopicGenerator):
             logger.info(f"📦 Using BASELINE slide generation prompt")
             # Fall back to parent's implementation with baseline prompt
             return super().generate_slides_html(blog_content, purpose, theme)
+
+
+class EvolvedPDFGenerator(PDFGenerator):
+    """
+    PDF generator that uses evolved prompts while keeping all other functionality
+    """
+    
+    def __init__(self, api_key, evolved_prompt: str = None):
+        """Initialize with evolved prompt"""
+        super().__init__(api_key)
+        self.evolved_prompt = evolved_prompt
+        
+        if evolved_prompt:
+            logger.info(f"📝 EvolvedPDFGenerator using evolved prompt ({len(evolved_prompt)} chars)")
+        else:
+            logger.error(f"❌ EvolvedPDFGenerator initialized without evolved prompt!")
+    
+    def generate_slides_html(self, pdf_data, presentation_focus, theme="professional", extract_images=False, output_dir=None):
+        """Generate HTML slides directly from PDF content using evolved prompt."""
+        
+        self.presentation_focus = presentation_focus
+        
+        # Extract images and captions if enabled (copied from parent)
+        image_captions = {}
+        extracted_images_dir = None
+        if extract_images and output_dir:
+            logger.info("🔍 Extracting images and captions from PDF...")
+            image_captions, extracted_images_dir, plots = self._extract_images_and_captions(pdf_data, output_dir)
+            
+            if image_captions:
+                logger.info(f"📸 Found {len(image_captions)} images with captions")
+            else:
+                logger.info("📸 No images found in PDF")
+        
+        # Build image context for prompt (copied from parent)
+        image_context = ""
+        if image_captions:
+            image_context = "\n\n<extracted_images>\n"
+            image_context += "The following images have been extracted from the PDF with their captions and dimensions:\n"
+            for image_id, info in image_captions.items():
+                dimensions = info.get('dimensions', 'unknown')
+                image_context += f"- {image_id}: {info['caption']} (file: {info['path']}, size: {dimensions})\n"
+            image_context += "\nPlease incorporate these images into the presentation using their file paths.\n"
+            image_context += "Use <img src='../extracted_images/image_id.png' alt='caption'> format.\n"
+            image_context += "Consider the image dimensions when placing them in the layout to ensure proper fit.\n"
+            image_context += "</extracted_images>\n"
+        
+        # Use evolved prompt if available, otherwise fallback to hardcoded
+        if self.evolved_prompt:
+            logger.info("🧬 Using EVOLVED PDF generation prompt")
+            try:
+                # Import static examples functions for PDF mode
+                from .pdf_static_examples import remove_static_sections, add_static_examples
+                
+                # Remove static sections before formatting to avoid brace escaping issues
+                prompt_without_static = remove_static_sections(self.evolved_prompt)
+                logger.debug(f"🔧 Removed static sections: {len(self.evolved_prompt)} → {len(prompt_without_static)} chars")
+                
+                # Format the prompt without static sections
+                logger.debug(f"🔧 Formatting evolved prompt with: presentation_focus='{presentation_focus}', theme='{theme}', image_context len={len(image_context)}")
+                formatted_prompt = prompt_without_static.format(
+                    presentation_focus=presentation_focus,
+                    theme=theme,
+                    image_context=image_context
+                )
+                
+                # Add static sections back after formatting
+                academic_gen_prompt = add_static_examples(formatted_prompt)
+                logger.info(f"✅ Successfully formatted evolved prompt with static examples: {len(academic_gen_prompt)} characters")
+            except Exception as e:
+                logger.error(f"❌ Failed to format evolved prompt: {e}")
+                logger.error(f"❌ Error type: {type(e).__name__}")
+                logger.error(f"❌ Prompt preview (first 200 chars): {self.evolved_prompt[:200]}...")
+                logger.info("🔄 Falling back to hardcoded prompt")
+                academic_gen_prompt = self._get_fallback_prompt(presentation_focus, theme, image_context)
+        else:
+            logger.info("📦 Using fallback hardcoded prompt")
+            academic_gen_prompt = self._get_fallback_prompt(presentation_focus, theme, image_context)
+        
+        try:
+            logger.info("🔍 Analyzing PDF and generating slides using evolved prompt...")
+            logger.info("📡 Using streaming for long-running operation...")
+            
+            # Use streaming for long operations (copied from parent)
+            stream = self.client.messages.create(
+                model="claude-3-7-sonnet-20250219",
+                max_tokens=50000,
+                temperature=0.7,
+                stream=True,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "document",
+                                "source": {
+                                    "type": "base64",
+                                    "media_type": "application/pdf",
+                                    "data": pdf_data,
+                                },
+                            },
+                            {
+                                "type": "text",
+                                "text": academic_gen_prompt
+                            }
+                        ],
+                    }
+                ],
+            )
+            
+            # Collect the streamed response (copied from parent)
+            html_content = ""
+            for chunk in stream:
+                if chunk.type == "content_block_delta":
+                    html_content += chunk.delta.text
+                    # Log progress every 1000 characters
+                    if len(html_content) % 1000 == 0:
+                        logger.info(f"📝 Generated {len(html_content)} characters...")
+            
+            logger.info(f"✅ Completed evolved PDF generation: {len(html_content)} characters")
+            return self.clean_html_content(html_content), None
+
+        except Exception as e:
+            return None, f"Error generating slides with evolved prompt: {str(e)}"
+    
+    def _get_fallback_prompt(self, presentation_focus, theme, image_context):
+        """Get fallback hardcoded prompt in case evolved prompt fails"""
+        return f'''<presentation_task>
+Create a stunning, visually captivating HTML presentation that makes viewers stop and say "wow" based on this PDF document.
+
+**Purpose of presentation:** {presentation_focus}
+**Visual theme:** {theme}
+</presentation_task>
+
+<design_philosophy>
+CREATE EMOTIONAL IMPACT:
+- Prioritize the "wow factor" over conventional academic design
+- Make every slide feel alive and dynamic with subtle animations
+- Choose bold, vibrant colors over muted, safe academic palettes
+- Use cutting-edge web design trends (glassmorphism, gradient overlays, micro-animations)
+- Push the boundaries of what's possible with modern CSS and JavaScript
+- Create a premium, cutting-edge experience that feels expensive and engaging
+</design_philosophy>
+
+<output_requirements>
+IMPORTANT: The HTML must be a complete, self-contained file that opens directly in a browser and immediately impresses with its sophisticated visual design and smooth interactions.
+
+IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and end with </html>. No explanations, no markdown formatting around the code.
+</output_requirements>
+{image_context}
+'''

@@ -357,12 +357,13 @@ class PromptParser:
             for i, section in enumerate(parsed["editable_sections"])
         ]
     
-    def validate_evolved_prompt(self, original_prompt: str, evolved_prompt: str) -> Dict[str, Any]:
+    def validate_evolved_prompt(self, original_prompt: str, evolved_prompt: str, critical_vars: set = None) -> Dict[str, Any]:
         """Validate that evolved prompt preserves critical variables only
         
         Args:
             original_prompt: The original prompt
             evolved_prompt: The evolved prompt from LLM
+            critical_vars: Set of critical variables to check, defaults to topic-based variables
             
         Returns:
             Dict with validation results
@@ -372,8 +373,10 @@ class PromptParser:
             orig_vars = set(re.findall(r'\{[^}]+\}', original_prompt))
             evolved_vars = set(re.findall(r'\{[^}]+\}', evolved_prompt))
             
-            # Only check critical variables needed for template substitution
-            critical_vars = {'{blog_content}', '{purpose}', '{theme}'}
+            # Use provided critical variables or default to topic-based
+            if critical_vars is None:
+                critical_vars = {'{blog_content}', '{purpose}', '{theme}'}
+            
             missing_critical = critical_vars - evolved_vars
             
             # Check if all critical elements are preserved (tags can evolve freely)

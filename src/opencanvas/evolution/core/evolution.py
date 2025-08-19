@@ -50,7 +50,7 @@ class EvolutionSystem:
         logger.info(f"🔧 Initializing EvolutionSystem with output_dir={output_dir}, max_iterations={max_iterations}, diagnostic={diagnostic_mode}, prompt_only={prompt_only}, memory={use_memory}")
         
         self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(exist_ok=True)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         
         # Memory configuration - controls whether prompts registry is loaded
         self.use_memory = use_memory
@@ -722,11 +722,24 @@ class EvolutionSystem:
                 
                 # Use evaluate_presentation_with_sources WITH source content
                 # This enables reference-required evaluation for content accuracy
-                eval_result = evaluator.evaluate_presentation_with_sources(
-                    presentation_pdf_path=presentation['pdf_path'],
-                    source_content_path=presentation.get('source_content_path'),  # Use saved source content
-                    source_pdf_path=None  # No PDF source (using text source)
-                )
+                
+                # Detect if this is PDF-based or topic-based presentation
+                is_pdf_based = presentation['topic'].startswith('PDF:')
+                
+                if is_pdf_based:
+                    # For PDF evolution - use source PDF for reference-required evaluation
+                    eval_result = evaluator.evaluate_presentation_with_sources(
+                        presentation_pdf_path=presentation['pdf_path'],
+                        source_content_path=None,  # No text source for PDF
+                        source_pdf_path=presentation.get('source_pdf_path')  # Use saved source PDF
+                    )
+                else:
+                    # For topic evolution - use source content for reference-required evaluation
+                    eval_result = evaluator.evaluate_presentation_with_sources(
+                        presentation_pdf_path=presentation['pdf_path'],
+                        source_content_path=presentation.get('source_content_path'),  # Use saved source content
+                        source_pdf_path=None  # No PDF source (using text source)
+                    )
                 
                 # Convert dataclass to dict and log the evaluation scores
                 if eval_result:
@@ -1917,7 +1930,12 @@ class EvolutionSystem:
             else:
                 # Subsequent iterations: load previous evolution from experiment directory
                 evolved_dir = self.output_dir / "evolved_prompts"
-                prev_file = evolved_dir / f"generation_prompt_v{iteration_number-1}.txt"
+                
+                # Use correct filename based on mode
+                if hasattr(self, 'pdf_mode') and self.pdf_mode:
+                    prev_file = evolved_dir / f"pdf_generation_prompt_v{iteration_number-1}.txt"
+                else:
+                    prev_file = evolved_dir / f"generation_prompt_v{iteration_number-1}.txt"
                 
                 logger.info(f"📂 Looking for previous evolved prompt at: {prev_file.absolute()}")
                 if prev_file.exists():
@@ -1927,7 +1945,12 @@ class EvolutionSystem:
                     # Fallback to global evolved prompts, then baseline
                     logger.warning(f"Previous evolution v{iteration_number-1} not found in experiment, checking global")
                     global_evolved_dir = Path("evolution_runs/evolved_prompts")
-                    global_prev_file = global_evolved_dir / f"generation_prompt_v{iteration_number-1}.txt"
+                    
+                    # Use correct filename based on mode for global fallback
+                    if hasattr(self, 'pdf_mode') and self.pdf_mode:
+                        global_prev_file = global_evolved_dir / f"pdf_generation_prompt_v{iteration_number-1}.txt"
+                    else:
+                        global_prev_file = global_evolved_dir / f"generation_prompt_v{iteration_number-1}.txt"
                     
                     logger.info(f"📂 Checking global evolved prompts at: {global_prev_file.absolute()}")
                     if global_prev_file.exists():
@@ -1977,10 +2000,23 @@ class EvolutionSystem:
             
             evolved_prompt = response.content[0].text.strip()
             
+            # For PDF mode, add static code examples back to the evolved prompt
+            if hasattr(self, 'pdf_mode') and self.pdf_mode:
+                from .pdf_static_examples import add_static_examples
+                evolved_prompt = add_static_examples(evolved_prompt)
+                logger.info(f"📋 Added static code examples to evolved prompt: {len(evolved_prompt)} total characters")
+            
             # Validate the evolved prompt structure
             from .prompt_parser import PromptParser
             parser = PromptParser()
-            validation = parser.validate_evolved_prompt(current_prompt, evolved_prompt)
+            
+            # Get critical variables based on evolution mode
+            if hasattr(self, 'pdf_mode') and self.pdf_mode:
+                critical_vars = {'{presentation_focus}', '{theme}', '{image_context}'}
+            else:
+                critical_vars = {'{blog_content}', '{purpose}', '{theme}'}
+            
+            validation = parser.validate_evolved_prompt(current_prompt, evolved_prompt, critical_vars)
             
             # Additional validation: check for navigation compatibility
             navigation_validation = self._validate_navigation_compatibility(evolved_prompt)
@@ -2040,12 +2076,25 @@ class EvolutionSystem:
                                       registry_context: str, iteration_number: int) -> str:
         """Create the prompt for evolving the current prompt"""
         
+        # For PDF mode, remove static code examples before evolution
+        if hasattr(self, 'pdf_mode') and self.pdf_mode:
+            from .pdf_static_examples import remove_static_sections
+            current_prompt = remove_static_sections(current_prompt)
+        
         # Simplify evaluation data for context
         eval_summary = []
         for eval_data in evaluation_data[-3:]:  # Last 3 evaluations
             visual_score = eval_data.get("visual_scores", {}).get("overall_visual_score", 0)
             content_score = eval_data.get("content_free_scores", {}).get("overall_content_score", 0)
             eval_summary.append(f"Visual: {visual_score:.2f}, Content: {content_score:.2f}")
+        
+        # Get placeholder instruction before building f-string
+        placeholder_instruction = self._get_placeholder_instruction()
+        
+        # Add PDF-specific instruction about static examples
+        static_examples_note = ""
+        if hasattr(self, 'pdf_mode') and self.pdf_mode:
+            static_examples_note = "\nNOTE: Code examples for MathJax and Mermaid diagrams are handled separately and will be automatically included. Focus on evolving the presentation instructions and guidelines only."
         
         evolution_prompt = f"""You are an expert at improving prompts for presentation generation. 
 
@@ -2063,11 +2112,11 @@ REGISTRY CONTEXT (lessons learned from previous attempts):
 
 CRITICAL INSTRUCTIONS:
 1. Return ONLY the improved prompt text - no explanations or comments
-2. Keep ALL variables exactly as they are: {{blog_content}}, {{purpose}}, {{theme}}
+{placeholder_instruction}
 3. Keep ALL XML tags exactly as they are: <presentation_task>, <design_philosophy>, etc.
 4. Improve the prompt content to address evaluation weaknesses
 5. Use insights from the registry context to avoid failed patterns
-6. Focus on specific, actionable improvements rather than vague suggestions
+6. Focus on specific, actionable improvements rather than vague suggestions{static_examples_note}
 
 NAVIGATION COMPATIBILITY REQUIREMENTS (CRITICAL):
 7. DO NOT change the slide navigation mechanism - maintain consistent approach
@@ -2084,6 +2133,19 @@ HTML GENERATION REQUIREMENTS:
 Based on the evaluation feedback and registry context, provide an improved version of the prompt that will generate better presentations WITHOUT breaking slide navigation.
 """
         return evolution_prompt
+    
+    def _get_placeholder_instruction(self) -> str:
+        """Get the appropriate placeholder instruction based on evolution mode"""
+        if hasattr(self, 'pdf_mode') and self.pdf_mode:
+            return """2. Keep ALL variables exactly as they are: {presentation_focus}, {theme}, {image_context}
+CRITICAL FOR PYTHON FORMAT STRINGS:
+- Single braces { } are format placeholders - keep EXACTLY as-is for the three variables above
+- Double braces {{ }} produce literal braces in the output HTML - MUST preserve ALL double braces
+- Example: MathJax = {{ tex: {{ ... }} }} NOT MathJax = { tex: { ... } }
+- All JavaScript objects, CSS rules, and template literals need {{ }} to render correctly in the final HTML
+- When you see {{ or }} in the current prompt, it MUST remain as {{ or }} in your output"""
+        else:
+            return "2. Keep ALL variables exactly as they are: {blog_content}, {purpose}, {theme}"
     
     def _test_evolved_prompt_simple(self, evolved_prompt: str, iteration_number: int) -> float:
         """Simple test of evolved prompt - returns improvement estimate"""
@@ -2117,7 +2179,13 @@ Based on the evaluation feedback and registry context, provide an improved versi
             # Save ONLY to experiment-specific evolved_prompts (like successful 0815 run)
             evolved_dir = self.output_dir / "evolved_prompts"
             evolved_dir.mkdir(parents=True, exist_ok=True)
-            prompt_file = evolved_dir / f"generation_prompt_v{iteration_number}.txt"
+            
+            # Determine prompt filename based on evolution type (PDF vs topic)
+            if hasattr(self, 'pdf_mode') and self.pdf_mode:
+                prompt_file = evolved_dir / f"pdf_generation_prompt_v{iteration_number}.txt"
+            else:
+                prompt_file = evolved_dir / f"generation_prompt_v{iteration_number}.txt"
+            
             prompt_file.write_text(evolved_prompt)
             logger.info(f"💾 Saved evolved prompt: {prompt_file.relative_to(self.output_dir)} ({len(evolved_prompt)} characters)")
             
