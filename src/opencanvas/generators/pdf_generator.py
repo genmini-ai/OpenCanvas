@@ -15,6 +15,7 @@ from opencanvas.generators.base import BaseGenerator
 from opencanvas.utils.validation import InputValidator
 from opencanvas.config import Config
 from opencanvas.utils.plot_caption_extractor import PDFPlotCaptionExtractor
+from opencanvas.utils.docling_extractor import DoclingImageExtractor
 from opencanvas.utils.file_utils import create_organized_output_structure
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,7 @@ class PDFGenerator(BaseGenerator):
         self.client = Anthropic(api_key=api_key)
         self.presentation_focus = None
         self.plot_extractor = None
+        self.docling_extractor = None
 
     def validate_pdf_url(self, url):
         """Validate if the URL points to a PDF file"""
@@ -63,7 +65,10 @@ class PDFGenerator(BaseGenerator):
 
     def _extract_images_and_captions(self, pdf_data, output_dir):
         """
-        Extract images and captions from PDF using PDFPlotCaptionExtractor
+        Extract complete figures and captions from PDF using Docling
+        
+        This replaces the fragmented pdfplumber approach with Docling's semantic
+        figure detection that maintains the integrity of complex diagrams.
         
         Args:
             pdf_data: Base64 encoded PDF data
@@ -71,6 +76,56 @@ class PDFGenerator(BaseGenerator):
             
         Returns:
             Tuple of (image_captions_dict, extracted_images_dir, plots_list)
+        """
+        try:
+            # Try Docling extraction first (preferred method)
+            if self._try_docling_extraction():
+                logger.info("🔍 Using Docling for complete figure extraction...")
+                
+                # Initialize Docling extractor if not already done
+                if self.docling_extractor is None:
+                    self.docling_extractor = DoclingImageExtractor(dpi_scale=2.0)
+                
+                # Extract using Docling
+                image_captions, extracted_images_dir, plots = self.docling_extractor.extract_from_pdf_data(
+                    pdf_data, output_dir
+                )
+                
+                if image_captions:
+                    logger.info(f"✅ Docling extracted {len(image_captions)} complete figures")
+                    return image_captions, extracted_images_dir, plots
+                else:
+                    logger.info("Docling found no figures, falling back to pdfplumber")
+            
+            # Fallback to original fragmented extraction
+            logger.info("📋 Falling back to pdfplumber fragmented extraction...")
+            return self._extract_with_pdfplumber_fallback(pdf_data, output_dir)
+            
+        except Exception as e:
+            logger.error(f"Error in image extraction: {e}")
+            # Always fallback to original method if there's any error
+            logger.info("🔄 Error occurred, using pdfplumber fallback...")
+            return self._extract_with_pdfplumber_fallback(pdf_data, output_dir)
+    
+    def _try_docling_extraction(self) -> bool:
+        """
+        Check if Docling extraction is available and should be used
+        
+        Returns:
+            True if Docling should be used, False for fallback
+        """
+        try:
+            from opencanvas.utils.docling_extractor import DOCLING_AVAILABLE
+            return DOCLING_AVAILABLE
+        except ImportError:
+            return False
+    
+    def _extract_with_pdfplumber_fallback(self, pdf_data, output_dir):
+        """
+        Fallback extraction using the original pdfplumber method
+        
+        This preserves the original fragmented behavior for compatibility
+        when Docling is not available or fails.
         """
         try:
             # Initialize plot extractor if not already done
@@ -122,7 +177,7 @@ class PDFGenerator(BaseGenerator):
                         
                         logger.info(f"Extracted image: {plot.plot_id} -> {image_path} ({plot.dimensions or 'unknown'})")
                 
-                logger.info(f"Extracted {len(image_captions)} images with captions")
+                logger.info(f"pdfplumber extracted {len(image_captions)} image fragments")
                 return image_captions, extracted_images_dir, plots
                 
             finally:
@@ -131,7 +186,7 @@ class PDFGenerator(BaseGenerator):
                     os.unlink(temp_pdf_path)
                     
         except Exception as e:
-            logger.error(f"Error extracting images and captions: {e}")
+            logger.error(f"Error in pdfplumber fallback extraction: {e}")
             return {}, None, []
 
     def generate_slides_html(self, pdf_data, presentation_focus, theme="professional", extract_images=False, output_dir=None):
