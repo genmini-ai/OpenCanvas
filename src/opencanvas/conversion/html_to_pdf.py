@@ -116,6 +116,7 @@ class PresentationConverter:
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-web-security")
         chrome_options.add_argument("--allow-running-insecure-content")
+        chrome_options.add_argument("--allow-file-access-from-files")  # Allow access to local image files
         
         # Disable automation banner
         chrome_options.add_argument("--disable-infobars")
@@ -133,7 +134,7 @@ class PresentationConverter:
     def _compress_images_in_html(self) -> Path:
         """Create a temporary HTML file with compressed Unsplash images"""
         import re
-        import tempfile
+        import time
         
         # Read original HTML
         with open(self.html_file, 'r', encoding='utf-8') as f:
@@ -143,16 +144,14 @@ class PresentationConverter:
         compressed_content = re.sub(r'w=1350', 'w=400', html_content)
         compressed_content = re.sub(r'q=80', 'q=40', compressed_content)
         
-        # Create temporary HTML file
-        temp_fd, temp_path = tempfile.mkstemp(suffix='.html', prefix='compressed_')
-        self.temp_html_file = Path(temp_path)
+        # Create temp file IN THE SAME DIRECTORY as original (not /tmp!)
+        # This preserves relative paths to ../extracted_images/
+        timestamp = int(time.time() * 1000)  # milliseconds for uniqueness
+        temp_path = self.html_file.parent / f"compressed_{timestamp}.html"
+        self.temp_html_file = temp_path
         
-        try:
-            with os.fdopen(temp_fd, 'w', encoding='utf-8') as f:
-                f.write(compressed_content)
-        except:
-            os.close(temp_fd)
-            raise
+        with open(temp_path, 'w', encoding='utf-8') as f:
+            f.write(compressed_content)
         
         logger.info(f"Created compressed HTML: {self.temp_html_file}")
         return self.temp_html_file
@@ -167,6 +166,7 @@ class PresentationConverter:
             except Exception as e:
                 logger.warning(f"Failed to cleanup temporary HTML: {e}")
 
+
     def convert_with_playwright(self, output_filename: str) -> str:
         """Convert using Playwright - produces selectable PDF with proper multi-slide support."""
         logger.info("Converting with Playwright...")
@@ -180,12 +180,25 @@ class PresentationConverter:
             logger.info("Using compressed images for PDF generation")
         
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context()
+            # Launch browser with flags to allow local file access (needed for extracted images)
+            browser = p.chromium.launch(
+                headless=True,
+                args=[
+                    '--allow-file-access-from-files',
+                    '--disable-web-security',
+                    '--allow-running-insecure-content'
+                ]
+            )
+            # Create context with bypass CSP to allow local file access
+            context = browser.new_context(
+                bypass_csp=True,
+                ignore_https_errors=True
+            )
             page = context.new_page()
             
-            # Navigate to file
+            # Navigate to file (using original HTML)
             file_url = f"file://{html_file_to_use.absolute()}"
+            logger.info(f"Loading HTML from: {file_url}")
             page.goto(file_url, wait_until='networkidle')
             page.wait_for_timeout(3000)
             
@@ -303,7 +316,7 @@ class PresentationConverter:
             
             browser.close()
             
-            # Clean up compressed HTML if it was created
+            # Clean up temporary files
             if self.compress_images:
                 self._cleanup_temp_html()
             
@@ -361,6 +374,7 @@ class PresentationConverter:
         logger.info("Converting with Chrome headless...")
         
         pdf_path = self.output_dir / output_filename
+        
         file_url = f"file://{self.html_file.absolute()}"
         
         # Find Chrome executable
@@ -394,6 +408,10 @@ class PresentationConverter:
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--disable-infobars")
             options.add_argument("--disable-extensions")
+            # Add flags to allow local file access for extracted images
+            options.add_argument("--allow-file-access-from-files")
+            options.add_argument("--disable-web-security")
+            options.add_argument("--allow-running-insecure-content")
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option('useAutomationExtension', False)
             
@@ -547,6 +565,7 @@ class PresentationConverter:
         logger.info("Converting with Selenium + Chrome DevTools Protocol...")
         
         pdf_path = self.output_dir / output_filename
+        
         
         options = Options()
         options.add_argument("--headless")
