@@ -189,7 +189,7 @@ class PDFGenerator(BaseGenerator):
             logger.error(f"Error in pdfplumber fallback extraction: {e}")
             return {}, None, []
 
-    def generate_slides_html(self, pdf_data, presentation_focus, theme="professional", extract_images=False, output_dir=None):
+    def generate_slides_html(self, pdf_data, presentation_focus, theme="professional", extract_images=True, output_dir=None):
         """Generate HTML slides directly from PDF content in a single step."""
         
         self.presentation_focus = presentation_focus
@@ -235,36 +235,186 @@ Create a stunning, visually captivating HTML presentation that makes viewers sto
 
 <design_philosophy>
 CREATE EMOTIONAL IMPACT:
-- Prioritize the "wow factor" over conventional academic design
-- Make every slide feel alive and dynamic with subtle animations
-- Choose bold, vibrant colors over muted, safe academic palettes
-- Use cutting-edge web design trends (glassmorphism, gradient overlays, micro-animations)
-- Push the boundaries of what's possible with modern CSS and JavaScript
-- Create a premium, cutting-edge experience that feels expensive and engaging
+- Prioritize the "wow factor" through cohesive visual storytelling that enhances the core message
+- Make every slide feel alive with purposeful, subtle animations that enhance comprehension
+- Use a strategic color palette with 3-5 colors that reinforce the {theme} and create visual harmony
+- Implement modern design techniques (glassmorphism, gradient overlays) with restraint and purpose
+- Balance visual excitement with clarity and readability
+- Create a premium experience through thoughtful spacing, alignment, and visual hierarchy
+- Ensure every visual element directly supports and elevates the content narrative
+- Use visual contrast strategically to create focal points that guide the viewer's attention
 </design_philosophy>
 
 <visual_requirements>
 1. Create a self-contained HTML file with embedded CSS and JavaScript
-2. Use modern slide transitions with easing and physics-based animations (not basic reveals)
-3. Implement a sophisticated color scheme with gradients and depth for the "{theme}" theme
-4. Include micro-interactions: hover effects, animated reveals, parallax scrolling
-5. Use expressive, modern typography with varied font weights and dynamic sizing
-6. Add glassmorphism effects, subtle shadows, and layered visual depth
-7. Target ~100 words per slide maximum with animated text reveals
-8. Create navigation with smooth, delightful interactions and visual feedback
-9. CRITICAL: Use fixed width: 1280px; min-height: 720px; for all slides - use horizontal layouts for diagrams
-10. Add subtle background animations or patterns that enhance without distracting
-11. Ensure responsive content: Use horizontal layouts and optimize for the fixed 1280px width
-12. **HEIGHT-AWARE LAYOUT: Ensure all content fit within the 720px height by adjusting complexity**
+2. Use consistent slide transitions with natural easing (cubic-bezier) for predictable navigation
+3. Implement a sophisticated color scheme with intentional contrast ratios (minimum 4.5:1 for text) for the "{theme}" theme
+4. Include purposeful micro-interactions that guide attention to key content
+5. Use no more than 2 complementary font families with clear hierarchy through weight and size
+6. Add depth through subtle shadows and layering (max 3 layers) to create visual interest
+7. Target 60-80 words per slide maximum with sequential text reveals
+8. Create intuitive navigation with consistent visual feedback on all interactive elements
+9. CRITICAL: Use fixed width: 1280px; min-height: 720px; for all slides - maintain horizontal layouts
+10. Use background elements that reinforce the theme without competing with content
+11. Ensure all content remains within the 1280px × 720px viewport without overflow
+12. **HEIGHT-AWARE LAYOUT: Limit vertical content to 650px maximum to ensure visibility**
+13. Apply the rule of thirds for content placement to create balanced, visually appealing compositions
+14. Use whitespace strategically to create breathing room and highlight important elements
+15. Implement a consistent visual grid system (12-column recommended) for alignment across all slides
+16. Use visual contrast (size, color, position) to create clear focal points on each slide
+17. CRITICAL: Ensure all slides use ONLY opacity-based transitions (.active class with opacity: 1) for navigation
+18. Maintain consistent padding (40-60px) around content areas for visual breathing room
+19. Use high-quality vector graphics or SVGs when possible for crisp rendering at any scale
+20. Implement a cohesive visual language with consistent icon styles, button treatments, and UI elements
+21. Create visual hierarchy with a 1.5:1 size ratio between importance levels (headings, body text, captions)
+22. Use drop shadows sparingly (2-4px blur, 30-40% opacity) to create subtle depth perception
 </visual_requirements>
 
 <motion_design>
-- Everything should have subtle movement and life
-- Use staggered animations for mathematical formulas and diagrams
-- Implement smooth cursor tracking effects on interactive elements
-- Add entrance animations for each slide element with proper timing
-- Create seamless transitions that maintain visual flow between concepts
+- Use consistent animation timing (300-500ms) and easing functions across all elements
+- Implement sequential animations with 100-150ms delays between related elements
+- Keep background animations subtle (opacity changes of 0.1-0.2 or 1-2px movements)
+- Ensure all animations support the content narrative rather than distract from it
+- Use entrance animations that build from the bottom up or left to right for natural reading flow
+- Limit concurrent animations to 3 elements maximum to prevent visual overload
+- Create a signature animation style that appears consistently throughout the presentation
+- Use motion to create visual connections between related concepts across slides
+- Apply the "less is more" principle: animate only what needs attention
+- Use scale transforms (1.0 to 1.05) for subtle emphasis rather than dramatic movements
+- CRITICAL: Avoid animations that interfere with slide navigation or content visibility
+- Test all animations at different speeds to ensure they enhance rather than hinder comprehension
+- Create "reveal" animations that build anticipation and highlight key information
+- Use motion to guide the viewer's eye to the most important elements on each slide
 </motion_design>
+
+<academic_guidelines>
+- Transform complex concepts into visual narratives with clear progression
+- Use before/after comparisons with consistent visual language and clear delineation
+- Present algorithms as visual flowcharts with consistent iconography and color coding
+- Create data visualizations with meaningful color mapping and progressive build-up
+- Use visual metaphors consistently throughout the presentation to reinforce key concepts
+- Present limitations with balanced visual treatment that doesn't undermine achievements
+- Incorporate visual evidence (charts, diagrams, images) to support every major claim
+- Use consistent visual language for similar concepts across all slides
+- Implement progressive complexity: start simple, then build detail as concepts develop
+- Create visual anchors that connect related concepts across multiple slides
+- Provide clear visual distinction between facts, hypotheses, and conclusions
+- Use color consistently to categorize different types of information
+- Create visual summaries that reinforce key takeaways at section endpoints
+- Use diagrams to illustrate relationships between concepts rather than explaining them with text
+</academic_guidelines>
+
+<content_structure>
+- Begin each slide with a clear, concise headline (5-7 words maximum)
+- Structure content in digestible chunks with visual separation between concepts
+- Use the 1-3-1 principle: one main idea, three supporting points, one conclusion per slide
+- Create visual hierarchy through size (1.5:1 ratio between importance levels)
+- Use consistent iconography (line weight, style) to represent similar concepts
+- Implement progressive disclosure that reveals information in logical sequence
+- Create clear visual distinctions between facts, interpretations, and implications
+- Ensure every slide has a clear purpose that advances the overall narrative
+- Use visual anchors (consistent icons, colors, or shapes) to help viewers track key themes
+- Apply the "inverted pyramid" structure: most important information first, details later
+- Create visual breadcrumbs that help viewers understand where they are in the narrative
+- Use consistent formatting for similar content types (quotes, data, examples)
+- Implement a clear information hierarchy with primary, secondary, and tertiary content levels
+- Create meaningful transitions between major sections with visual cues
+- Use "chunking" to group related information visually (max 3-5 items per group)
+- Create visual signposts that indicate transitions between major topics or sections
+</content_structure>
+
+<technical_implementation>
+- Use standardized CSS class naming convention (.slide, .active, .content, .title)
+- Implement smooth opacity transitions (opacity: 0 to opacity: 1) for slide changes
+- Ensure all slides use the SAME navigation mechanism for consistency
+- Add keyboard navigation (arrow keys) with visual indicators for current slide position
+- Implement consistent z-indexing strategy (background: 1-10, content: 11-50, overlays: 51-100)
+- Test all animations at 60fps to ensure smooth performance
+- CRITICAL: Maintain consistent slide visibility behavior across all slides
+- Verify that all interactive elements work consistently throughout the presentation
+- IMPORTANT: Use opacity-based transitions ONLY (.active class with opacity: 1) for slide navigation
+- DO NOT mix transform-based and opacity-based slide transitions
+- CRITICAL: Ensure all slides have position: absolute and are contained within the same parent
+- Test navigation with keyboard, mouse clicks, and touch events to ensure universal accessibility
+- Implement consistent event listeners for all interactive elements
+- Verify that all slides have the same base CSS structure to prevent navigation inconsistencies
+- Use CSS variables for consistent theming across all slides (--primary-color, --accent-color, etc.)
+- Implement proper event delegation for efficient event handling across all slides
+</technical_implementation>
+
+<slide_structure>
+- Opening slide: Bold headline, subtle animation revealing key visual, clear purpose statement
+- Content progression: Each slide builds on previous knowledge with visual callbacks
+- Section dividers: Clear visual breaks between major topic transitions with distinct visual treatment
+- Data slides: Maximum of 5 data points per visualization with clear labeling and progressive reveal
+- Conclusion slide: 3 key takeaways with visual reinforcement and call to action
+- Create a visual thread that connects the opening to the conclusion for narrative coherence
+- Use consistent visual language for similar slide types (data, concept, transition)
+- Include a visual progress indicator that shows current position in the presentation
+- Create visual bookends: opening and closing slides should have thematic visual connection
+- Implement a consistent header/footer system with slide numbers and section indicators
+- Use clear visual signals for transitions between major sections
+- Create a table of contents slide that visually previews the presentation structure
+- Include "bridge slides" that connect major sections with visual summaries of previous content
+- Design section intro slides that establish visual vocabulary for upcoming content
+</slide_structure>
+
+<content_enhancement>
+- Transform bullet points into visually engaging elements with icons or small illustrations
+- Use metaphorical imagery that reinforces abstract concepts
+- Create visual comparisons for contrasting ideas using consistent design elements
+- Highlight key statistics with distinctive visual treatment (size, color, animation)
+- Use visual storytelling techniques to create emotional connection with the material
+- Incorporate meaningful transitions that visually connect related concepts
+- Balance text and visuals with a 40/60 ratio (40% text, 60% visual elements)
+- Use color psychology intentionally: warm colors for emphasis, cool colors for background
+- Create visual mnemonics that help viewers remember key concepts
+- Use the "rule of odds" (3, 5, 7) for grouping visual elements to create more appealing compositions
+- Convert complex text explanations into visual diagrams, flowcharts, or infographics
+- Use consistent visual metaphors throughout the presentation to reinforce key themes
+- Create "aha moments" through strategic visual reveals that clarify complex concepts
+- Implement visual storytelling techniques that create emotional engagement with the content
+- Use "before and after" visual comparisons to demonstrate impact or transformation
+- Create visual hierarchies that guide the viewer through complex information in logical sequence
+</content_enhancement>
+
+<visual_excellence>
+- Create a signature visual style that's consistent yet distinctive for this presentation
+- Use a visual rhythm with recurring elements that create cohesion across slides
+- Implement the 60-30-10 rule for color distribution (60% primary, 30% secondary, 10% accent)
+- Create depth through layering with subtle shadows (2-4px blur, 30-40% opacity)
+- Use visual anchors that remain consistent across slide transitions
+- Apply the golden ratio (1:1.618) for proportional relationships between elements
+- Create focal points through strategic use of contrast, scale, and position
+- Use negative space as an active design element, not just empty background
+- Implement a consistent visual grid for alignment across all slides
+- Create visual harmony through repetition of shapes, colors, and patterns
+- Use consistent visual treatment for similar content types across all slides
+- Implement a cohesive design system with reusable components and consistent styling
+- Create visual emphasis through strategic use of color, size, and position
+- Use visual contrast to direct attention to the most important elements on each slide
+- Apply the "squint test" to ensure key elements remain visible even when details blur
+- Create visual "breathing room" around important content to increase impact
+</visual_excellence>
+
+<data_visualization>
+- Use consistent color coding across all charts and graphs
+- Implement progressive reveals for complex data visualizations
+- Limit data points to 5-7 per visualization for clarity
+- Use appropriate chart types for different data relationships (bar, line, pie, scatter)
+- Include clear, concise labels directly on visualizations
+- Maintain consistent scale and units across related visualizations
+- Use animation to show data changes or comparisons
+- Highlight key insights with visual emphasis (color, size, annotations)
+- Provide context for all data through titles and brief explanations
+- Use consistent styling for all chart elements (axes, labels, legends)
+- Create visual hierarchy within data visualizations to guide understanding
+- Use data visualization to tell a clear story, not just display numbers
+- Implement progressive disclosure for complex data (start simple, add complexity)
+- Use annotations to highlight key insights directly on visualizations
+- Create visual comparisons that make data relationships immediately apparent
+</data_visualization>
+
 
 <academic_math_support>
 ### LaTeX Formula Support:
@@ -274,8 +424,8 @@ CREATE EMOTIONAL IMPACT:
 <script>
 MathJax = {{
   tex: {{
-    inlineMath: [['$', '$'], ['\\(', '\\)']],
-    displayMath: [['$$', '$$'], ['\\[', '\\]']]
+    inlineMath: [['$', '$'], ['\(', '\)']],
+    displayMath: [['$$', '$$'], ['\[', '\]']]
   }},
   options: {{
     processHtmlClass: 'mathjax-enabled'
@@ -284,7 +434,7 @@ MathJax = {{
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
 <div class="code mathjax-enabled animate-reveal" style="white-space: pre-line; backdrop-filter: blur(10px); background: rgba(255,255,255,0.1); border-radius: 12px; padding: 20px;">
-Algorithm with $f_θ$ and loss $L_t = \\frac{{1}}{{t}} \\delta_{{x_t,m}}$
+Algorithm with $f_θ$ and loss $L_t = \frac{{1}}{{t}} \delta_{{x_t,m}}$
 Next line preserved
 </div>
 ```
@@ -318,43 +468,21 @@ Next line preserved
 - Animated diagrams: Add CSS animations to make diagram elements appear with staggered timing
 </diagram_support>
 
-<academic_guidelines>
-- Show problems visually: Use dynamic before/after comparisons with smooth transitions
-- Explain solutions beautifully: Present ideas with elegant diagrams and animated mathematical expressions
-- Break down algorithms elegantly: Provide step-by-step walkthroughs with smooth reveals and visual flow
-- Prove effectiveness dramatically: Use animated charts and graphs with stunning visual impact
-- Explain intuitively: Use beautiful analogies with visual metaphors and smooth transitions
-- Present limitations honestly: Use elegant visual indicators for constraints and future possibilities
-</academic_guidelines>
-
-<content_presentation>
-- Transform academic content into visually engaging elements with icons and graphics
-- Use progressive disclosure with smooth animations
-- Create visual hierarchy through dynamic sizing, vibrant colors, and spatial relationships
-- Include elegant progress indicators and slide counters with smooth animations
-- Break up dense content with beautiful visual elements and breathing room
-</content_presentation>
-
-<technical_excellence>
-- Use advanced CSS features: backdrop-filter, clip-path, CSS Grid, Flexbox, custom properties
-- Implement smooth JavaScript animations with requestAnimationFrame
-- Add keyboard navigation with delightful visual feedback and sound design
-- Include beautiful preloaders and seamless state transitions
-- Ensure the presentation feels responsive, premium, and engaging
-</technical_excellence>
-
-<slide_structure>
-- Stunning title slide with animated value proposition and visual hierarchy
-- 8-15 content slides (each with one key message beautifully presented)
-- Elegant conclusion slide with animated key takeaways summary
-</slide_structure>
-
 <output_requirements>
-IMPORTANT: The HTML must be a complete, self-contained file that opens directly in a browser and immediately impresses with its sophisticated visual design and smooth interactions.
+IMPORTANT: The HTML must be a complete, self-contained file that opens directly in a browser with consistent navigation between ALL slides.
+
+CRITICAL: Ensure ALL slides use the SAME navigation mechanism (opacity transitions recommended) and that arrow key navigation works throughout the entire presentation.
 
 IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and end with </html>. No explanations, no markdown formatting around the code.
-</output_requirements>
-'''
+
+SLIDE NAVIGATION REQUIREMENTS:
+1. All slides MUST use position: absolute within the same container
+2. Navigation MUST use ONLY opacity transitions (.active class with opacity: 1)
+3. DO NOT use transforms for slide positioning or transitions
+4. Ensure keyboard arrow navigation works for ALL slides
+5. Maintain consistent z-index strategy across all slides
+6. Test all slide transitions to ensure smooth, predictable behavior
+</output_requirements>'''
         try:
             logger.info("🔍 Analyzing PDF and generating slides in one step...")
             logger.info("📡 Using streaming for long-running operation...")
@@ -401,7 +529,7 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
         except Exception as e:
             return None, f"Error generating slides directly: {str(e)}"
     
-    def generate_presentation(self, pdf_source, presentation_focus="A comprehensive overview", theme="professional", slide_count=12, output_dir=str(Config.OUTPUT_DIR), extract_images=False):
+    def generate_presentation(self, pdf_source, presentation_focus="A comprehensive overview", theme="professional", slide_count=12, output_dir=str(Config.OUTPUT_DIR), extract_images=True):
         """
         One-step function to generate a presentation from a PDF source with organized file structure.
         

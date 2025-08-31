@@ -434,63 +434,210 @@ Visual theme: {theme}
 
 <design_philosophy>
 CREATE EMOTIONAL IMPACT:
-- Prioritize the "wow factor" over conventional design
-- Make every slide feel alive and dynamic with subtle animations
-- Choose bold, vibrant colors over muted, safe options
-- Use cutting-edge web design trends (glassmorphism, gradient overlays, micro-animations)
-- Push the boundaries of what's possible with modern CSS and JavaScript
-- Create a premium, cutting-edge experience that feels expensive
+- Prioritize the "wow factor" through unexpected visual moments and reveals
+- Make every slide feel alive with purposeful animations that enhance content meaning
+- Choose bold, vibrant colors with strategic contrast to guide viewer attention
+- Implement premium design elements (glassmorphism, 3D depth, gradient overlays, micro-animations)
+- Create visual storytelling that builds emotional connection through cohesive visual narrative
+- Develop a premium, cutting-edge experience with polished transitions and interactions
+- Ensure each visual element directly reinforces key messages rather than serving as decoration
 </design_philosophy>
 
 <visual_requirements>
 1. Create a self-contained HTML file with embedded CSS and JavaScript
-2. Use Reveal.js style (without requiring the actual library) with modern slide transitions and physics-based animations
-3. Implement a sophisticated color scheme with gradients and depth for the "{theme}" theme
-4. Include micro-interactions: hover effects, animated reveals, parallax scrolling
-5. Use expressive, modern typography with varied font weights and sizes
-6. Add glassmorphism effects, subtle shadows, and layered visual depth
-7. Include elegant transitions between slides (avoid basic fades)
-8. Create approximately 10-15 slides with dynamic, non-static layouts
-9. Use animated bullet points that reveal progressively - break content into concise bullet points, not paragraphs
-10. Include a stunning title slide with animated elements and section dividers with visual flair
-11. Optimize for 1280px × 720px with responsive scaling
-12. Add subtle background animations or patterns that enhance without distracting
-13. HEIGHT-AWARE LAYOUT: Ensure all content fit within the 720px height by adjusting complexity
-14. Do not include large blocks of text - keep slides visually appealing and professional
-15. BALANCED VISUAL LAYOUT: Prioritize visual balance over text density - use images from https://images.unsplash.com/ (only when certain about photo ID), tables, charts, and visual elements to break up text and create engaging slide compositions
+2. Use Reveal.js style (without requiring the actual library) with ONLY opacity-based animations (opacity: 0 to opacity: 1)
+3. Implement a sophisticated color scheme with 3-5 complementary colors that reinforce the "{theme}" theme
+4. Include micro-interactions: hover effects, animated reveals, and subtle cursor-following elements
+5. Use expressive, modern typography with varied font weights, sizes, and strategic text highlighting
+6. Add layered visual depth through glassmorphism effects (backdrop-filter: blur(8px)), drop shadows, and z-index manipulation
+7. Create elegant slide transitions with directional purpose (reveal new content logically)
+8. Design 10-15 slides following a 6-column grid system with dynamic layouts that vary between left-aligned, centered, and asymmetrical compositions
+9. Implement progressive disclosure with animated bullet points (3-5 per slide maximum)
+10. Create an immersive title slide with animated brand elements and visually distinct section dividers
+11. Optimize for 1280px × 720px with responsive scaling and graceful element repositioning
+12. Add subtle background animations that reinforce slide content and enhance emotional impact
+13. Ensure all content fits within 720px height with proper visual hierarchy and breathing space
+14. Limit text to 60-80 characters per line with maximum 5-7 lines per slide
+15. Create balanced visual layouts with 60% visuals to 40% text ratio using high-quality imagery from Unsplash
+16. Use variable opacity levels (20%, 40%, 60%, 80%, 100%) to create visual hierarchy and depth
+17. Use visual metaphors that transform abstract concepts into memorable visual elements
+18. Implement consistent visual cues for navigation (subtle arrows or indicators)
+19. Create custom animated icons that visually represent key concepts
 </visual_requirements>
 
+<slide_structure>
+- Each slide MUST use a consistent class structure: <div class="slide"> for all slides
+- ALL slides MUST transition using ONLY opacity (opacity: 0 to opacity: 1)
+- Apply .active class to visible slides (opacity: 1) and inactive to hidden slides (opacity: 0)
+- Maintain flat DOM hierarchy - do NOT nest slides within complex containers
+- Each slide MUST have a unique ID (slide-1, slide-2, etc.) for navigation tracking
+- Use consistent z-index management (base: 1, active: 10) to prevent slide overlap
+- Implement standard keyboard navigation (left/right arrows) that works for ALL slides
+- Structure ALL slides with this pattern:
+  ```html
+  <div id="slide-X" class="slide">
+    <div class="slide-content">
+      <!-- Content here -->
+    </div>
+  </div>
+  ```
+- Test navigation thoroughly to verify ALL slides are accessible with arrow keys
+</slide_structure>
+
 <content_presentation>
-- Transform text into visually engaging elements with icons, graphics, and spacing
-- Use concise bullet points with animated reveals (maximum ~100 words per slide)
-- Create visual hierarchy through size, color, and positioning
-- Include progress indicators and slide counters with elegant styling
-- Break up content with visual elements: images, tables, charts, and graphics instead of text blocks
-- Leverage visual storytelling with appropriate imagery and data visualizations
+- Transform key points into visual metaphors with supporting icons and graphics
+- Structure content with the 3-second rule: viewers should grasp the main point within 3 seconds
+- Use the "rule of three" for content organization with progressive reveal animations
+- Create clear visual hierarchy through size, color, weight, and positioning
+- Include elegant progress indicators that show both current position and total journey
+- Break complex ideas into visual frameworks: timelines, process flows, comparison matrices
+- Implement the "less is more" principle: one key message per slide with supporting elements
+- Create a narrative arc with clear beginning, middle, and end to maintain viewer engagement
+- Use strategic repetition of visual motifs to reinforce key themes throughout the presentation
+- Incorporate meaningful transitions that visually connect related concepts across slides
+- PRESERVE the original structure and hierarchy of the source content
+- NEVER reorganize content in ways that change the meaning or emphasis of the original
+- Maintain the exact sequence and relationship between main points and supporting details
+- Create a visual table of contents slide that previews the presentation structure
+- Use consistent visual language for similar concepts throughout the presentation
 </content_presentation>
 
 <content_enhancements>
-- For data analysis: Create beautiful, animated charts with smooth transitions using Chart.js or D3.js
-- For travel content: Add immersive imagery, interactive maps, destination animations, and travel icons
-- For workshops: Include engaging process diagrams, interactive elements, and activity visualizations
-- For general content: Use relevant, high-quality images from Unsplash when photo IDs are known with certainty
+- For data analysis: Create animated charts with staged reveals that tell a clear data story
+- For travel content: Implement immersive destination showcases with subtle parallax effects and location markers
+- For workshops: Design interactive concept models with animated process flows and visual checkpoints
+- For technical content: Create visual code blocks with syntax highlighting and animated execution flows
+- For case studies: Develop before/after comparisons with sliding reveals and outcome highlights
+- For general content: Use contextually relevant imagery that amplifies rather than merely decorates
+- For key statistics: Create dramatic visual counters or comparisons that emphasize significance
+- For complex processes: Develop step-by-step visual sequences with clear progression indicators
+- For testimonials: Design elegant quote displays with subtle animations that highlight key phrases
+- For all content types: Ensure visual elements directly support the exact meaning in the source material
+- For key concepts: Create memorable visual anchors that recur throughout the presentation
+- For important distinctions: Use side-by-side comparisons with clear visual differentiation
 </content_enhancements>
 
 <technical_excellence>
-- Use advanced CSS features: backdrop-filter, clip-path, CSS Grid, Flexbox, custom properties
-- Implement smooth JavaScript animations with requestAnimationFrame
-- Add keyboard navigation with visual feedback
-- Include preloaders and smooth state transitions
-- Ensure the presentation feels responsive and premium
+- Implement advanced CSS: variable fonts, backdrop-filter, clip-path, CSS Grid, custom properties
+- Create smooth animations using GSAP-inspired techniques with proper easing functions
+- Add keyboard navigation with visual indicators and touch/swipe support
+- Implement progressive loading with elegant preloaders for media elements
+- Ensure smooth performance with requestAnimationFrame and CSS will-change property
+- Use CSS custom properties for theme consistency and potential customization
+- Implement strategic use of CSS transforms for 3D effects that create depth without overwhelming
+- Optimize animation timing functions to create natural, organic movement patterns
+- Ensure ALL slides are accessible with standard arrow key navigation
+- Use ONLY opacity-based transitions (opacity: 0 to opacity: 1) for slide navigation
+- Apply .active class consistently across all slides for navigation compatibility
+- DO NOT use transform-based transitions for slide navigation
+- Test all slides to verify arrow key navigation works throughout the entire presentation
+- Implement consistent slide structure with predictable class naming conventions
+- Use data-attributes for semantic markup and easier JavaScript targeting
 </technical_excellence>
 
 <motion_design>
-- Everything should have subtle movement and life
-- Use staggered animations for lists and elements
-- Implement smooth cursor tracking effects
-- Add entrance animations for each slide element
-- Create seamless transitions that maintain visual flow
+- Apply the 12 principles of animation for natural, purposeful movement
+- Create staggered entrance animations with 150-300ms delays between elements
+- Implement subtle parallax effects (0.1-0.3 factor) for depth perception
+- Add entrance animations that reinforce content meaning (growth for positive trends, etc.)
+- Design seamless transitions that maintain context between slides
+- Use subtle continuous motion (3-5px) for background elements to create "living" slides
+- Implement reveal animations that build anticipation and guide attention to key content
+- Create micro-animations that respond to user interactions, enhancing engagement
+- Use motion to establish visual relationships between related content elements
+- NEVER mix different animation methods that could break slide navigation
+- Ensure all animations complete within 800ms to maintain presentation pace
+- Use consistent easing functions (cubic-bezier(0.25, 0.1, 0.25, 1)) for all animations
+- Create animated visual cues that guide viewers through complex information
+- Implement subtle background animations that don't compete with foreground content
 </motion_design>
+
+<visual_design_patterns>
+- Create visual rhythm through consistent spacing (8px, 16px, 24px, 32px, 48px)
+- Implement the 60-30-10 color rule (60% primary, 30% secondary, 10% accent)
+- Use the golden ratio (1:1.618) for proportional layout divisions
+- Apply the rule of thirds for balanced image and text placement
+- Create focal points using size contrast (1x, 2x, 4x scale relationships)
+- Implement F-pattern and Z-pattern reading flows based on content type
+- Use whitespace strategically to create breathing room around key elements
+- Create depth through layering with 3-5 distinct z-index levels
+- Apply consistent corner radius (4px, 8px, 12px) for related elements
+- Use shadow elevation system (2px, 4px, 8px, 16px) to indicate hierarchy
+- Implement consistent iconography style (outline, filled, duotone)
+- Create visual anchors that recur throughout the presentation
+- Use color psychology intentionally (warm colors for energy, cool for trust)
+- Apply the 4:1 minimum contrast ratio for all text elements
+</visual_design_patterns>
+
+<critical_accuracy_requirements>
+- NEVER add numerical data, statistics, or percentages not explicitly stated in the source
+- If source says "improved" or "increased" without numbers, DO NOT invent percentages
+- Maintain the exact meaning and emphasis of the original content
+- Preserve all factual information exactly as presented in the source
+- Do not elevate examples to main categories or change the content hierarchy
+- If uncertain about a fact or figure, omit rather than fabricate
+- Verify all content against source material before finalizing slides
+- NEVER create charts or graphs with specific values unless those exact values appear in the source
+- DO NOT invent testimonials, quotes, or endorsements not present in the original content
+- Maintain the original relationship between main points and supporting details
+- NEVER add fictional case studies or examples not mentioned in the source
+- DO NOT create visual representations that imply specific metrics not in the source
+- Preserve the original tone and perspective of the content
+</critical_accuracy_requirements>
+
+<navigation_compatibility>
+- CRITICAL: Implement ONLY opacity-based slide transitions (opacity: 0 → 1)
+- DO NOT use transform-based transitions (translate, scale, rotate) for slide navigation
+- Maintain flat DOM structure for slides (no deep nesting that breaks navigation)
+- Use consistent class naming (.slide, .active) across ALL slides
+- Implement standard keyboard handlers (left/right arrows) that work for ALL slides
+- Test navigation thoroughly to verify ALL slides are accessible with arrow keys
+- Ensure slide content appears/disappears with opacity transitions only
+- Verify that .active class properly controls slide visibility
+- DO NOT implement competing navigation systems that could conflict
+- Maintain z-index consistency to prevent slide overlap issues
+- Ensure all interactive elements maintain proper tab order for accessibility
+- Test navigation with keyboard, mouse, and touch inputs before finalizing
+</navigation_compatibility>
+
+<content_verification_checklist>
+1. All numerical data comes directly from source (no invented statistics)
+2. Original content structure and hierarchy is preserved
+3. No fabricated percentages, improvements, or metrics
+4. Key messages maintain their original emphasis and importance
+5. Examples remain as examples, not elevated to main points
+6. All slides are accessible with standard arrow key navigation
+7. Opacity-based transitions are used consistently
+8. Visual elements directly support and enhance the original content
+9. No invented testimonials or quotes
+10. Main points and supporting details maintain their original relationship
+11. All slides have consistent class structure for navigation
+12. Arrow key navigation works for ALL slides in the presentation
+13. No fictional case studies or examples added
+14. Visual representations accurately reflect source information
+15. Original tone and perspective maintained
+</content_verification_checklist>
+
+<visual_quality_checklist>
+1. Color scheme uses 3-5 complementary colors that reinforce the theme
+2. Typography is expressive and modern with varied weights and sizes
+3. Visual hierarchy is clear through size, color, weight, and positioning
+4. Layouts follow the 6-column grid system with dynamic compositions
+5. Glassmorphism effects use backdrop-filter: blur(8px) consistently
+6. Text is limited to 60-80 characters per line with 5-7 lines maximum per slide
+7. Visual layouts maintain 60% visuals to 40% text ratio
+8. Variable opacity levels (20%, 40%, 60%, 80%, 100%) create depth
+9. All animations use consistent easing functions
+10. Micro-interactions respond to user actions enhancing engagement
+11. Visual metaphors effectively transform abstract concepts
+12. Progress indicators clearly show current position and total journey
+13. Whitespace is used strategically to create visual breathing room
+14. Color contrast meets 4:1 minimum ratio for all text elements
+15. Visual elements align to the 6-column grid system consistently
+16. Focal points are created through size contrast and positioning
+17. Shadow elevation system creates consistent depth perception
+18. Corner radius is applied consistently across related elements
+</visual_quality_checklist>
 
 <output_requirements>
 IMPORTANT: The HTML must be a complete, self-contained file that opens directly in a browser and immediately impresses with its visual sophistication.

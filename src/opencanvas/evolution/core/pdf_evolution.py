@@ -5,7 +5,7 @@ PDF-Based Evolution System - Autonomous improvement for PDF presentation generat
 import json
 import logging
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional, Tuple, Union
 from datetime import datetime
 
 from opencanvas.config import Config
@@ -30,7 +30,7 @@ class PDFEvolutionSystem(EvolutionSystem):
     """
     
     def __init__(self, 
-                 test_pdf: str,
+                 test_pdfs: Union[str, List[str]],
                  output_dir: str = None,
                  max_iterations: int = 5,
                  improvement_threshold: float = 0.2,
@@ -63,11 +63,30 @@ class PDFEvolutionSystem(EvolutionSystem):
             use_memory=use_memory
         )
         
+        # Handle both single and multiple PDFs
+        if isinstance(test_pdfs, str):
+            self.test_pdfs = [test_pdfs]  # Convert single to list
+        else:
+            self.test_pdfs = test_pdfs
+        
+        # Validate PDFs
+        for pdf in self.test_pdfs:
+            if pdf.startswith('http'):
+                # URL validation - basic check
+                if not ('://' in pdf and pdf.endswith('.pdf')):
+                    logger.warning(f"⚠️ PDF URL may be invalid: {pdf}")
+            else:
+                # Local file validation
+                if not Path(pdf).exists():
+                    raise ValueError(f"PDF file not found: {pdf}")
+        
         # PDF-specific configuration
-        self.test_pdf = test_pdf
+        self.test_pdf = self.test_pdfs[0]  # For backward compatibility
         self.pdf_mode = True
         
-        logger.info(f"🔧 Initializing PDFEvolutionSystem with test_pdf={test_pdf}")
+        logger.info(f"🔧 Initializing PDFEvolutionSystem with {len(self.test_pdfs)} PDF(s)")
+        for i, pdf in enumerate(self.test_pdfs):
+            logger.info(f"  📄 PDF {i+1}: {pdf}")
         logger.info(f"📁 PDF evolution output: {output_dir}")
         logger.info(f"🎯 Theme: {theme}, Purpose: {purpose}")
         
@@ -77,6 +96,20 @@ class PDFEvolutionSystem(EvolutionSystem):
         
         # Initialize PDF cache directory
         self.pdf_cache_dir = self.output_dir / "pdf_cache"
+    
+    def _get_pdf_name(self, pdf_path: str) -> str:
+        """Extract clean name from PDF path/URL"""
+        if pdf_path.startswith('http'):
+            # Extract from URL: arxiv.org/pdf/2505.20286 → 2505_20286
+            parts = pdf_path.split('/')
+            name = parts[-1].replace('.pdf', '').replace('.', '_')
+        else:
+            # Extract from path: /path/to/document.pdf → document
+            name = Path(pdf_path).stem
+        
+        # Sanitize for filesystem
+        name = name.replace(' ', '_').replace(',', '').replace('(', '').replace(')', '')[:30]
+        return name
     
     def _extract_and_save_initial_pdf_prompt(self):
         """Extract the hardcoded prompt from PDFGenerator and save as v0"""
@@ -200,22 +233,10 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
     def _generate_test_presentations(self, iteration_dir: Path, iteration_number: int) -> Dict[str, Any]:
         """Generate test presentations using cached PDF data"""
         
-        logger.info(f"🚀 Generating PDF-based test presentation (iteration {iteration_number})")
+        logger.info(f"🚀 Generating {len(self.test_pdfs)} PDF-based presentations (iteration {iteration_number})")
         
         presentations_dir = iteration_dir / "presentations"
         presentations_dir.mkdir(exist_ok=True)
-        
-        # Get or cache PDF data once
-        pdf_data, image_metadata = self._get_or_cache_pdf_data()
-        if not pdf_data:
-            error_msg = "Failed to load or cache PDF data"
-            logger.error(f"❌ {error_msg}")
-            return {
-                "success": False,
-                "error": error_msg,
-                "presentations": [],
-                "errors": [error_msg]
-            }
         
         # Determine router type based on iteration
         use_evolved_router = False
@@ -266,189 +287,198 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
         presentations = []
         errors = []
         
-        try:
-            # Generate presentation using cached PDF data
-            pdf_slug = "test_pdf_presentation"
-            pdf_dir = presentations_dir / pdf_slug
-            pdf_dir.mkdir(parents=True, exist_ok=True)
-            
-            # Copy cached images to presentation directory for this iteration
-            if image_metadata and "extracted_images_dir" in image_metadata:
-                cached_images_dir = Path(image_metadata["extracted_images_dir"])
-                iteration_images_dir = pdf_dir / "extracted_images"
+        # Generate presentation for each PDF
+        for i, test_pdf in enumerate(self.test_pdfs):
+            try:
+                # Get or cache PDF data for this specific PDF
+                pdf_data, image_metadata = self._get_or_cache_pdf_data(test_pdf, pdf_index=i)
+                if not pdf_data:
+                    errors.append(f"Failed to load PDF {i+1}: {test_pdf}")
+                    continue
                 
-                if cached_images_dir.exists():
-                    logger.info(f"📸 Copying cached images to iteration directory...")
-                    iteration_images_dir.mkdir(exist_ok=True)
+                # Generate presentation using cached PDF data
+                pdf_name = self._get_pdf_name(test_pdf)
+                pdf_slug = f"pdf_{i+1}_{pdf_name}"
+                pdf_dir = presentations_dir / pdf_slug
+                pdf_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Copy cached images to presentation directory for this iteration
+                if image_metadata and "extracted_images_dir" in image_metadata:
+                    cached_images_dir = Path(image_metadata["extracted_images_dir"])
+                    iteration_images_dir = pdf_dir / "extracted_images"
                     
-                    # Copy each cached image
-                    for image_file in cached_images_dir.glob("*.png"):
-                        dest_file = iteration_images_dir / image_file.name
-                        import shutil
-                        shutil.copy2(image_file, dest_file)
-                    
-                    logger.info(f"📸 Copied {len(list(iteration_images_dir.glob('*.png')))} cached images")
-            
-            # For evolved router (iteration 2+) with cached data, we need to call the PDF generator directly
-            # since the router's generate() method would re-download and re-extract
-            if use_evolved_router and hasattr(router, 'pdf_generator'):
-                # Use the evolved PDF generator directly with cached data
-                pdf_generator = router.pdf_generator
-                
-                # Build image context from cached metadata - integrated format
-                image_context = ""
-                if image_metadata and image_metadata.get("image_captions"):
-                    image_captions_dict = image_metadata["image_captions"]
-                    logger.info(f"🖼️ Building image context with {len(image_captions_dict)} images")
-                    image_context = "\n**Visual Assets:** The following images have been extracted from the PDF with their captions and dimensions:\n"
-                    for image_id, info in image_captions_dict.items():
-                        dimensions = info.get('dimensions', 'unknown')
-                        # Update path to point to iteration-specific images
-                        relative_path = f"../extracted_images/{image_id}.png"
-                        image_context += f"- {image_id}: {info['caption']} (file: {relative_path}, size: {dimensions})\n"
-                    image_context += "\n**Integration Instructions:**\n"
-                    image_context += "- Incorporate these images strategically throughout the presentation\n"
-                    image_context += "- Use format: `<img src='../extracted_images/image_id.png' alt='caption'>`\n"
-                    image_context += "- Consider image dimensions for proper layout and positioning\n"
-                    image_context += "- Place images where they enhance understanding and visual impact\n"
-                    logger.info(f"📝 Image context: {len(image_context)} characters")
-                else:
-                    image_context = "\n**Visual Assets:** No images were found in the source PDF."
-                    logger.info("📝 No images in metadata - using 'no images' context")
-                
-                # Override the evolved prompt to include image context
-                if hasattr(pdf_generator, 'evolved_prompt') and pdf_generator.evolved_prompt:
-                    try:
-                        formatted_prompt = pdf_generator.evolved_prompt.format(
-                            presentation_focus=self.purpose,
-                            theme=self.theme,
-                            image_context=image_context
-                        )
-                        # Temporarily store the formatted prompt
-                        original_prompt = pdf_generator.evolved_prompt
-                        pdf_generator.evolved_prompt = formatted_prompt
+                    if cached_images_dir.exists():
+                        logger.info(f"📸 Copying cached images to iteration directory...")
+                        iteration_images_dir.mkdir(exist_ok=True)
                         
-                        html_content, error = pdf_generator.generate_slides_html(
-                            pdf_data=pdf_data,
-                            presentation_focus=self.purpose,
-                            theme=self.theme,
-                            extract_images=False,  # Images already cached and copied
-                            output_dir=pdf_dir
-                        )
+                        # Copy each cached image
+                        for image_file in cached_images_dir.glob("*.png"):
+                            dest_file = iteration_images_dir / image_file.name
+                            import shutil
+                            shutil.copy2(image_file, dest_file)
                         
-                        # Restore original prompt
-                        pdf_generator.evolved_prompt = original_prompt
-                    except Exception as e:
-                        logger.error(f"❌ Failed to format evolved prompt with cached image context: {e}")
-                        html_content, error = pdf_generator.generate_slides_html(
-                            pdf_data=pdf_data,
-                            presentation_focus=self.purpose,
-                            theme=self.theme,
-                            extract_images=False,  # Images already cached and copied
-                            output_dir=pdf_dir
-                        )
-                else:
-                    html_content, error = pdf_generator.generate_slides_html(
-                        pdf_data=pdf_data,
-                        presentation_focus=self.purpose,
-                        theme=self.theme,
-                        extract_images=False,  # Images already cached and copied
-                        output_dir=pdf_dir
-                    )
+                        logger.info(f"📸 Copied {len(list(iteration_images_dir.glob('*.png')))} cached images")
                 
-                if error:
-                    errors.append(f"PDF generation failed: {error}")
-                    html_content = None
-                
-                # Create result structure similar to router.generate()
-                if html_content:
-                    html_file = pdf_dir / "slides" / "slides.html"
-                    html_file.parent.mkdir(parents=True, exist_ok=True)
-                    html_file.write_text(html_content)
+                # For evolved router (iteration 2+) with cached data, we need to call the PDF generator directly
+                # since the router's generate() method would re-download and re-extract
+                if use_evolved_router and hasattr(router, 'pdf_generator'):
+                    # Use the evolved PDF generator directly with cached data
+                    pdf_generator = router.pdf_generator
                     
-                    result = {
-                        'html_file': str(html_file),
-                        'html_content': html_content,
-                        'pdf_source': self.test_pdf,
-                        'presentation_focus': self.purpose,
-                        'theme': self.theme,
-                        'extract_images': True,
-                        'cached_data_used': True
-                    }
-                else:
-                    result = None
-                    
-            else:
-                # For baseline router, fall back to standard generation
-                # (will re-download but that's expected for baseline comparison)
-                result = router.generate(
-                    input_source=self.test_pdf,
-                    purpose=self.purpose,
-                    theme=self.theme, 
-                    output_dir=str(pdf_dir),
-                    extract_images=True  # Enable image extraction for PDFs
-                )
-            
-            if result and result.get('html_file'):
-                # Convert to PDF if available
-                pdf_path = None
-                try:
-                    from opencanvas.conversion.html_to_pdf import PresentationConverter
-                    converter = PresentationConverter(
-                        html_file=result['html_file'],
-                        output_dir=str(pdf_dir),
-                        method="playwright",
-                        zoom_factor=1.0,
-                        compress_images=True
-                    )
-                    pdf_path = converter.convert(output_filename="presentation.pdf")
-                except ImportError:
-                    logger.warning("    ⚠️ PDF conversion skipped - converter not available")
-                    pdf_path = None
-                
-                # Save PDF source for reference-required evaluation (use cached if available)
-                source_pdf_path = None
-                try:
-                    cached_pdf_file = self.pdf_cache_dir / "pdf_data.b64"
-                    if cached_pdf_file.exists():
-                        # Use cached PDF data
-                        import base64
-                        pdf_content = base64.b64decode(cached_pdf_file.read_text())
-                        source_pdf_path = pdf_dir / "sources" / "source.pdf"
-                        source_pdf_path.parent.mkdir(parents=True, exist_ok=True)
-                        with open(source_pdf_path, 'wb') as f:
-                            f.write(pdf_content)
-                        logger.info(f"    📄 Saved source PDF from cache: {source_pdf_path.name}")
+                    # Build image context from cached metadata - integrated format
+                    image_context = ""
+                    if image_metadata and image_metadata.get("image_captions"):
+                        image_captions_dict = image_metadata["image_captions"]
+                        logger.info(f"🖼️ Building image context with {len(image_captions_dict)} images")
+                        image_context = "\n**Visual Assets:** The following images have been extracted from the PDF with their captions and dimensions:\n"
+                        for image_id, info in image_captions_dict.items():
+                            dimensions = info.get('dimensions', 'unknown')
+                            # Update path to point to iteration-specific images
+                            relative_path = f"../extracted_images/{image_id}.png"
+                            image_context += f"- {image_id}: {info['caption']} (file: {relative_path}, size: {dimensions})\n"
+                        image_context += "\n**Integration Instructions:**\n"
+                        image_context += "- Incorporate these images strategically throughout the presentation\n"
+                        image_context += "- Use format: `<img src='../extracted_images/image_id.png' alt='caption'>`\n"
+                        image_context += "- Consider image dimensions for proper layout and positioning\n"
+                        image_context += "- Place images where they enhance understanding and visual impact\n"
+                        logger.info(f"📝 Image context: {len(image_context)} characters")
                     else:
-                        # Fallback to download if cache missing
-                        import requests
-                        response = requests.get(self.test_pdf, timeout=30)
-                        if response.status_code == 200:
+                        image_context = "\n**Visual Assets:** No images were found in the source PDF."
+                        logger.info("📝 No images in metadata - using 'no images' context")
+                    
+                    # Override the evolved prompt to include image context
+                    if hasattr(pdf_generator, 'evolved_prompt') and pdf_generator.evolved_prompt:
+                        try:
+                            formatted_prompt = pdf_generator.evolved_prompt.format(
+                                presentation_focus=self.purpose,
+                                theme=self.theme,
+                                image_context=image_context
+                            )
+                            # Temporarily store the formatted prompt
+                            original_prompt = pdf_generator.evolved_prompt
+                            pdf_generator.evolved_prompt = formatted_prompt
+                            
+                            html_content, error = pdf_generator.generate_slides_html(
+                                pdf_data=pdf_data,
+                                presentation_focus=self.purpose,
+                                theme=self.theme,
+                                extract_images=False,  # Images already cached and copied
+                                output_dir=pdf_dir
+                            )
+                            
+                            # Restore original prompt
+                            pdf_generator.evolved_prompt = original_prompt
+                        except Exception as e:
+                            logger.error(f"❌ Failed to format evolved prompt with cached image context: {e}")
+                            html_content, error = pdf_generator.generate_slides_html(
+                                pdf_data=pdf_data,
+                                presentation_focus=self.purpose,
+                                theme=self.theme,
+                                extract_images=False,  # Images already cached and copied
+                                output_dir=pdf_dir
+                            )
+                    else:
+                        html_content, error = pdf_generator.generate_slides_html(
+                            pdf_data=pdf_data,
+                            presentation_focus=self.purpose,
+                            theme=self.theme,
+                            extract_images=False,  # Images already cached and copied
+                            output_dir=pdf_dir
+                        )
+                    
+                    if error:
+                        errors.append(f"PDF generation failed: {error}")
+                        html_content = None
+                    
+                    # Create result structure similar to router.generate()
+                    if html_content:
+                        html_file = pdf_dir / "slides" / "slides.html"
+                        html_file.parent.mkdir(parents=True, exist_ok=True)
+                        html_file.write_text(html_content)
+                        
+                        result = {
+                            'html_file': str(html_file),
+                            'html_content': html_content,
+                            'pdf_source': test_pdf,
+                            'presentation_focus': self.purpose,
+                            'theme': self.theme,
+                            'extract_images': True,
+                            'cached_data_used': True
+                        }
+                    else:
+                        result = None
+                        
+                else:
+                    # For baseline router, fall back to standard generation
+                    # (will re-download but that's expected for baseline comparison)
+                    result = router.generate(
+                        input_source=test_pdf,
+                        purpose=self.purpose,
+                        theme=self.theme, 
+                        output_dir=str(pdf_dir),
+                        extract_images=True  # Enable image extraction for PDFs
+                    )
+                
+                if result and result.get('html_file'):
+                    # Convert to PDF if available
+                    pdf_path = None
+                    try:
+                        from opencanvas.conversion.html_to_pdf import PresentationConverter
+                        converter = PresentationConverter(
+                            html_file=result['html_file'],
+                            output_dir=str(pdf_dir),
+                            method="playwright",
+                            zoom_factor=1.0,
+                            compress_images=True
+                        )
+                        pdf_path = converter.convert(output_filename="presentation.pdf")
+                    except ImportError:
+                        logger.warning("    ⚠️ PDF conversion skipped - converter not available")
+                        pdf_path = None
+                    
+                    # Save PDF source for reference-required evaluation (use cached if available)
+                    source_pdf_path = None
+                    try:
+                        cached_pdf_file = self.pdf_cache_dir / "pdf_data.b64"
+                        if cached_pdf_file.exists():
+                            # Use cached PDF data
+                            import base64
+                            pdf_content = base64.b64decode(cached_pdf_file.read_text())
                             source_pdf_path = pdf_dir / "sources" / "source.pdf"
                             source_pdf_path.parent.mkdir(parents=True, exist_ok=True)
                             with open(source_pdf_path, 'wb') as f:
-                                f.write(response.content)
-                            logger.info(f"    📄 Downloaded and saved source PDF: {source_pdf_path.name}")
+                                f.write(pdf_content)
+                            logger.info(f"    📄 Saved source PDF from cache: {source_pdf_path.name}")
                         else:
-                            logger.warning(f"    ⚠️ Failed to download source PDF: HTTP {response.status_code}")
-                except Exception as e:
-                    logger.warning(f"    ⚠️ Failed to save source PDF: {e}")
-                
-                presentations.append({
-                    "topic": f"PDF: {self.test_pdf}",
-                    "html_path": result['html_file'],
-                    "pdf_path": pdf_path,
-                    "source_pdf_path": str(source_pdf_path) if source_pdf_path else None,
-                    "output_dir": str(pdf_dir),
-                    "result": result,  # Keep full result for reference
-                    "cached_data_used": result.get('cached_data_used', False)
-                })
-            else:
-                errors.append(f"PDF generation failed for: {self.test_pdf}")
-                
-        except Exception as e:
-            errors.append(f"Error with PDF {self.test_pdf}: {e}")
-            logger.error(f"❌ PDF generation error: {e}")
+                            # Fallback to download if cache missing
+                            import requests
+                            response = requests.get(test_pdf, timeout=30)
+                            if response.status_code == 200:
+                                source_pdf_path = pdf_dir / "sources" / "source.pdf"
+                                source_pdf_path.parent.mkdir(parents=True, exist_ok=True)
+                                with open(source_pdf_path, 'wb') as f:
+                                    f.write(response.content)
+                                logger.info(f"    📄 Downloaded and saved source PDF: {source_pdf_path.name}")
+                            else:
+                                logger.warning(f"    ⚠️ Failed to download source PDF: HTTP {response.status_code}")
+                    except Exception as e:
+                        logger.warning(f"    ⚠️ Failed to save source PDF: {e}")
+                    
+                    presentations.append({
+                        "topic": f"PDF: {test_pdf}",
+                        "html_path": result['html_file'],
+                        "pdf_path": pdf_path,
+                        "source_pdf_path": str(source_pdf_path) if source_pdf_path else None,
+                        "output_dir": str(pdf_dir),
+                        "result": result,  # Keep full result for reference
+                        "cached_data_used": result.get('cached_data_used', False)
+                    })
+                else:
+                    errors.append(f"PDF generation failed for: {test_pdf}")
+                    
+            except Exception as e:
+                errors.append(f"Error with PDF {test_pdf}: {e}")
+                logger.error(f"❌ PDF generation error: {e}")
         
         success = len(presentations) > 0
         logger.info(f"✅ Generated {len(presentations)} PDF presentations ({len(errors)} errors)")
@@ -464,7 +494,7 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
         
         logger.info("="*70)
         logger.info(f"🔄 Starting PDF evolution cycle from iteration {start_iteration}")
-        logger.info(f"📄 Test PDF: {self.test_pdf}")
+        logger.info(f"📄 Test PDFs: {len(self.test_pdfs)} PDF(s)")
         logger.info(f"🔢 Max iterations: {self.max_iterations}")
         logger.info(f"📊 Improvement threshold: {self.improvement_threshold}")
         logger.info(f"🎨 Theme: {self.theme}")
@@ -474,22 +504,30 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
         # Call parent's run_evolution_cycle
         return super().run_evolution_cycle(start_iteration)
     
-    def _get_or_cache_pdf_data(self):
+    def _get_or_cache_pdf_data(self, pdf_source: str = None, pdf_index: int = 0):
         """Get PDF data and image metadata, using cache if available"""
         
-        # Check if cache exists
-        cache_file = self.pdf_cache_dir / "pdf_data.b64"
-        metadata_file = self.pdf_cache_dir / "image_metadata.json"
+        # Use provided PDF source or fall back to first PDF for backward compatibility
+        if pdf_source is None:
+            pdf_source = self.test_pdfs[0]
+        
+        # Create PDF-specific cache directory
+        pdf_cache_subdir = self.pdf_cache_dir / f"pdf_{pdf_index}"
+        pdf_cache_subdir.mkdir(parents=True, exist_ok=True)
+        
+        # Check if cache exists for this specific PDF
+        cache_file = pdf_cache_subdir / "pdf_data.b64"
+        metadata_file = pdf_cache_subdir / "image_metadata.json"
         
         if cache_file.exists() and metadata_file.exists():
-            logger.info("📦 Loading cached PDF data and images")
-            return self._load_cached_pdf_data()
+            logger.info(f"📦 Using cached data for PDF {pdf_index}: {pdf_source[:50]}...")
+            return self._load_cached_pdf_data(pdf_cache_subdir)
         else:
-            logger.info("🔄 First iteration - downloading and caching PDF data")
-            return self._cache_pdf_data()
+            logger.info(f"📥 Caching PDF {pdf_index}: {pdf_source[:50]}...")
+            return self._cache_pdf_data(pdf_source, pdf_cache_subdir)
     
-    def _cache_pdf_data(self):
-        """Download PDF, extract images, and cache everything"""
+    def _cache_pdf_data(self, pdf_source: str, cache_subdir: Path):
+        """Download PDF, extract images, and cache everything for specific PDF"""
         
         # Import PDF processing here to avoid dependency issues
         try:
@@ -503,27 +541,26 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
             temp_generator = PDFGenerator(Config.ANTHROPIC_API_KEY)
             
             # Download and encode PDF
-            logger.info(f"📥 Downloading PDF: {self.test_pdf}")
-            if self.test_pdf.startswith(('http://', 'https://')):
-                pdf_data, error = temp_generator.encode_pdf_from_url(self.test_pdf)
+            logger.info(f"📥 Processing PDF: {pdf_source}")
+            if pdf_source.startswith(('http://', 'https://')):
+                pdf_data, error = temp_generator.encode_pdf_from_url(pdf_source)
             else:
-                pdf_data, error = temp_generator.encode_pdf_from_file(self.test_pdf)
+                pdf_data, error = temp_generator.encode_pdf_from_file(pdf_source)
             
             if error:
                 logger.error(f"❌ Failed to encode PDF: {error}")
                 return None, {}
             
-            # Create cache directory
-            self.pdf_cache_dir.mkdir(parents=True, exist_ok=True)
+            # Cache directory already created by caller
             
             # Extract images to cache directory
             logger.info("🔍 Extracting images and captions from PDF...")
-            extracted_images_dir = self.pdf_cache_dir / "extracted_images"
+            extracted_images_dir = cache_subdir / "extracted_images"
             extracted_images_dir.mkdir(exist_ok=True)
             
             image_captions, _, plots = temp_generator._extract_images_and_captions(
                 pdf_data, 
-                self.pdf_cache_dir
+                cache_subdir
             )
             
             # Prepare image metadata for caching
@@ -534,12 +571,12 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
             }
             
             # Save PDF data to cache
-            cache_file = self.pdf_cache_dir / "pdf_data.b64"
+            cache_file = cache_subdir / "pdf_data.b64"
             cache_file.write_text(pdf_data)
             logger.info(f"💾 Cached PDF data: {cache_file}")
             
             # Save image metadata to cache
-            metadata_file = self.pdf_cache_dir / "image_metadata.json"
+            metadata_file = cache_subdir / "image_metadata.json"
             import json
             try:
                 metadata_file.write_text(json.dumps(image_metadata, indent=2))
@@ -565,18 +602,18 @@ IMPORTANT: Output ONLY the complete HTML code. Start with <!DOCTYPE html> and en
             logger.error(f"❌ Failed to cache PDF data: {e}")
             return None, {}
     
-    def _load_cached_pdf_data(self):
+    def _load_cached_pdf_data(self, cache_subdir: Path):
         """Load PDF data and image metadata from cache"""
         
         try:
             import json
             
             # Load PDF data
-            cache_file = self.pdf_cache_dir / "pdf_data.b64"
+            cache_file = cache_subdir / "pdf_data.b64"
             pdf_data = cache_file.read_text()
             
             # Load image metadata
-            metadata_file = self.pdf_cache_dir / "image_metadata.json"
+            metadata_file = cache_subdir / "image_metadata.json"
             image_metadata = json.loads(metadata_file.read_text())
             
             # Log cache info
