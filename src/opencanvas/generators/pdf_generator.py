@@ -178,6 +178,7 @@ class PDFGenerator(BaseGenerator):
                         logger.info(f"Extracted image: {plot.plot_id} -> {image_path} ({plot.dimensions or 'unknown'})")
                 
                 logger.info(f"pdfplumber extracted {len(image_captions)} image fragments")
+
                 return image_captions, extracted_images_dir, plots
                 
             finally:
@@ -529,6 +530,7 @@ SLIDE NAVIGATION REQUIREMENTS:
         except Exception as e:
             return None, f"Error generating slides directly: {str(e)}"
     
+
     def generate_presentation(self, pdf_source, presentation_focus="A comprehensive overview", theme="professional", slide_count=12, output_dir=str(Config.OUTPUT_DIR), extract_images=True):
         """
         One-step function to generate a presentation from a PDF source with organized file structure.
