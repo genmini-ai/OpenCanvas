@@ -24,6 +24,29 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
+def check_optional_dependencies():
+    """Check for optional dependencies used by image extraction"""
+    features = {}
+    
+    try:
+        import docling
+        features['docling'] = True
+        logger.debug("Docling available for advanced image extraction")
+    except ImportError:
+        features['docling'] = False
+        logger.debug("Docling not available - will use fallback image extraction")
+    
+    try:
+        import pdfplumber
+        features['pdfplumber'] = True
+        logger.debug("pdfplumber available for image extraction")
+    except ImportError:
+        features['pdfplumber'] = False
+        logger.debug("pdfplumber not available - will use fallback image extraction")
+    
+    return features
+
+
 class GenerationService:
     """Service for presentation generation"""
     
@@ -59,12 +82,34 @@ class GenerationService:
             )
             
             if result:
-                return GenerateResponse(
-                    success=True,
-                    html_file=result.get('html_file'),
-                    research_performed=result.get('research_performed'),
-                    message="Presentation generated successfully"
-                )
+                response_data = {
+                    "success": True,
+                    "html_file": result.get('html_file'),
+                    "research_performed": result.get('research_performed'),
+                    "organized_files": result.get('organized_files'),
+                    "message": "Presentation generated successfully"
+                }
+                
+                # Add PDF-specific information if images were extracted
+                if result.get('extract_images') and result.get('organized_files'):
+                    # Count extracted images if present
+                    organized_files = result.get('organized_files', {})
+                    images_dir = organized_files.get('images')
+                    if images_dir:
+                        try:
+                            from pathlib import Path
+                            images_path = Path(images_dir)
+                            if images_path.exists():
+                                image_files = list(images_path.glob('*'))
+                                response_data["extracted_images_count"] = len(image_files)
+                        except Exception as e:
+                            logger.warning(f"Could not count extracted images: {e}")
+                
+                # Add topic-specific information if available (image validation)
+                if result.get('image_validation_report'):
+                    response_data["image_validation_report"] = result['image_validation_report']
+                
+                return GenerateResponse(**response_data)
             else:
                 return GenerateResponse(
                     success=False,
@@ -317,6 +362,9 @@ class PipelineService:
                 pdf_file=pdf_file,
                 evaluation_results=evaluation_results,
                 research_performed=gen_response.research_performed,
+                organized_files=gen_response.organized_files,
+                extracted_images_count=gen_response.extracted_images_count,
+                image_validation_report=gen_response.image_validation_report,
                 message="Pipeline completed successfully"
             )
             
