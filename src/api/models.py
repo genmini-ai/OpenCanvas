@@ -53,6 +53,9 @@ class GenerateResponse(BaseModel):
     success: bool = Field(..., description="Whether generation was successful")
     html_file: Optional[str] = Field(None, description="Path to generated HTML file")
     research_performed: Optional[bool] = Field(None, description="Whether web research was performed")
+    organized_files: Optional[Dict[str, Any]] = Field(None, description="Organized output file paths")
+    extracted_images_count: Optional[int] = Field(None, description="Number of images extracted from PDF")
+    image_validation_report: Optional[Dict[str, Any]] = Field(None, description="Image validation results")
     message: str = Field(..., description="Status message")
     error: Optional[str] = Field(None, description="Error message if failed")
 
@@ -120,6 +123,9 @@ class PipelineResponse(BaseModel):
     pdf_file: Optional[str] = Field(None, description="Path to generated PDF file")
     evaluation_results: Optional[EvaluationScores] = Field(None, description="Evaluation results if requested")
     research_performed: Optional[bool] = Field(None, description="Whether web research was performed")
+    organized_files: Optional[Dict[str, Any]] = Field(None, description="Organized output file paths")
+    extracted_images_count: Optional[int] = Field(None, description="Number of images extracted from PDF")
+    image_validation_report: Optional[Dict[str, Any]] = Field(None, description="Image validation results")
     message: str = Field(..., description="Status message")
     error: Optional[str] = Field(None, description="Error message if failed")
 

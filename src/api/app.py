@@ -205,12 +205,30 @@ async def startup_event():
     
     # Validate configuration
     try:
-        from ..config import Config
+        from opencanvas.config import Config
         Config.validate()
         logger.info("Configuration validated successfully")
     except Exception as e:
         logger.error(f"Configuration validation failed: {e}")
         raise
+    
+    # Check and log available features
+    try:
+        from .services import check_optional_dependencies
+        features = check_optional_dependencies()
+        
+        logger.info("🔧 Feature availability check:")
+        logger.info(f"  📸 Image extraction (docling): {'✅ Available' if features.get('docling') else '❌ Not available'}")
+        logger.info(f"  📊 PDF processing (pdfplumber): {'✅ Available' if features.get('pdfplumber') else '❌ Not available'}")
+        
+        # Warn if important features are missing
+        if not features.get('docling') and not features.get('pdfplumber'):
+            logger.warning("⚠️  No image extraction libraries available. PDF image extraction may be limited.")
+        elif not features.get('docling'):
+            logger.info("ℹ️  Docling not available - using fallback image extraction methods")
+            
+    except Exception as e:
+        logger.warning(f"Could not check feature availability: {e}")
 
 
 @app.on_event("shutdown")

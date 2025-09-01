@@ -254,4 +254,26 @@ async def get_conversion_methods():
     return {
         "methods": [method.value for method in ConversionMethodEnum],
         "default": "selenium"
+    }
+
+
+@router.get("/features", tags=["Configuration"])
+async def get_available_features():
+    """Get available features and their status"""
+    from .services import check_optional_dependencies
+    
+    features = check_optional_dependencies()
+    
+    return {
+        "image_extraction": {
+            "docling": features.get('docling', False),
+            "pdfplumber": features.get('pdfplumber', False),
+            "description": "Advanced image extraction from PDFs"
+        },
+        "supported": {
+            "pdf_generation": True,
+            "topic_generation": True,
+            "html_to_pdf": True,
+            "evaluation": True
+        }
     } 
