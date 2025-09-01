@@ -391,38 +391,12 @@ Please write a complete educational blog post that stays focused on the user's t
             return None
 
     def _load_generation_prompt(self, prompt_version=None):
-        """Load generation prompt from file (evolved or baseline)"""
-        try:
-            # If specific version requested, try to load it
-            if prompt_version:
-                version_file = Path(f"evolution_runs/evolved_prompts/generation_prompt_v{prompt_version}.txt")
-                if version_file.exists():
-                    prompt = version_file.read_text()
-                    logger.info(f"📝 Loaded specific prompt version v{prompt_version}")
-                    return prompt
-                else:
-                    logger.warning(f"Requested prompt version v{prompt_version} not found, falling back to latest")
-            
-            # No random loading from global evolved prompts during evolution
-            # Evolution system manages prompt loading explicitly
-            
-            # Fall back to baseline prompt
-            baseline_file = Path("src/opencanvas/prompts/baseline/generation_prompt.txt")
-            if baseline_file.exists():
-                prompt = baseline_file.read_text()
-                logger.info("📝 Loaded baseline prompt from file")
-                return prompt
-            
-            # Final fallback to hardcoded prompt
-            logger.warning("No prompt files found, using hardcoded fallback")
-            return self._get_hardcoded_prompt()
-            
-        except Exception as e:
-            logger.error(f"Failed to load generation prompt: {e}")
-            return self._get_hardcoded_prompt()
+        """Load basedline generation prompt inline"""
+        logger.info(f"Loaded generation prompt")
+        return self._get_hardcoded_prompt()
     
     def _get_hardcoded_prompt(self):
-        """Get the hardcoded prompt as final fallback"""
+        """Get the hardcoded prompt"""
         return """<presentation_task>
 Create a stunning, visually captivating HTML presentation that makes viewers stop and say "wow" based on this content:
 
