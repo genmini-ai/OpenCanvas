@@ -1,0 +1,23 @@
+{
+  "input_file": "pdf_4_2412_06769/slides/slides.html",
+  "output_file": "pdf_4_2412_06769/slides/slides_fixed_v2.html",
+  "fixes_applied": [
+    {
+      "type": "defensive_css",
+      "description": "Injected defensive CSS rules"
+    },
+    {
+      "type": "runtime_js",
+      "description": "Added runtime JavaScript fixes"
+    },
+    {
+      "type": "image_constraints",
+      "description": "Fixed constraints on 10 images"
+    }
+  ],
+  "file_size": {
+    "original": 80141,
+    "fixed": 66414,
+    "difference": -13727
+  }
+}

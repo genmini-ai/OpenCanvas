@@ -305,6 +305,100 @@ class PresentationEvaluator:
         logger.info("Evaluating visual dimensions...")
         return self.call_api_with_pdfs(self.prompts.visual, presentation_pdf_data)
     
+    def evaluate_visual_with_prompt(self, html_content: str, custom_prompt: str) -> Dict[str, Any]:
+        """
+        Evaluate visual dimensions using a custom prompt
+        
+        Args:
+            html_content: HTML content of the presentation
+            custom_prompt: Custom evaluation prompt to use
+            
+        Returns:
+            Evaluation results dictionary
+        """
+        logger.info("Evaluating visual dimensions with custom prompt...")
+        
+        # For simplicity, we'll use the HTML content directly
+        # In production, this would convert to PDF first
+        try:
+            if self.provider == "claude":
+                return self._evaluate_with_claude_custom(html_content, custom_prompt)
+            elif self.provider == "gpt":
+                return self._evaluate_with_gpt_custom(html_content, custom_prompt)
+            elif self.provider == "gemini":
+                return self._evaluate_with_gemini_custom(html_content, custom_prompt)
+        except Exception as e:
+            logger.error(f"Error in custom prompt evaluation: {e}")
+            return {"error": str(e)}
+    
+    def _evaluate_with_claude_custom(self, html_content: str, prompt: str) -> Dict[str, Any]:
+        """Evaluate using Claude with custom prompt"""
+        try:
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=4000,
+                temperature=0.3,
+                system=prompt,
+                messages=[
+                    {"role": "user", "content": f"Please evaluate this presentation:\n\n{html_content}"}
+                ]
+            )
+            
+            result_text = response.content[0].text
+            return self.parse_json_response(result_text)
+        except Exception as e:
+            logger.error(f"Claude custom evaluation error: {e}")
+            return {"error": str(e)}
+    
+    def _evaluate_with_gpt_custom(self, html_content: str, prompt: str) -> Dict[str, Any]:
+        """Evaluate using GPT with custom prompt"""
+        try:
+            if OpenAI:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    temperature=0.3,
+                    messages=[
+                        {"role": "system", "content": prompt},
+                        {"role": "user", "content": f"Please evaluate this presentation:\n\n{html_content}"}
+                    ]
+                )
+                result_text = response.choices[0].message.content
+            else:
+                # Old OpenAI library
+                response = openai.ChatCompletion.create(
+                    model=self.model,
+                    temperature=0.3,
+                    messages=[
+                        {"role": "system", "content": prompt},
+                        {"role": "user", "content": f"Please evaluate this presentation:\n\n{html_content}"}
+                    ]
+                )
+                result_text = response.choices[0].message["content"]
+                
+            return self.parse_json_response(result_text)
+        except Exception as e:
+            logger.error(f"GPT custom evaluation error: {e}")
+            return {"error": str(e)}
+    
+    def _evaluate_with_gemini_custom(self, html_content: str, prompt: str) -> Dict[str, Any]:
+        """Evaluate using Gemini with custom prompt"""
+        try:
+            full_prompt = f"{prompt}\n\nPlease evaluate this presentation:\n\n{html_content}"
+            response = self.client.models.generate_content(
+                model=f"models/{self.model}",
+                contents=full_prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.3,
+                    max_output_tokens=4000
+                )
+            )
+            
+            result_text = response.text
+            return self.parse_json_response(result_text)
+        except Exception as e:
+            logger.error(f"Gemini custom evaluation error: {e}")
+            return {"error": str(e)}
+    
     def evaluate_content_free(self, presentation_pdf_data: str) -> Dict[str, Any]:
         """Evaluate content dimensions without reference using presentation PDF"""
         logger.info("Evaluating reference-free content dimensions...")

@@ -77,6 +77,10 @@ test_outputs/
 output/
 pdf_zoom_tests/
 
+# PDF conversion test outputs
+tests/conversion/test_output/
+pdf_zoom_tests/
+
 # Evolution system outputs
 evolution_runs/
 temp_evolution*/

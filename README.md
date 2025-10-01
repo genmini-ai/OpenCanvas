@@ -1,132 +1,117 @@
 # OpenCanvas
 
-OpenCanvas is a comprehensive presentation generation and evaluation system that creates HTML slide decks from topics or PDF documents, converts them to PDF format, and evaluates their quality using AI.
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## TODO
-- [ ] add source saving while generating, to streamline eval {pdf: paper.pdf, topic: blog.txt}
-    - [ ] fix full pipeline run
-    - [ ] try self evolution
-- [ ] add GPT model for eval
-- [ ] improve visual layout and component (image, diagram, etc.)
-- [ ] improve template design taste
+> AI-powered presentation generation system that creates beautiful HTML slide decks from topics or PDF documents, with automatic quality evaluation and continuous improvement.
 
-## Features
+## ✨ Features
 
-🎨 **Dual Input Support**: Generate presentations from either text topics or PDF documents  
-🔄 **HTML to PDF Conversion**: Convert generated HTML slides to PDF format  
-📊 **AI-Powered Evaluation**: Comprehensive presentation quality assessment  
-🎯 **Smart Research**: Automatic web research for insufficient knowledge topics  
-🎨 **Multiple Themes**: Professional themes for different presentation contexts  
-🔧 **Complete Pipeline**: End-to-end workflow from input to evaluation  
-🚀 **REST API**: Full RESTful API for programmatic access  
-📚 **Interactive Docs**: Auto-generated API documentation  
+- 🎨 **Dual Input Support** - Generate from text topics or PDF documents
+- 🔍 **Smart Research** - Automatic web research when knowledge is insufficient
+- 📊 **AI Evaluation** - Comprehensive quality assessment with Claude, GPT, or Gemini
+- 🎯 **Multiple Themes** - Professional themes for different presentation contexts
+- 🔄 **HTML to PDF** - High-quality PDF conversion with customizable zoom
+- 📁 **Organized Output** - Structured folders with timestamps and source tracking
+- 🚀 **REST API** - Full RESTful interface for programmatic access
+- 🤖 **Self-Evolution** - Autonomous system that improves presentation quality over time
 
-## Installation
+## 🚀 Quick Start
 
-1. **Clone the repository**
+### Installation
+
 ```bash
 git clone https://github.com/genmini-ai/OpenCanvas.git
 cd OpenCanvas
-```
-
-2. **Install dependencies**
-
-Choose one of the following installation options:
-
-**Option A (recommended): directly install this package (CLI)**
-```
 pip install -e .
-```
-
-**Option B: Complete installation (CLI + API)**
-```bash
-pip install -r requirements-all.txt
-```
-
-**Option C: Core functionality only (CLI)**
-```bash
-pip install -r requirements.txt
-```
-
-**Option D: API only (for microservices)**
-```bash
-pip install -r requirements-api.txt
-```
-
-**Option E: Install separately**
-```bash
-# Install core dependencies
-pip install -r requirements.txt
-
-# Install API dependencies (if needed)
-pip install -r requirements-api.txt
-```
-
-3. **Install browser drivers** (for HTML to PDF conversion)
-```bash
-# For Playwright
 playwright install chromium
-
-# For Selenium - download ChromeDriver manually or use:
-# https://chromedriver.chromium.org/
 ```
 
-4. **Setup environment variables**
+### Configuration
+
 ```bash
 cp .env.example .env
 # Edit .env with your API keys
 ```
 
-Required API keys:
-- `ANTHROPIC_API_KEY`: For Claude AI (required)
-- `BRAVE_API_KEY`: For web search (optional, but recommended)
-- `OPENAI_API_KEY`: For GPT evaluation (optional)
+Required: `ANTHROPIC_API_KEY` (get from [console.anthropic.com](https://console.anthropic.com/))
+Optional: `BRAVE_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`
 
-## Quick Start
+### Generate Your First Presentation
 
-### CLI Usage
-
-#### Generate from Topic
 ```bash
-opencanvas generate "AI in healthcare applications" --purpose "academic presentation" --theme "clean minimalist"
-```
+# From a topic
+opencanvas generate "AI in healthcare" --purpose "academic presentation"
 
-#### Generate from PDF
-```bash
+# From a PDF
 opencanvas generate "https://arxiv.org/pdf/2505.20286" --purpose "research seminar"
+
+# Full pipeline (generate + convert + evaluate)
+opencanvas pipeline "quantum computing" --purpose "conference talk" --evaluate
 ```
 
-#### Generate from PDF with Image Extraction
+## 📖 Usage
+
+### CLI Commands
+
+#### Generate
 ```bash
-# Extract and include images from PDF with AI-generated captions
-opencanvas generate "https://arxiv.org/pdf/2505.20286" --purpose "research seminar" --extract-images
+# Topic-based generation
+opencanvas generate "sustainable energy solutions" \
+  --purpose "corporate presentation" \
+  --theme "natural earth"
 
-# Local PDF with image extraction
-opencanvas generate "paper.pdf" --purpose "conference presentation" --extract-images
+# PDF-based generation (images extracted by default)
+opencanvas generate "paper.pdf" --purpose "conference presentation"
+
+# Disable image extraction
+opencanvas generate "paper.pdf" --no-extract-images
 ```
 
-#### Convert HTML to PDF
+#### Convert to PDF
 ```bash
-opencanvas convert output/slides.html --output presentation.pdf --zoom 1.5
+opencanvas convert output/slides.html \
+  --output presentation.pdf \
+  --zoom 1.5
 ```
 
-#### Evaluate Presentation
+#### Evaluate Quality
 ```bash
 opencanvas evaluate evaluation_folder/
 ```
 
-#### Full Pipeline
+#### Complete Pipeline
 ```bash
-# Complete workflow with organized outputs
-opencanvas pipeline "quantum computing" --purpose "conference talk" --evaluate --zoom 1.3
-
-# Pipeline with source PDF for evaluation
-opencanvas pipeline "quantum computing" --source-pdf paper.pdf --evaluate
+opencanvas pipeline "machine learning ethics" \
+  --purpose "academic seminar" \
+  --evaluate \
+  --zoom 1.3
 ```
 
-## Organized Output Structure
+### API Usage
 
-OpenCanvas now creates organized directory structures for all outputs:
+Start the API server:
+```bash
+opencanvas api --host 0.0.0.0 --port 8000
+```
+
+Make requests:
+```bash
+curl -X POST "http://localhost:8000/api/v1/generate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input_source": "AI in healthcare",
+    "purpose": "academic presentation",
+    "theme": "professional blue"
+  }'
+```
+
+**Documentation:** [http://localhost:8000/docs](http://localhost:8000/docs)
+**Full API Guide:** [API_README.md](API_README.md)
+
+## 📁 Output Structure
+
+OpenCanvas creates organized directories for all outputs:
 
 ```
 output/
@@ -136,565 +121,139 @@ output/
     │   └── quantum_computing_presentation.pdf
     ├── evaluation/
     │   └── quantum_computing_evaluation.json
-    ├── sources/
-    │   ├── quantum_computing_source_blog.txt    # For topic-based generation
-    │   └── quantum_computing_source.pdf         # For PDF-based generation
-    └── extracted_images/                        # For PDF-based generation with image extraction
-        ├── plot_page1_img1.png
-        ├── plot_page2_chart1.png
-        └── plot_page3_fig1.png
+    └── sources/
+        ├── source_content.txt          # For topic-based
+        └── source.pdf                  # For PDF-based
 ```
 
-### Benefits of Organized Structure
-
-- **Topic-based naming**: Files use meaningful names derived from your topic (max 5 words)
-- **Source storage**: Original content is saved for reference-required evaluation
-- **Complete pipeline**: All outputs (.html, .pdf, .json) in one organized folder
-- **Easy evaluation**: Source content is automatically available for comprehensive evaluation
-
-### API Usage
-
-#### Start the API Server
-```bash
-# Using the standalone server script
-python server.py
-
-# Or using the main CLI
-opencanvas api
-
-# Or with custom settings
-python server.py --host 0.0.0.0 --port 8080 --reload
-```
-
-#### Access API Documentation
-- **Interactive Docs**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-- **Health Check**: http://localhost:8000/api/v1/health
-
-#### Example API Calls
-
-**Generate a presentation:**
-```bash
-curl -X POST "http://localhost:8000/api/v1/generate" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "input_source": "Machine learning in healthcare",
-       "purpose": "academic presentation",
-       "theme": "professional blue"
-     }'
-```
-
-**Convert to PDF:**
-```bash
-curl -X POST "http://localhost:8000/api/v1/convert" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "html_file": "output/presentation.html",
-       "zoom_factor": 1.2
-     }'
-```
-
-**Run complete pipeline:**
-```bash
-curl -X POST "http://localhost:8000/api/v1/pipeline" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "input_source": "Quantum computing applications",
-       "evaluate": true
-     }'
-```
-
-For complete API documentation, see [API_README.md](API_README.md).
-
-## Configuration Reference
+## ⚙️ Configuration
 
 ### Environment Variables
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `ANTHROPIC_API_KEY` | ✅ | - | Claude API key for generation |
-| `BRAVE_API_KEY` | ❌ | - | Brave Search API for web research |
-| `OPENAI_API_KEY` | ❌ | - | OpenAI API key for GPT evaluation |
-| `EVALUATION_PROVIDER` | ❌ | `claude` | Evaluation provider: `claude` or `gpt` |
-| `EVALUATION_MODEL` | ❌ | `claude-3-5-sonnet-20241022` | Model for evaluation |
-| `DEFAULT_THEME` | ❌ | `professional blue` | Default presentation theme |
+| `ANTHROPIC_API_KEY` | ✅ | - | Claude API key (generation) |
+| `BRAVE_API_KEY` | ❌ | - | Web search API key |
+| `GEMINI_API_KEY` | ❌ | - | Gemini API key (evaluation) |
+| `OPENAI_API_KEY` | ❌ | - | OpenAI API key (evaluation) |
+| `EVALUATION_PROVIDER` | ❌ | `gemini` | `claude`, `gpt`, or `gemini` |
+| `EVALUATION_MODEL` | ❌ | `gemini-2.5-flash` | Model for evaluation |
+| `DEFAULT_THEME` | ❌ | `professional blue` | Presentation theme |
 | `DEFAULT_ZOOM` | ❌ | `1.2` | PDF zoom factor |
-| `DEFAULT_CONVERSION_METHOD` | ❌ | `playwright` | PDF conversion method |
 
 ### Available Themes
 
-- `professional blue` - Clean, corporate-friendly design
-- `clean minimalist` - Simple, elegant layout
-- `natural earth` - Warm, earth-tone colors
-- `modern contemporary` - Trendy, cutting-edge design
-- `warm earth tones` - Cozy, approachable feel
-- `bold high contrast` - High-impact, attention-grabbing
+- `professional blue` - Clean corporate design
+- `clean minimalist` - Simple elegant layout
+- `natural earth` - Warm earth tones
+- `modern contemporary` - Trendy cutting-edge
+- `warm earth tones` - Cozy approachable
+- `bold high contrast` - High-impact design
 
-### Available Models
+Full list: See [themes.py](src/opencanvas/shared/themes.py)
 
-**Claude Models:**
-- `claude-3-5-sonnet-20241022` (recommended for evaluation)
-- `claude-3-7-sonnet-20250219` (good for generation)
-- `claude-sonnet-4-20250514` (latest, premium)
+## 🧪 Testing
 
-**GPT Models:**
-- `gpt-4o` (best quality, higher cost)
-- `gpt-4o-mini` (good balance, recommended)
-- `gpt-4-turbo` (fast, good quality)
+```bash
+# Run full test suite
+python run_tests.py
 
-## Troubleshooting
+# Light mode (faster)
+python run_tests.py light
+
+# Specific tests
+python run_tests.py topic  # Topic generation only
+python run_tests.py pdf    # PDF generation only
+```
+
+## 🤖 Evolution System
+
+OpenCanvas includes an autonomous improvement system that learns from evaluation results:
+
+```bash
+# Run evolution cycle
+opencanvas evolve --max-iterations 3 --improvement-threshold 0.15
+```
+
+The system automatically:
+- Evaluates presentation quality
+- Identifies improvement opportunities
+- Evolves prompts and generates new tools
+- Tracks performance improvements
+
+**Learn more:** [docs/architecture/evolution-system.md](docs/architecture/evolution-system.md)
+
+## 📚 Documentation
+
+- **[Installation Guide](docs/installation.md)** - Detailed setup instructions
+- **[CLI Reference](docs/usage/cli.md)** - Complete command reference
+- **[API Guide](API_README.md)** - REST API documentation
+- **[Architecture](docs/architecture/overview.md)** - System design
+- **[Contributing](CONTRIBUTING.md)** - How to contribute
+- **[Examples](examples/)** - Usage examples
+
+## 🔧 Troubleshooting
 
 ### Common Issues
 
-**1. "opencanvas command not found"**
+**"opencanvas command not found"**
 ```bash
-# Make sure you installed with -e flag
 pip install -e .
-
-# Check if it's in your PATH
 which opencanvas
 ```
 
-**2. "ANTHROPIC_API_KEY is required"**
+**"ANTHROPIC_API_KEY is required"**
 ```bash
-# Check your .env file exists and has the key
 cat .env | grep ANTHROPIC_API_KEY
-
-# Make sure .env is in the same directory where you run opencanvas
 ```
 
-**3. "Model 'gpt-4.1' not found" with Claude provider**
+**Playwright not available**
 ```bash
-# This happens when EVALUATION_MODEL doesn't match EVALUATION_PROVIDER
-# Fix in .env:
-EVALUATION_PROVIDER=claude
-EVALUATION_MODEL=claude-3-5-sonnet-20241022
-
-# Or use GPT:
-EVALUATION_PROVIDER=gpt  
-EVALUATION_MODEL=gpt-4o-mini
-```
-
-**4. "Playwright not available"**
-```bash
-# Install Playwright browser
 playwright install chromium
-
-# Or use selenium method
+# Or use selenium
 opencanvas convert slides.html --method selenium
 ```
 
-**5. Web research not working**
+**Web research not working**
 ```bash
 # Add BRAVE_API_KEY to .env for web research
 # Without it, generation uses only Claude's knowledge
-BRAVE_API_KEY=your-brave-key-here
 ```
 
-### Validation Commands
+More troubleshooting: [docs/troubleshooting.md](docs/troubleshooting.md)
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+### Development Setup
 
 ```bash
-# Test your configuration
-python -c "from opencanvas.config import Config; Config.validate(); print('✅ Configuration valid')"
-
-# Test API keys
-opencanvas generate "test topic" --output-dir test_output
-
-# Check available models
-python -c "
-from opencanvas.config import Config
-print('Claude Model:', Config.CLAUDE_MODEL)
-print('Evaluation Model:', Config.EVALUATION_MODEL)
-print('Evaluation Provider:', Config.EVALUATION_PROVIDER)
-"
+git clone https://github.com/genmini-ai/OpenCanvas.git
+cd OpenCanvas
+pip install -r requirements-all.txt
+playwright install chromium
 ```
 
-## Available Commands
-
-### CLI Commands
-
-#### `generate`
-Generate presentation from topic or PDF source.
-
-**Arguments:**
-- `input`: Topic text or PDF file path/URL
-- `--purpose`: Purpose of presentation (default: "general presentation")
-- `--theme`: Visual theme (default: "professional blue")
-- `--output-dir`: Output directory (default: "output")
-
-**Example:**
-```bash
-opencanvas generate "sustainable energy solutions" --purpose "corporate presentation" --theme "natural earth"
-```
-
-#### `convert`
-Convert HTML presentation to PDF.
-
-**Arguments:**
-- `html_file`: HTML presentation file path
-- `--output`: Output PDF filename (default: "presentation.pdf")
-- `--method`: Browser method - "selenium" or "playwright" (default: "selenium")
-- `--zoom`: Zoom factor 0.1-3.0 (default: 1.2)
-- `--output-dir`: Output directory (default: "output")
-- `--no-cleanup`: Keep temporary image files
-
-**Example:**
-```bash
-opencanvas convert slides.html --output final_presentation.pdf --zoom 1.8 --method playwright
-```
-
-#### `evaluate`
-Evaluate presentation quality using AI.
-
-**Arguments:**
-- `eval_folder`: Folder containing presentation.pdf and optionally paper.pdf
-- `--output`: Output JSON file path (optional)
-- `--model`: Claude model for evaluation (default: claude-3-5-sonnet-20241022)
-
-**Example:**
-```bash
-opencanvas evaluate my_presentation_folder/ --output results.json
-```
-
-#### `pipeline`
-Complete workflow: generate → convert → evaluate.
-
-**Arguments:**
-- `input`: Topic text or PDF file path/URL
-- `--purpose`: Purpose of presentation
-- `--theme`: Visual theme
-- `--source-pdf`: Source PDF for evaluation (if input is topic)
-- `--evaluate`: Run evaluation after generation
-- `--output-dir`: Output directory
-- `--zoom`: PDF zoom factor
-- `--method`: Conversion method
-
-**Example:**
-```bash
-opencanvas pipeline "machine learning ethics" --purpose "academic seminar" --theme "modern contemporary" --evaluate --source-pdf ethics_paper.pdf
-```
-
-#### `api`
-Start the REST API server.
-
-**Arguments:**
-- `--host`: Host to bind to (default: 127.0.0.1)
-- `--port`: Port to bind to (default: 8000)
-- `--reload`: Enable auto-reload for development
-- `--log-level`: Log level (default: info)
-- `--workers`: Number of worker processes (default: 1)
-
-**Example:**
-```bash
-opencanvas api --host 0.0.0.0 --port 8080 --reload
-```
-
-### API Endpoints
-
-#### Core Endpoints
-- `POST /api/v1/generate` - Generate presentation from topic or PDF
-- `POST /api/v1/convert` - Convert HTML to PDF
-- `POST /api/v1/evaluate` - Evaluate presentation quality
-- `POST /api/v1/pipeline` - Run complete pipeline workflow
-
-#### Configuration Endpoints
-- `GET /api/v1/themes` - Get available themes
-- `GET /api/v1/purposes` - Get available purposes
-- `GET /api/v1/conversion-methods` - Get conversion methods
-
-#### System Endpoints
-- `GET /api/v1/health` - Health check
-- `GET /api/v1/files/{file_path}` - Download generated files
-
-For detailed API documentation, see [API_README.md](API_README.md).
-
-## Available Themes
-
-- **professional blue**: Clean, professional theme with blue accents
-- **clean minimalist**: Minimal design with subtle grays
-- **bold high contrast**: High contrast theme for maximum impact
-- **cool professional**: Cool tones for professional presentations
-- **natural earth**: Earth tones for sustainability themes
-- **muted morandi tones**: Soft, muted colors inspired by Morandi
-- **modern contemporary**: Modern purple and gray combination
-- **warm earth tones**: Warm oranges and browns for approachable feel
-- **soft pastels**: Gentle pastels for personal or creative topics
-- **academic**: Traditional academic presentation style
-
-## File Structure
-
-```
-OpenCanvas/
-├── README.md                      # Project documentation
-├── API_README.md                  # API documentation
-├── requirements.txt               # Core dependencies only
-├── requirements-api.txt           # API dependencies only
-├── requirements-all.txt           # All dependencies
-├── setup.py                      # Package setup configuration
-├── server.py                     # Standalone API server
-├── test_api.py                   # API test script
-├── .env.example                  # Environment variables template
-├── .gitignore                    # Git ignore rules
-├── src/
-│   ├── main.py                    # Main CLI interface
-│   ├── config.py                  # Configuration management
-│   ├── api/                       # API package
-│   │   ├── __init__.py            # API package init
-│   │   ├── app.py                 # FastAPI application
-│   │   ├── models.py              # Pydantic models
-│   │   ├── routes.py              # API route handlers
-│   │   └── services.py            # Service layer
-│   ├── generators/
-│   │   ├── router.py              # Generation routing
-│   │   ├── topic_generator.py     # Topic-based generation
-│   │   ├── pdf_generator.py       # PDF-based generation
-│   │   └── base.py                # Base generator class
-│   ├── conversion/
-│   │   └── html_to_pdf.py         # HTML to PDF converter
-│   ├── evaluation/
-│   │   ├── evaluator.py           # Presentation evaluator
-│   │   └── prompts.py             # Evaluation prompts
-│   ├── shared/
-│   │   ├── themes.py              # Theme definitions
-│   │   └── html_utils.py          # HTML utilities
-│   └── utils/
-│       ├── logging.py             # Logging configuration
-│       └── validation.py         # Input validation
-├── tests/
-│   ├── test_topics.py             # Topic generation tests
-│   ├── test_pdfs.py               # PDF generation tests
-│   └── test_conversion.py         # Conversion tests
-└── examples/
-    └── basic_usage.py             # Usage examples
-```
-
-## Features in Detail
-
-### Topic-Based Generation
-- **Knowledge Assessment**: Automatically determines if additional research is needed
-- **Web Research**: Uses Brave Search API to gather authoritative sources
-- **Source Credibility**: AI-powered ranking of search results
-- **Content Synthesis**: Combines research with existing knowledge
-
-### PDF-Based Generation
-- **Academic Focus**: Optimized for research papers and academic content
-- **LaTeX Support**: Mathematical formulas and equations
-- **Mermaid Diagrams**: Process flows and system architecture
-- **Citation Handling**: Proper attribution and references
-- **Image Extraction**: Automatic extraction of plots, charts, and figures with AI-generated captions
-- **Visual Integration**: Extracted images are automatically incorporated into presentations with proper paths
-
-### HTML to PDF Conversion
-- **Multiple Methods**: Selenium and Playwright support
-- **Zoom Control**: Adjustable PDF scaling (0.1x to 3.0x)
-- **Slide Navigation**: Automatic slide detection and capture
-- **Quality Optimization**: High-resolution output
-
-### AI Evaluation
-- **Visual Assessment**: Design, hierarchy, readability, balance
-- **Content Analysis**: Structure, narrative, accuracy, coverage
-- **Reference Comparison**: Accuracy against source materials
-- **Comprehensive Scoring**: 1-5 scale with detailed reasoning
-
-### REST API
-- **Full CRUD Operations**: All functionality available via HTTP
-- **Async Processing**: Non-blocking operations for better performance
-- **Comprehensive Documentation**: Auto-generated OpenAPI/Swagger docs
-- **Error Handling**: Consistent error responses and status codes
-- **File Management**: Download generated files via API
-
-## Testing
-
-### E2E Test Suite
-Run comprehensive end-to-end tests:
+### Running Tests
 
 ```bash
-# From root directory (convenient wrapper)
-python run_tests.py                    # Full suite, all tests
-python run_tests.py light              # Full suite, light mode (faster)
-python run_tests.py topic              # Topic tests only
-python run_tests.py pdf                # PDF tests only
-python run_tests.py topic light        # Topic tests, light mode
-python run_tests.py force              # Force regenerate all files
-
-# Or run directly from tests directory
-cd tests
-python run_e2e_tests.py light          # Light mode for quick validation
-```
-
-### Adversarial Evaluation Testing
-Test the robustness of the evaluation system:
-
-```bash
-# Run adversarial evaluation tests (requires existing presentations)
-python run_adversarial_eval_test.py
-
-# Generate fresh presentations and test
-python run_adversarial_eval_test.py --regenerate
-
-# Analysis only (skip testing)
-python run_adversarial_eval_test.py --analysis-only
-```
-
-This feature applies 5 different adversarial attacks to test presentations and measures how well the evaluation system detects quality degradation.
-
-### Individual Test Files
-Run specific test components:
-
-```bash
-# Topic generation tests
-python tests/test_topics.py
-
-# PDF generation tests  
-python tests/test_pdfs.py
-
-# Conversion tests
-python tests/test_conversion.py
-
-# All tests with pytest
+python run_tests.py
 pytest tests/
 ```
 
-### API Testing
-Test the API functionality:
+## 📄 License
 
-```bash
-# Start the API server
-python server.py
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-# In another terminal, run the test suite
-python test_api.py
-```
+## 🙏 Acknowledgments
 
-## Configuration
+Built with:
+- [Anthropic Claude](https://www.anthropic.com/) - AI generation
+- [Playwright](https://playwright.dev/) - Browser automation
+- [FastAPI](https://fastapi.tiangolo.com/) - REST API framework
+- [Brave Search](https://brave.com/search/api/) - Web research
 
-Environment variables in `.env`:
+---
 
-```bash
-# Required
-ANTHROPIC_API_KEY=your_anthropic_key
-
-# Optional
-BRAVE_API_KEY=your_brave_key
-DEFAULT_THEME=professional blue
-DEFAULT_PURPOSE=general presentation
-OUTPUT_DIR=output
-DEFAULT_ZOOM=1.2
-DEFAULT_CONVERSION_METHOD=selenium
-EVALUATION_MODEL=claude-3-5-sonnet-20241022
-```
-
-## Production Deployment
-
-### API Server Deployment
-
-#### Using Gunicorn
-```bash
-pip install gunicorn
-gunicorn src.api.app:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
-```
-
-#### Using Docker
-```dockerfile
-FROM python:3.11-slim
-WORKDIR /app
-COPY requirements-all.txt .
-RUN pip install -r requirements-all.txt
-COPY . .
-EXPOSE 8000
-CMD ["python", "server.py", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-#### Using Docker Compose
-```yaml
-version: '3.8'
-services:
-  opencanvas-api:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - BRAVE_API_KEY=${BRAVE_API_KEY}
-    volumes:
-      - ./output:/app/output
-```
-
-### Microservices Deployment
-
-For microservices architecture, you can deploy the API separately:
-
-```dockerfile
-# API-only Dockerfile
-FROM python:3.11-slim
-WORKDIR /app
-COPY requirements-api.txt .
-RUN pip install -r requirements-api.txt
-COPY src/api/ ./src/api/
-COPY src/config.py ./src/config.py
-COPY src/utils/ ./src/utils/
-EXPOSE 8000
-CMD ["python", "server.py", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **ChromeDriver not found**
-   - Download ChromeDriver and add to PATH
-   - Or use `playwright` method instead
-
-2. **Brave Search API errors**
-   - Check your API key and quota
-   - Generation will work without it (no web research)
-
-3. **PDF conversion fails**
-   - Ensure HTML file has proper slide structure
-   - Try different zoom factors
-   - Check browser dependencies
-
-4. **Evaluation requires both PDFs**
-   - Place `presentation.pdf` and `paper.pdf` in eval folder
-   - Reference-required evaluation needs source material
-
-5. **API not starting**
-   - Check if FastAPI dependencies are installed: `pip install -r requirements-api.txt`
-   - Verify environment variables are set
-   - Check if port is already in use
-
-6. **Missing dependencies**
-   - For CLI only: `pip install -r requirements.txt`
-   - For API only: `pip install -r requirements-api.txt`
-   - For everything: `pip install -r requirements-all.txt`
-
-### Debug Mode
-
-Enable verbose logging:
-```bash
-# CLI
-opencanvas --verbose generate "your topic"
-
-# API
-python server.py --log-level debug --reload
-```
-
-## Examples
-
-See the `examples/` directory for:
-- Basic usage patterns
-- Advanced workflow examples
-- Batch processing scripts
-- Custom theme creation
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+**Star this repo** if you find it useful! ⭐

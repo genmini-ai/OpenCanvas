@@ -210,6 +210,67 @@ wait
 echo "Both requests completed"
 ```
 
+## Tested Commands
+
+### Working PDF Generation Example
+This command has been successfully tested:
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/generate" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "input_source": "https://arxiv.org/pdf/2505.20286",    
+      "purpose": "academic presentation",
+      "theme": "professional blue",
+      "extract_images": true
+    }'
+```
+
+**Successful Response:**
+```json
+{
+  "success": true,
+  "html_file": "test_output/20250831_181926/slides/presentation.html",
+  "research_performed": null,
+  "organized_files": {
+    "html": "test_output/20250831_181926/slides/presentation.html",
+    "base_folder": "test_output/20250831_181926"
+  },
+  "extracted_images_count": null,
+  "image_validation_report": null,
+  "message": "Presentation generated successfully",
+  "error": null
+}
+```
+
+### Potential Issues
+Some PDF URLs may not work and return an error:
+```bash
+# This URL failed:
+curl -X POST "http://localhost:8000/api/v1/generate" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "input_source": "https://arxiv.org/pdf/2301.08727.pdf",
+      "purpose": "academic presentation",
+      "theme": "professional blue",
+      "extract_images": true
+    }'
+```
+
+**Error Response:**
+```json
+{
+  "error": "HTTP 400",
+  "detail": "No result returned from generator",
+  "timestamp": "2025-08-31T18:18:09.359278"
+}
+```
+
+If you encounter errors, try:
+1. Using a different PDF URL
+2. Ensuring the PDF is publicly accessible
+3. Using a simpler PDF without complex formatting
+
 ## Deployment
 
 ### Development
