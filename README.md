@@ -7,14 +7,14 @@
 
 ## ✨ Features
 
-🎨 **Dual Input Support** - Generate from text topics or PDF documents
-🔍 **Smart Research** - Automatic web research when knowledge is insufficient
-📊 **AI Evaluation** - Comprehensive quality assessment with Claude, GPT, or Gemini
-🎯 **Multiple Themes** - Professional themes for different presentation contexts
-🔄 **HTML to PDF** - High-quality PDF conversion with customizable zoom
-📁 **Organized Output** - Structured folders with timestamps and source tracking
-🚀 **REST API** - Full RESTful interface for programmatic access
-🤖 **Self-Evolution** - Autonomous system that improves presentation quality over time
+- 🎨 **Dual Input Support** - Generate from text topics or PDF documents
+- 🔍 **Smart Research** - Automatic web research when knowledge is insufficient
+- 📊 **AI Evaluation** - Comprehensive quality assessment with Claude, GPT, or Gemini
+- 🎯 **Multiple Themes** - Professional themes for different presentation contexts
+- 🔄 **HTML to PDF** - High-quality PDF conversion with customizable zoom
+- 📁 **Organized Output** - Structured folders with timestamps and source tracking
+- 🚀 **REST API** - Full RESTful interface for programmatic access
+- 🤖 **Self-Evolution** - Autonomous system that improves presentation quality over time
 
 ## 🚀 Quick Start
 
