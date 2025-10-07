@@ -48,14 +48,18 @@ python run_tests.py force           # Force regenerate all files
 python run_adversarial_eval_test.py
 python run_adversarial_eval_test.py --regenerate
 
-# Evolution System - Autonomous presentation improvement
-python test_evolution_unified_final.py --run  # Run complete autonomous evolution system (default: 2 iterations)
-python test_evolution_unified_final.py --run --max-iterations 1  # Single iteration test to verify tool/prompt changes
-python test_evolution_unified_final.py --run --max-iterations 1 --topic "AI in healthcare"  # Custom topic single iteration
-python test_evolution_unified_final.py --run --diagnostic  # Run with diagnostic output for debugging
-python test_evolution_unified_final.py --run --prompt-only  # Focus only on prompt optimization, skip tool creation
-python test_evolution_unified_final.py --run --initial-prompt evolution_runs/evolved_prompts/generation_prompt_v3.txt  # Start with custom prompt
-python test_evolution_unified_final.py --run --resume evolution_runs/tracked_evolution_20250815_162354  # Resume from existing experiment
+# Topic Evolution System - Autonomous presentation improvement
+python topic_evolution.py --run  # Run complete autonomous evolution system (default: 2 iterations)
+python topic_evolution.py --run --max-iterations 1  # Single iteration test to verify tool/prompt changes
+python topic_evolution.py --run --max-iterations 1 --topic "AI in healthcare"  # Custom topic single iteration
+python topic_evolution.py --run --diagnostic  # Run with diagnostic output for debugging
+python topic_evolution.py --run --prompt-only  # Focus only on prompt optimization, skip tool creation
+python topic_evolution.py --run --initial-prompt evolution_runs/evolved_prompts/generation_prompt_v3.txt  # Start with custom prompt
+python topic_evolution.py --run --resume evolution_runs/tracked_evolution_20250815_162354  # Resume from existing experiment
+
+# PDF Evolution System - PDF-based presentation evolution
+python pdf_evolution.py --max-iterations 2 --prompt-only --test-pdfs https://arxiv.org/pdf/2505.20286
+python pdf_evolution.py --max-iterations 4 --prompt-only --test-pdfs URL1 URL2 URL3 --memory
 
 # Validate configuration
 python -c "from opencanvas.config import Config; Config.validate(); print('✅ Configuration valid')"
@@ -143,7 +147,7 @@ This is a Python-based presentation generation and evaluation system with both C
 **Adversarial Testing** (`run_adversarial_eval_test.py`): Tests evaluation robustness with 5 attack methods  
 **Individual Component Tests**: Separate test files for topics, PDFs, and conversion  
 **API Testing** (`test_api.py`): REST API endpoint testing  
-**Evolution Testing** (`test_evolution_unified_final.py`): Autonomous evolution system with ML-style unified logging
+**Evolution Testing** (`topic_evolution.py`, `pdf_evolution.py`): Autonomous evolution systems for topic-based and PDF-based presentations
 
 The testing system supports light mode for faster validation and force regeneration for comprehensive testing.
 
@@ -207,7 +211,8 @@ evolution_runs/experiment_name/
 - **Prompt Evolution**: `src/opencanvas/evolution/core/prompts.py` - Dynamic prompt improvement system
 - **Tools Manager**: `src/opencanvas/evolution/core/tools.py` - Tool lifecycle management
 - **Tool Generation Prompts**: `src/opencanvas/evolution/prompts/tool_generation.yaml` - Centralized YAML prompts for tool creation
-- **Evolution Test**: `test_evolution_unified_final.py` - Complete autonomous evolution demonstration
+- **Topic Evolution**: `topic_evolution.py` - Topic-based autonomous evolution system
+- **PDF Evolution**: `pdf_evolution.py` - PDF-based autonomous evolution system
 
 ## Required API Keys
 

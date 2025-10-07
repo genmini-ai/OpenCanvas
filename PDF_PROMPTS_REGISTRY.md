@@ -84,12 +84,12 @@ _No experiments recorded yet. This section will track autonomous evolution runs.
 
 ### Starting Evolution from Baseline
 ```bash
-python test_pdf_evolution.py --max-iterations 5 --prompt-only
+python pdf_evolution.py --max-iterations 5 --prompt-only
 ```
 
 ### Starting from Specific Version
 ```bash
-python test_pdf_evolution.py \
+python pdf_evolution.py \
   --max-iterations 10 \
   --initial-prompt "evolution_runs/evolved_prompts/pdf_generation_prompt_v2.txt" \
   --memory \
@@ -98,7 +98,7 @@ python test_pdf_evolution.py \
 
 ### Quick Single Iteration Test
 ```bash
-python test_pdf_evolution.py --max-iterations 1 --diagnostic
+python pdf_evolution.py --max-iterations 1 --diagnostic
 ```
 
 ## Integration Notes
