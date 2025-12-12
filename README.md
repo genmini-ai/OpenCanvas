@@ -8,6 +8,7 @@
 ## ✨ Features
 
 - 🎨 **Dual Input Support** - Generate from text topics or PDF documents
+- 🖼️ **Image Presentation Mode** - Generate PNG slides with Gemini (Nano Banana Pro) + automatic PDF
 - 🔍 **Smart Research** - Automatic web research when knowledge is insufficient
 - 📊 **AI Evaluation** - Comprehensive quality assessment with Claude, GPT, or Gemini
 - 🎯 **Multiple Themes** - Professional themes for different presentation contexts
@@ -40,11 +41,16 @@ Optional: `BRAVE_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`
 ### Generate Your First Presentation
 
 ```bash
-# From a topic
+# HTML Mode: From a topic
 opencanvas generate "AI in healthcare" --purpose "academic presentation"
 
-# From a PDF
+# HTML Mode: From a PDF
 opencanvas generate "https://arxiv.org/pdf/2505.20286" --purpose "research seminar"
+
+# Image Mode: PNG slides + PDF (requires GEMINI_API_KEY)
+opencanvas generate "Introduction to Machine Learning" \
+  --output-format image \
+  --purpose "academic presentation"
 
 # Full pipeline (generate + convert + evaluate)
 opencanvas pipeline "quantum computing" --purpose "conference talk" --evaluate
@@ -55,6 +61,8 @@ opencanvas pipeline "quantum computing" --purpose "conference talk" --evaluate
 ### CLI Commands
 
 #### Generate
+
+**HTML Mode (Default)**
 ```bash
 # Topic-based generation
 opencanvas generate "sustainable energy solutions" \
@@ -66,6 +74,36 @@ opencanvas generate "paper.pdf" --purpose "conference presentation"
 
 # Disable image extraction
 opencanvas generate "paper.pdf" --no-extract-images
+```
+
+**Image Mode (Gemini Nano Banana Pro) 🎨**
+
+Generate presentation as PNG slides with automatic PDF conversion using Gemini's multimodal AI:
+
+```bash
+# From a topic
+opencanvas generate "Introduction to Machine Learning" \
+  --output-format image \
+  --purpose "academic presentation" \
+  --theme "academic"
+
+# From an arXiv paper
+opencanvas generate "https://arxiv.org/pdf/2505.20286" \
+  --output-format image \
+  --purpose "research seminar"
+
+# From a local PDF
+opencanvas generate "path/to/paper.pdf" \
+  --output-format image \
+  --purpose "conference talk"
+```
+
+**Output**: Individual PNG slides + compiled PDF presentation
+
+**Requirements**: 
+- `GEMINI_API_KEY` required for image generation
+- ~3 minutes for 10-12 slides (with rate limiting)
+- Output includes: slides/, sources/, and presentation.pdf
 ```
 
 #### Convert to PDF
@@ -113,6 +151,7 @@ curl -X POST "http://localhost:8000/api/v1/generate" \
 
 OpenCanvas creates organized directories for all outputs:
 
+**HTML Mode:**
 ```
 output/
 └── quantum_computing_20241128_120000/
@@ -126,6 +165,21 @@ output/
         └── source.pdf                  # For PDF-based
 ```
 
+**Image Mode:**
+```
+output/
+└── introduction_to_ml_20241209_173521/
+    ├── slides/
+    │   ├── slide_001.png
+    │   ├── slide_002.png
+    │   ├── ...
+    │   └── slide_011.png
+    ├── sources/
+    │   ├── blog_content.txt
+    │   └── slide_blueprints.json
+    └── presentation.pdf               # Auto-generated from PNGs
+```
+
 ## ⚙️ Configuration
 
 ### Environment Variables
@@ -133,8 +187,8 @@ output/
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `ANTHROPIC_API_KEY` | ✅ | - | Claude API key (generation) |
+| `GEMINI_API_KEY` | ✅* | - | Gemini API key (*required for image mode) |
 | `BRAVE_API_KEY` | ❌ | - | Web search API key |
-| `GEMINI_API_KEY` | ❌ | - | Gemini API key (evaluation) |
 | `OPENAI_API_KEY` | ❌ | - | OpenAI API key (evaluation) |
 | `EVALUATION_PROVIDER` | ❌ | `gemini` | `claude`, `gpt`, or `gemini` |
 | `EVALUATION_MODEL` | ❌ | `gemini-2.5-flash` | Model for evaluation |
