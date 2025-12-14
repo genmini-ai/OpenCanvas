@@ -50,16 +50,19 @@ opencanvas generate "https://arxiv.org/pdf/2412.06769" \
   --theme minimalist
 ```
 
+> **Available themes:** `minimalist` (tested), `academic`, `corporate`, `creative`, `tech`, `cartoon`
+> **Example presentations:** [Minimalist theme](docs/images/example_slide_with_figures.png) | [Cartoon theme PDF](docs/examples/cartoon_theme_example.pdf)
+
 ![Image Mode Example](docs/images/example_slide_with_figures.png)
 *Image mode: AI-generated slide with automatically extracted and matched figures from research paper*
 
 **HTML Mode (Default)**
 ```bash
 # From a topic
-opencanvas generate "AI in healthcare" --theme minimalist
+opencanvas generate "AI in healthcare" --purpose "conference talk"
 
 # From a PDF
-opencanvas generate "https://arxiv.org/pdf/2412.06769" --theme minimalist
+opencanvas generate "https://arxiv.org/pdf/2412.06769" --purpose "conference talk"
 ```
 
 ![HTML Mode Example](docs/images/html_mode_example.png)

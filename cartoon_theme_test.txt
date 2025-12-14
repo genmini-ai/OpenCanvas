@@ -1,0 +1,112 @@
+2025-12-14 12:06:52,701 - opencanvas.main - INFO - 🚀 Starting generation from: How Cats Rule the Internet
+2025-12-14 12:06:52,701 - opencanvas.main - INFO - 📄 Output format: image
+2025-12-14 12:06:52,702 - opencanvas.main - INFO - 🎨 Using image generation mode
+2025-12-14 12:06:52,810 - opencanvas.generators.topic_generator - INFO - Loaded generation prompt
+  🔑 API key loaded successfully (length: 108)
+2025-12-14 12:06:52,984 - opencanvas.image_validation.image_validator - INFO - Image validation pipeline initialized successfully
+2025-12-14 12:06:52,984 - opencanvas.generators.topic_generator - INFO - ✅ Image validation pipeline initialized
+2025-12-14 12:06:52,987 - opencanvas.generators.topic_generator - INFO - Evolution tool pipeline imported successfully
+2025-12-14 12:06:52,987 - opencanvas.evolution.core.tool_pipeline - INFO - 🔧 Tool Pipeline initialized
+2025-12-14 12:06:52,989 - opencanvas.evolution.core.tool_pipeline - INFO - 📦 Loaded 0 tools from iteration 1
+2025-12-14 12:06:52,989 - opencanvas.generators.topic_generator - INFO -   Total tools in pipeline: 0
+2025-12-14 12:06:52,989 - opencanvas.generators.topic_generator - INFO - ✅ Evolution tool pipeline initialized
+2025-12-14 12:06:53,036 - opencanvas.generators.image_presentation_generator - INFO - ✅ Image presentation generator initialized
+2025-12-14 12:06:53,037 - opencanvas.main - INFO - 📝 Detected topic input: How Cats Rule the Internet
+2025-12-14 12:06:53,037 - opencanvas.generators.image_presentation_generator - INFO - 🎨 Generating image presentation from topic: How Cats Rule the Internet
+2025-12-14 12:06:53,037 - opencanvas.generators.image_presentation_generator - INFO - 📝 Generating blog content...
+2025-12-14 12:06:54,128 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-14 12:06:54,138 - opencanvas.generators.image_presentation_generator - INFO - 📊 Knowledge assessment: SUFFICIENT
+2025-12-14 12:07:18,750 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-14 12:07:18,752 - opencanvas.generators.image_presentation_generator - INFO - ✅ Blog content generated
+2025-12-14 12:07:18,752 - opencanvas.generators.image_presentation_generator - INFO - 🖼️  Generating slide images...
+2025-12-14 12:07:18,752 - opencanvas.generators.image_generator - INFO - 🎨 Starting image-based slide generation...
+2025-12-14 12:07:18,753 - opencanvas.generators.image_generator - INFO - 📁 Output directory: test_output/how_cats_rule_the_internet_20251214_120718/slides
+2025-12-14 12:07:18,753 - opencanvas.generators.image_generator - INFO - 🎨 Style: cartoon
+2025-12-14 12:08:16,738 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-14 12:08:16,742 - opencanvas.generators.image_generator - INFO - 📋 Planned 12 slides
+2025-12-14 12:08:16,743 - opencanvas.generators.image_generator - INFO - 💾 Saved blog content: blog_content.txt
+2025-12-14 12:08:16,745 - opencanvas.generators.image_generator - INFO - 💾 Saved blueprints: slide_blueprints.json
+2025-12-14 12:08:16,746 - opencanvas.generators.image_generator - INFO - 💾 Saved style settings: style_settings.txt
+2025-12-14 12:08:16,747 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 1/12...
+2025-12-14 12:08:16,747 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 12:08:33,934 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 12:08:34,265 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 12:08:34,855 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_001.png
+2025-12-14 12:08:34,855 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-14 12:08:49,860 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 2/12...
+2025-12-14 12:08:49,860 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 12:09:12,064 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 12:09:12,370 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 12:09:12,954 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_002.png
+2025-12-14 12:09:12,954 - opencanvas.generators.image_generator - INFO - ✨ Captured Slide 2 as style anchor
+2025-12-14 12:09:12,954 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-14 12:09:27,960 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 3/12...
+2025-12-14 12:09:27,961 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 12:09:48,134 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 12:09:48,568 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 12:09:49,669 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_003.png
+2025-12-14 12:09:49,670 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-14 12:10:04,674 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 4/12...
+2025-12-14 12:10:04,675 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 12:10:26,011 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 12:10:26,332 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 12:10:26,686 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_004.png
+2025-12-14 12:10:26,686 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-14 12:10:41,689 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 5/12...
+2025-12-14 12:10:41,690 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 12:10:59,410 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 12:10:59,758 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 12:11:00,261 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_005.png
+2025-12-14 12:11:00,261 - opencanvas.generators.image_generator - INFO - ⏸️  Extra wait after 5 slides: 30s...
+2025-12-14 12:11:30,267 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 6/12...
+2025-12-14 12:11:30,269 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 12:11:52,283 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 12:11:52,667 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 12:11:53,069 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_006.png
+2025-12-14 12:11:53,070 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-14 12:12:08,075 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 7/12...
+2025-12-14 12:12:08,075 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 12:12:27,494 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 12:12:27,828 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 12:12:28,298 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_007.png
+2025-12-14 12:12:28,298 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-14 12:12:43,304 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 8/12...
+2025-12-14 12:12:43,304 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 12:13:06,411 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 12:13:06,759 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 12:13:07,366 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_008.png
+2025-12-14 12:13:07,366 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-14 12:13:22,371 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 9/12...
+2025-12-14 12:13:22,372 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 12:13:44,461 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 12:13:44,812 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 12:13:45,231 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_009.png
+2025-12-14 12:13:45,232 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-14 12:14:00,232 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 10/12...
+2025-12-14 12:14:00,232 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 12:14:18,961 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 12:14:19,234 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 12:14:19,775 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_010.png
+2025-12-14 12:14:19,775 - opencanvas.generators.image_generator - INFO - ⏸️  Extra wait after 5 slides: 30s...
+2025-12-14 12:14:49,780 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 11/12...
+2025-12-14 12:14:49,782 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 12:15:12,208 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 12:15:12,535 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 12:15:13,111 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_011.png
+2025-12-14 12:15:13,111 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-14 12:15:28,117 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 12/12...
+2025-12-14 12:15:28,117 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 12:15:44,938 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 12:15:45,281 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 12:15:45,685 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_012.png
+2025-12-14 12:15:45,685 - opencanvas.generators.image_generator - INFO - ✅ All 12 slides generated and saved!
+2025-12-14 12:15:45,685 - opencanvas.generators.image_presentation_generator - INFO - 📄 Converting slides to PDF...
+2025-12-14 12:15:45,685 - opencanvas.generators.image_generator - INFO - 📄 Converting 12 slides to PDF...
+2025-12-14 12:15:46,663 - opencanvas.generators.image_generator - INFO - ✅ PDF created: test_output/how_cats_rule_the_internet_20251214_120718/presentation.pdf
+2025-12-14 12:15:46,663 - opencanvas.generators.image_presentation_generator - INFO - ✅ Image presentation complete!
+2025-12-14 12:15:46,663 - opencanvas.generators.image_presentation_generator - INFO - 📁 Output: test_output/how_cats_rule_the_internet_20251214_120718/slides
+2025-12-14 12:15:46,663 - opencanvas.generators.image_presentation_generator - INFO - 📄 PDF: test_output/how_cats_rule_the_internet_20251214_120718/presentation.pdf
+✅ Generated successfully!
+📁 Slides directory: test_output/how_cats_rule_the_internet_20251214_120718/slides
+📊 Total slides: 12
+📄 PDF file: test_output/how_cats_rule_the_internet_20251214_120718/presentation.pdf
