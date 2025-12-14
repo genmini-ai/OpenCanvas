@@ -119,7 +119,7 @@ class ImagePresentationGenerator:
         
         return result
     
-    def generate_from_pdf(self, pdf_source, purpose, theme="academic", output_dir=None, extract_images=True):
+    def generate_from_pdf(self, pdf_source, purpose, theme="academic", output_dir=None, extract_images=True, use_extracted_images=True):
         """
         Generate image-based presentation from a PDF document.
         
@@ -131,12 +131,15 @@ class ImagePresentationGenerator:
             theme: Visual theme
             output_dir: Output directory
             extract_images: Whether to extract images from PDF
+            use_extracted_images: Whether to use extracted images in slides (default: True)
         """
         from opencanvas.generators.pdf_generator import PDFGenerator
         from opencanvas.utils.file_utils import generate_topic_slug
         from datetime import datetime
         import base64
+        import os
         
+
         logger.info(f"🎨 Generating image presentation from PDF: {pdf_source}")
         
         output_dir = output_dir or str(Config.OUTPUT_DIR)
@@ -187,20 +190,28 @@ class ImagePresentationGenerator:
             
             logger.info("✅ Blog content generated")
             
+            # Create timestamp and topic slug early for consistent directory structure
+            topic_slug = generate_topic_slug(pdf_source.split('/')[-1].replace('.pdf', ''))
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamped_output_dir = os.path.join(output_dir, f"{topic_slug}_{timestamp}")
+            
             # Step 3: Extract images if enabled
             extracted_images_info = None
             if extract_images:
                 logger.info("🖼️  Extracting images from PDF...")
                 image_captions, extracted_images_dir, plots = pdf_gen._extract_images_and_captions(
                     pdf_data, 
-                    output_dir
+                    timestamped_output_dir  # Use timestamped directory
                 )
                 
-                if image_captions:
-                    logger.info(f"✅ Extracted {len(image_captions)} images")
+                # Debug logging
+                logger.info(f"🔍 Debug: image_captions={type(image_captions)}, plots={type(plots)}, len(plots)={len(plots)}")
+                
+                if plots:
+                    logger.info(f"✅ Extracted {len(plots)} images")
                     extracted_images_info = {
-                        'captions': image_captions,
-                        'dir': extracted_images_dir,
+                        'image_captions': image_captions,
+                        'extracted_images_dir': extracted_images_dir,
                         'plots': plots
                     }
                 else:
@@ -209,8 +220,11 @@ class ImagePresentationGenerator:
             # Step 4: Generate slides as images
             logger.info("🖼️  Generating slide images...")
             
-            topic_slug = generate_topic_slug(pdf_source.split('/')[-1].replace('.pdf', ''))
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            # Prepare extracted figures in the format expected by image_generator
+            extracted_figures = None
+            if extract_images and extracted_images_info and extracted_images_info.get('plots'):
+                extracted_figures = extracted_images_info['plots']  # Already in correct format with 'path' and 'caption'
+                logger.info(f"📊 Passing {len(extracted_figures)} figures to slide generator")
             
             result = self.image_generator.generate_slides_images(
                 blog_content,
@@ -218,7 +232,9 @@ class ImagePresentationGenerator:
                 theme,
                 output_dir=output_dir,
                 topic_slug=topic_slug,
-                timestamp=timestamp
+                timestamp=timestamp,
+                extracted_figures=extracted_figures,
+                use_extracted_images=use_extracted_images
             )
             
             # Add extracted images info to result

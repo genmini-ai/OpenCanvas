@@ -1,0 +1,224 @@
+2025-12-13 20:58:14,154 - opencanvas.main - INFO - 🚀 Starting generation from: https://arxiv.org/pdf/2412.06769
+2025-12-13 20:58:14,154 - opencanvas.main - INFO - 📄 Output format: image
+2025-12-13 20:58:14,155 - opencanvas.main - INFO - 🎨 Using image generation mode
+2025-12-13 20:58:14,265 - opencanvas.generators.topic_generator - INFO - Loaded generation prompt
+  🔑 API key loaded successfully (length: 108)
+2025-12-13 20:58:14,437 - opencanvas.image_validation.image_validator - INFO - Image validation pipeline initialized successfully
+2025-12-13 20:58:14,437 - opencanvas.generators.topic_generator - INFO - ✅ Image validation pipeline initialized
+2025-12-13 20:58:14,440 - opencanvas.generators.topic_generator - INFO - Evolution tool pipeline imported successfully
+2025-12-13 20:58:14,440 - opencanvas.evolution.core.tool_pipeline - INFO - 🔧 Tool Pipeline initialized
+2025-12-13 20:58:14,442 - opencanvas.evolution.core.tool_pipeline - INFO - 📦 Loaded 0 tools from iteration 1
+2025-12-13 20:58:14,442 - opencanvas.generators.topic_generator - INFO -   Total tools in pipeline: 0
+2025-12-13 20:58:14,442 - opencanvas.generators.topic_generator - INFO - ✅ Evolution tool pipeline initialized
+2025-12-13 20:58:14,491 - opencanvas.generators.image_presentation_generator - INFO - ✅ Image presentation generator initialized
+2025-12-13 20:58:14,491 - opencanvas.main - INFO - 📄 Detected PDF input: https://arxiv.org/pdf/2412.06769
+2025-12-13 20:58:14,491 - opencanvas.generators.image_presentation_generator - INFO - 🎨 Generating image presentation from PDF: https://arxiv.org/pdf/2412.06769
+2025-12-13 20:58:14,504 - opencanvas.generators.image_presentation_generator - INFO - 📥 Loading PDF...
+2025-12-13 20:58:14,766 - opencanvas.generators.image_presentation_generator - INFO - 📝 Extracting content from PDF...
+2025-12-13 20:58:17,080 - opencanvas.generators.image_presentation_generator - INFO - 📝 Generating blog content from PDF...
+2025-12-13 20:58:44,090 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-13 20:58:44,101 - opencanvas.generators.image_presentation_generator - INFO - ✅ Blog content generated
+2025-12-13 20:58:44,101 - opencanvas.generators.image_presentation_generator - INFO - 🖼️  Extracting images from PDF...
+2025-12-13 20:58:44,101 - opencanvas.generators.pdf_generator - INFO - 🔍 Using Docling for complete figure extraction...
+2025-12-13 20:58:44,107 - opencanvas.utils.docling_extractor - INFO - Initialized Docling extractor with DPI scale: 2.0
+2025-12-13 20:58:44,125 - opencanvas.utils.docling_extractor - INFO - Processing PDF with Docling: /var/folders/5w/wtg_j3q5399_xqx091lfqw8c0000gn/T/tmp6j9gtgwv.pdf
+2025-12-13 20:58:44,131 - docling.datamodel.document - INFO - detected formats: [<InputFormat.PDF: 'pdf'>]
+2025-12-13 20:58:44,231 - docling.document_converter - INFO - Going to convert document batch...
+2025-12-13 20:58:44,232 - docling.document_converter - INFO - Initializing pipeline for StandardPdfPipeline with options hash 45e823ad9aa4b6fa53c56667a4a8e97c
+2025-12-13 20:58:44,243 - docling.models.factories.base_factory - INFO - Loading plugin 'docling_defaults'
+2025-12-13 20:58:44,246 - docling.models.factories - INFO - Registered ocr engines: ['easyocr', 'ocrmac', 'rapidocr', 'tesserocr', 'tesseract']
+2025-12-13 20:58:49,524 - docling.utils.accelerator_utils - INFO - Accelerator device: 'mps'
+2025-12-13 20:58:55,346 - docling.utils.accelerator_utils - INFO - Accelerator device: 'mps'
+2025-12-13 20:58:57,242 - docling.utils.accelerator_utils - INFO - Accelerator device: 'mps'
+2025-12-13 20:58:58,227 - docling.models.factories.base_factory - INFO - Loading plugin 'docling_defaults'
+2025-12-13 20:58:58,228 - docling.models.factories - INFO - Registered picture descriptions: ['vlm', 'api']
+2025-12-13 20:58:58,229 - docling.pipeline.base_pipeline - INFO - Processing document tmp6j9gtgwv.pdf
+2025-12-13 21:00:08,980 - docling.document_converter - INFO - Finished converting document tmp6j9gtgwv.pdf in 84.85 sec.
+2025-12-13 21:00:08,982 - opencanvas.utils.docling_extractor - INFO - Processing figure 1 on page 2
+2025-12-13 21:00:09,022 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page2_fig1 (518x256px)
+2025-12-13 21:00:09,022 - opencanvas.utils.docling_extractor - INFO - Caption: Figure 1 A comparison of Chain of Continuous Thought ( Coconut ) with Chain-of-Thought (CoT). In CoT...
+2025-12-13 21:00:09,023 - opencanvas.utils.docling_extractor - INFO - Processing figure 2 on page 2
+2025-12-13 21:00:09,030 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page2_fig2 (390x252px)
+2025-12-13 21:00:09,030 - opencanvas.utils.docling_extractor - INFO - Caption: In this work we instead explore LLM reasoning in a latent space by introducing a novel paradigm, Coc...
+2025-12-13 21:00:09,030 - opencanvas.utils.docling_extractor - INFO - Processing figure 3 on page 4
+2025-12-13 21:00:09,097 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page4_fig3 (936x393px)
+2025-12-13 21:00:09,097 - opencanvas.utils.docling_extractor - INFO - Caption: Figure 2 Training procedure of Chain of Continuous Thought ( Coconut ). Given training data with lan...
+2025-12-13 21:00:09,097 - opencanvas.utils.docling_extractor - INFO - Processing figure 4 on page 6
+2025-12-13 21:00:09,141 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page6_fig4 (930x356px)
+2025-12-13 21:00:09,141 - opencanvas.utils.docling_extractor - INFO - Caption: Figure 3 The accuracy of final answer (left) and reasoning process (right) of multiple variants of C...
+2025-12-13 21:00:09,142 - opencanvas.utils.docling_extractor - INFO - Processing figure 5 on page 7
+2025-12-13 21:00:09,223 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page7_fig5 (926x407px)
+2025-12-13 21:00:09,223 - opencanvas.utils.docling_extractor - INFO - Caption: Figure 4 A case study of ProsQA. The model trained with CoT hallucinates an edge ( Every yumpus is a...
+2025-12-13 21:00:09,223 - opencanvas.utils.docling_extractor - INFO - Processing figure 6 on page 7
+2025-12-13 21:00:09,256 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page7_fig6 (928x269px)
+2025-12-13 21:00:09,256 - opencanvas.utils.docling_extractor - INFO - Caption: Figure 5 An illustration of the latent search trees. The example is the same test case as in Figure ...
+2025-12-13 21:00:09,256 - opencanvas.utils.docling_extractor - INFO - Processing figure 7 on page 8
+2025-12-13 21:00:09,292 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page8_fig7 (396x277px)
+2025-12-13 21:00:09,292 - opencanvas.utils.docling_extractor - INFO - Caption: Figure 6 Analysis of parallelism in the first two steps of the latent tree search. The three curves ...
+2025-12-13 21:00:09,292 - opencanvas.utils.docling_extractor - INFO - Processing figure 8 on page 8
+2025-12-13 21:00:09,298 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page8_fig8 (393x276px)
+2025-12-13 21:00:09,298 - opencanvas.utils.docling_extractor - INFO - Caption: stage, suggesting a broad exploration of alternative possibilities. In contrast, the second thoughts...
+2025-12-13 21:00:09,298 - opencanvas.utils.docling_extractor - INFO - Processing figure 9 on page 8
+2025-12-13 21:00:09,304 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page8_fig9 (371x251px)
+2025-12-13 21:00:09,304 - opencanvas.utils.docling_extractor - INFO - Caption: These findings underscore the advantage of latent space reasoning. By delaying deterministic decisio...
+2025-12-13 21:00:09,304 - opencanvas.utils.docling_extractor - INFO - Processing figure 10 on page 8
+2025-12-13 21:00:09,310 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page8_fig10 (370x247px)
+2025-12-13 21:00:09,310 - opencanvas.utils.docling_extractor - INFO - Caption: Figure 7 The correlation between the predicted value of correct/incorrect nodes and their heights....
+2025-12-13 21:00:09,310 - opencanvas.utils.docling_extractor - INFO - Processing figure 11 on page 10
+2025-12-13 21:00:09,372 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page10_fig11 (328x211px)
+2025-12-13 21:00:09,373 - opencanvas.utils.docling_extractor - INFO - Caption: Additionally, we experimented with adjusting the hyperparameter c , which controls the number of lat...
+2025-12-13 21:00:09,373 - opencanvas.utils.docling_extractor - INFO - Processing figure 12 on page 10
+2025-12-13 21:00:09,377 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page10_fig12 (328x167px)
+2025-12-13 21:00:09,377 - opencanvas.utils.docling_extractor - INFO - Caption: Figure 8 Efficiency comparison of reasoning space and Coconut with different c ....
+2025-12-13 21:00:09,377 - opencanvas.utils.docling_extractor - INFO - Processing figure 13 on page 10
+2025-12-13 21:00:09,392 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page10_fig13 (424x363px)
+2025-12-13 21:00:09,392 - opencanvas.utils.docling_extractor - INFO - Caption: Figure 9 Decoding a continuous thought into language tokens in a math word problem. The decoded toke...
+2025-12-13 21:00:09,393 - opencanvas.utils.docling_extractor - INFO - Docling extraction completed: 13 figures
+2025-12-13 21:00:09,395 - opencanvas.utils.docling_extractor - ERROR - Error in Docling extraction: unsupported operand type(s) for /: 'str' and 'str'
+2025-12-13 21:00:09,396 - opencanvas.generators.pdf_generator - INFO - Docling found no figures, falling back to pdfplumber
+2025-12-13 21:00:09,396 - opencanvas.generators.pdf_generator - INFO - 📋 Falling back to pdfplumber fragmented extraction...
+2025-12-13 21:00:09,474 - opencanvas.utils.plot_caption_extractor - INFO - Processing PDF with 18 pages
+2025-12-13 21:00:09,474 - opencanvas.utils.plot_caption_extractor - INFO - Processing page 1
+2025-12-13 21:00:09,658 - opencanvas.utils.plot_caption_extractor - INFO - Processing page 2
+2025-12-13 21:00:09,990 - opencanvas.utils.plot_caption_extractor - INFO - Extracted plot from page 2, image 0 (1959x550px)
+2025-12-13 21:00:09,990 - opencanvas.utils.plot_caption_extractor - INFO - Processing page 3
+2025-12-13 21:00:10,177 - opencanvas.utils.plot_caption_extractor - INFO - Processing page 4
+2025-12-13 21:00:10,660 - opencanvas.utils.plot_caption_extractor - INFO - Extracted plot from page 4, image 0 (1959x825px)
+2025-12-13 21:00:10,660 - opencanvas.utils.plot_caption_extractor - INFO - Processing page 5
+2025-12-13 21:00:10,810 - opencanvas.utils.plot_caption_extractor - INFO - Processing page 6
+2025-12-13 21:00:11,042 - opencanvas.utils.plot_caption_extractor - INFO - Extracted plot from page 6, image 0 (1959x759px)
+2025-12-13 21:00:11,042 - opencanvas.utils.plot_caption_extractor - INFO - Processing page 7
+2025-12-13 21:00:11,469 - opencanvas.utils.plot_caption_extractor - INFO - Extracted plot from page 7, image 0 (1959x894px)
+2025-12-13 21:00:11,775 - opencanvas.utils.plot_caption_extractor - INFO - Extracted plot from page 7, image 1 (1959x582px)
+2025-12-13 21:00:11,775 - opencanvas.utils.plot_caption_extractor - INFO - Processing page 8
+2025-12-13 21:00:12,007 - opencanvas.utils.plot_caption_extractor - INFO - Extracted plot from page 8, image 0 (1763x587px)
+2025-12-13 21:00:12,151 - opencanvas.utils.plot_caption_extractor - INFO - Extracted plot from page 8, image 1 (784x1090px)
+2025-12-13 21:00:12,151 - opencanvas.utils.plot_caption_extractor - INFO - Processing page 9
+2025-12-13 21:00:12,266 - opencanvas.utils.plot_caption_extractor - INFO - Processing page 10
+2025-12-13 21:00:12,515 - opencanvas.utils.plot_caption_extractor - INFO - Extracted plot from page 10, image 0 (705x867px)
+2025-12-13 21:00:12,667 - opencanvas.utils.plot_caption_extractor - INFO - Extracted plot from page 10, image 1 (901x783px)
+2025-12-13 21:00:12,668 - opencanvas.utils.plot_caption_extractor - INFO - Processing page 11
+2025-12-13 21:00:12,724 - opencanvas.utils.plot_caption_extractor - INFO - Processing page 12
+2025-12-13 21:00:12,832 - opencanvas.utils.plot_caption_extractor - INFO - Processing page 13
+2025-12-13 21:00:12,968 - opencanvas.utils.plot_caption_extractor - INFO - Processing page 14
+2025-12-13 21:00:13,060 - opencanvas.utils.plot_caption_extractor - INFO - Processing page 15
+2025-12-13 21:00:13,144 - opencanvas.utils.plot_caption_extractor - INFO - Processing page 16
+2025-12-13 21:00:13,223 - opencanvas.utils.plot_caption_extractor - INFO - Processing page 17
+2025-12-13 21:00:13,323 - opencanvas.utils.plot_caption_extractor - INFO - Processing page 18
+2025-12-13 21:00:13,352 - opencanvas.utils.plot_caption_extractor - INFO - Extracted 9 plots from PDF
+2025-12-13 21:00:13,480 - opencanvas.utils.plot_caption_extractor - INFO - Generating caption for plot from page 2
+2025-12-13 21:00:13,548 - opencanvas.utils.plot_caption_extractor - INFO - Converted image to PNG: 115735 -> 115735 bytes
+2025-12-13 21:00:18,386 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-13 21:00:18,388 - opencanvas.utils.plot_caption_extractor - INFO - Generating caption for plot from page 4
+2025-12-13 21:00:18,631 - opencanvas.utils.plot_caption_extractor - INFO - Converted image to PNG: 487814 -> 487814 bytes
+2025-12-13 21:00:22,890 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-13 21:00:22,891 - opencanvas.utils.plot_caption_extractor - INFO - Generating caption for plot from page 6
+2025-12-13 21:00:22,982 - opencanvas.utils.plot_caption_extractor - INFO - Converted image to PNG: 165744 -> 165744 bytes
+2025-12-13 21:00:27,397 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-13 21:00:27,398 - opencanvas.utils.plot_caption_extractor - INFO - Generating caption for plot from page 7
+2025-12-13 21:00:27,635 - opencanvas.utils.plot_caption_extractor - INFO - Converted image to PNG: 590111 -> 590111 bytes
+2025-12-13 21:00:31,698 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-13 21:00:31,699 - opencanvas.utils.plot_caption_extractor - INFO - Generating caption for plot from page 7
+2025-12-13 21:00:31,878 - opencanvas.utils.plot_caption_extractor - INFO - Converted image to PNG: 381131 -> 381131 bytes
+2025-12-13 21:00:38,006 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-13 21:00:38,007 - opencanvas.utils.plot_caption_extractor - INFO - Generating caption for plot from page 8
+2025-12-13 21:00:38,056 - opencanvas.utils.plot_caption_extractor - INFO - Converted image to PNG: 62055 -> 62055 bytes
+2025-12-13 21:00:42,136 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-13 21:00:42,137 - opencanvas.utils.plot_caption_extractor - INFO - Generating caption for plot from page 8
+2025-12-13 21:00:42,178 - opencanvas.utils.plot_caption_extractor - INFO - Converted image to PNG: 95890 -> 95890 bytes
+2025-12-13 21:00:46,394 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-13 21:00:46,399 - opencanvas.utils.plot_caption_extractor - INFO - Generating caption for plot from page 10
+2025-12-13 21:00:46,430 - opencanvas.utils.plot_caption_extractor - INFO - Converted image to PNG: 100714 -> 100714 bytes
+2025-12-13 21:00:50,478 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-13 21:00:50,479 - opencanvas.utils.plot_caption_extractor - INFO - Generating caption for plot from page 10
+2025-12-13 21:00:50,514 - opencanvas.utils.plot_caption_extractor - INFO - Converted image to PNG: 74743 -> 74743 bytes
+2025-12-13 21:00:53,483 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-13 21:00:53,509 - opencanvas.generators.pdf_generator - ERROR - Error in pdfplumber fallback extraction: unsupported operand type(s) for /: 'str' and 'str'
+2025-12-13 21:00:53,510 - opencanvas.generators.image_presentation_generator - INFO - 🔍 Debug: image_captions=<class 'dict'>, plots=<class 'list'>, len(plots)=0
+2025-12-13 21:00:53,510 - opencanvas.generators.image_presentation_generator - INFO - ℹ️  No images extracted from PDF
+2025-12-13 21:00:53,510 - opencanvas.generators.image_presentation_generator - INFO - 🖼️  Generating slide images...
+2025-12-13 21:00:53,510 - opencanvas.generators.image_generator - INFO - 🎨 Starting image-based slide generation...
+2025-12-13 21:00:53,511 - opencanvas.generators.image_generator - INFO - 📁 Output directory: test_output/241206769_20251213_210053/slides
+2025-12-13 21:00:53,511 - opencanvas.generators.image_generator - INFO - 🎨 Style: minimalist
+2025-12-13 21:01:47,791 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-13 21:01:47,794 - opencanvas.generators.image_generator - INFO - 📋 Planned 11 slides
+2025-12-13 21:01:47,794 - opencanvas.generators.image_generator - INFO - 💾 Saved blog content: blog_content.txt
+2025-12-13 21:01:47,795 - opencanvas.generators.image_generator - INFO - 💾 Saved blueprints: slide_blueprints.json
+2025-12-13 21:01:47,795 - opencanvas.generators.image_generator - INFO - 💾 Saved style settings: style_settings.txt
+2025-12-13 21:01:47,795 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 1/11...
+2025-12-13 21:01:47,795 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-13 21:02:06,063 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-13 21:02:06,368 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-13 21:02:06,753 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_001.png
+2025-12-13 21:02:06,753 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-13 21:02:21,758 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 2/11...
+2025-12-13 21:02:21,758 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-13 21:02:45,856 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-13 21:02:46,102 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-13 21:02:46,475 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_002.png
+2025-12-13 21:02:46,475 - opencanvas.generators.image_generator - INFO - ✨ Captured Slide 2 as style anchor
+2025-12-13 21:02:46,475 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-13 21:03:01,481 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 3/11...
+2025-12-13 21:03:01,481 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-13 21:03:24,452 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-13 21:03:24,776 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-13 21:03:25,136 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_003.png
+2025-12-13 21:03:25,136 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-13 21:03:40,146 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 4/11...
+2025-12-13 21:03:40,146 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-13 21:03:58,196 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-13 21:03:58,530 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-13 21:03:58,907 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_004.png
+2025-12-13 21:03:58,907 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-13 21:04:13,915 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 5/11...
+2025-12-13 21:04:13,916 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-13 21:04:34,290 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-13 21:04:34,629 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-13 21:04:34,946 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_005.png
+2025-12-13 21:04:34,946 - opencanvas.generators.image_generator - INFO - ⏸️  Extra wait after 5 slides: 30s...
+2025-12-13 21:05:04,949 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 6/11...
+2025-12-13 21:05:04,950 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-13 21:05:27,436 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-13 21:05:27,681 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-13 21:05:28,068 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_006.png
+2025-12-13 21:05:28,068 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-13 21:05:43,078 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 7/11...
+2025-12-13 21:05:43,079 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-13 21:06:02,855 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-13 21:06:03,124 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-13 21:06:03,414 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_007.png
+2025-12-13 21:06:03,414 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-13 21:06:18,425 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 8/11...
+2025-12-13 21:06:18,425 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-13 21:06:37,582 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-13 21:06:37,908 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-13 21:06:38,266 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_008.png
+2025-12-13 21:06:38,266 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-13 21:06:53,276 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 9/11...
+2025-12-13 21:06:53,277 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-13 21:07:12,094 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-13 21:07:12,430 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-13 21:07:12,754 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_009.png
+2025-12-13 21:07:12,754 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-13 21:07:27,765 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 10/11...
+2025-12-13 21:07:27,765 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-13 21:07:46,005 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-13 21:07:46,440 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-13 21:07:46,922 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_010.png
+2025-12-13 21:07:46,922 - opencanvas.generators.image_generator - INFO - ⏸️  Extra wait after 5 slides: 30s...
+2025-12-13 21:08:16,932 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 11/11...
+2025-12-13 21:08:16,934 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-13 21:08:33,601 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-13 21:08:33,921 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-13 21:08:34,257 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_011.png
+2025-12-13 21:08:34,257 - opencanvas.generators.image_generator - INFO - ✅ All 11 slides generated and saved!
+2025-12-13 21:08:34,257 - opencanvas.generators.image_presentation_generator - INFO - 📄 Converting slides to PDF...
+2025-12-13 21:08:34,258 - opencanvas.generators.image_generator - INFO - 📄 Converting 11 slides to PDF...
+2025-12-13 21:08:34,999 - opencanvas.generators.image_generator - INFO - ✅ PDF created: test_output/241206769_20251213_210053/presentation.pdf
+2025-12-13 21:08:34,999 - opencanvas.generators.image_presentation_generator - INFO - ✅ Image presentation complete!
+2025-12-13 21:08:34,999 - opencanvas.generators.image_presentation_generator - INFO - 📁 Output: test_output/241206769_20251213_210053/slides
+2025-12-13 21:08:34,999 - opencanvas.generators.image_presentation_generator - INFO - 📄 PDF: test_output/241206769_20251213_210053/presentation.pdf
+✅ Generated successfully!
+📁 Slides directory: test_output/241206769_20251213_210053/slides
+📊 Total slides: 11
+📄 PDF file: test_output/241206769_20251213_210053/presentation.pdf

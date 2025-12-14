@@ -61,6 +61,7 @@ Examples:
     gen_parser.add_argument('--output-dir', default=str(Config.OUTPUT_DIR), help='Output directory')
     gen_parser.add_argument('--output-format', choices=['html', 'image'], default='html', help='Output format: html (default) or image (PNG slides + PDF)')
     gen_parser.add_argument('--no-extract-images', action='store_true', help='Disable image extraction from PDF (PDF input only)')
+    gen_parser.add_argument('--no-use-extracted-images', dest='use_extracted_images', action='store_false', default=True, help='Disable using extracted PDF figures in slides (image format only)')
     
     # Convert command  
     conv_parser = subparsers.add_parser('convert', help='Convert HTML presentation to PDF')
@@ -193,7 +194,8 @@ def handle_generate(args, logger):
                 purpose=args.purpose,
                 theme=args.theme,
                 output_dir=args.output_dir,
-                extract_images=not args.no_extract_images
+                extract_images=not args.no_extract_images,
+                use_extracted_images=args.use_extracted_images
             )
         else:
             logger.info(f"📝 Detected topic input: {args.input}")

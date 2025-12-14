@@ -25,7 +25,7 @@ class ImageSlideGenerator:
         # Use Gemini 3 Pro Image Preview for image generation
         self.model_name = 'gemini-3-pro-image-preview'
     
-    def generate_slides_images(self, blog_content, purpose, theme, output_dir=None, topic_slug=None, timestamp=None):
+    def generate_slides_images(self, blog_content, purpose, theme, output_dir=None, topic_slug=None, timestamp=None, extracted_figures=None, use_extracted_images=True):
         """
         Generate presentation slides as images with varied layouts.
         
@@ -36,6 +36,8 @@ class ImageSlideGenerator:
             output_dir: Output directory
             topic_slug: Topic identifier
             timestamp: Timestamp for folder naming
+            extracted_figures: List of extracted figures from PDF (optional)
+            use_extracted_images: Whether to use extracted figures in slides (default: True)
         """
         import time
         from datetime import datetime
@@ -65,7 +67,12 @@ class ImageSlideGenerator:
         logger.info(f"🎨 Style: {theme}")
         
         # Step 2: Plan slide blueprints with layout variations
-        blueprints = self._plan_blueprints(blog_content, purpose)
+        blueprints = self._plan_blueprints(
+            blog_content, 
+            purpose,
+            extracted_figures=extracted_figures,
+            use_extracted_images=use_extracted_images
+        )
         logger.info(f"📋 Planned {len(blueprints)} slides")
         
         # Save intermediate results
@@ -92,7 +99,8 @@ class ImageSlideGenerator:
             slide_image = self._generate_slide_image(
                 blueprint, 
                 style_settings=style_settings,
-                style_ref=style_reference
+                style_ref=style_reference,
+                extracted_figures=extracted_figures
             )
             
             # Save immediately (incremental saving)
@@ -238,6 +246,22 @@ class ImageSlideGenerator:
         # Return the style settings for the chosen theme, default to minimalist
         return style_templates.get(theme.lower(), style_templates["minimalist"])
     
+    def _format_figures_for_prompt(self, extracted_figures):
+        """Format extracted figures for Claude prompt"""
+        if not extracted_figures or len(extracted_figures) == 0:
+            return "No figures available from PDF."
+        
+        formatted = []
+        for i, fig in enumerate(extracted_figures):
+            # PlotInfo is a dataclass, use attribute access
+            caption = fig.caption if fig.caption else 'No caption available'
+            # Truncate long captions
+            if len(caption) > 200:
+                caption = caption[:197] + "..."
+            formatted.append(f"Figure {i}: {caption}")
+        
+        return "\n".join(formatted)
+    
     def convert_slides_to_pdf(self, slide_paths, output_dir, filename="presentation.pdf"):
         """
         Convert generated PNG slides to a single PDF file.
@@ -281,8 +305,15 @@ class ImageSlideGenerator:
         else:
             raise Exception("No images to convert to PDF")
     
-    def _plan_blueprints(self, blog_content, purpose):
-        """Use Claude to plan slide structure with sophisticated layout variations"""
+    def _plan_blueprints(self, blog_content, purpose, extracted_figures=None, use_extracted_images=True):
+        """Use Claude to plan slide structure with sophisticated layout variations
+        
+        Args:
+            blog_content: Content to present
+            purpose: Presentation purpose
+            extracted_figures: List of extracted figures from PDF (optional)
+            use_extracted_images: Whether to assign figures to slides (default: True)
+        """
         
         planning_prompt = f"""Analyze this blog content and create a slide-by-slide blueprint for a presentation.
 
@@ -333,6 +364,8 @@ Create a JSON array with 10-12 slides. For EACH slide specify:
 - title: string (concise, 5-7 words max)
 - content: string (substantive, detailed content - provide depth and specific information, not superficial bullet points)
 - visual_notes: string (describe specific visual elements: diagrams, charts, icons, illustrations, data visualizations)
+- figure_ids: array of ints or null (indices of figures from PDF to use, 0-based, e.g., [0, 2] or null if no figures)
+- figure_usage: string or null ("primary" for main visuals, "reference" for supporting, or null)
 
 IMPORTANT: 
 - Vary the layouts across slides - don't use the same layout repeatedly
@@ -354,7 +387,9 @@ Example:
     "layout_type": "Title Typography",
     "title": "AI in Healthcare",
     "content": "Transforming Patient Care Through Technology",
-    "visual_notes": "Medical cross icon, scattered tech badges, minimalist stamps"
+    "visual_notes": "Medical cross icon, scattered tech badges, minimalist stamps",
+    "figure_ids": null,
+    "figure_usage": null
   }},
   {{
     "slide_number": 2,
@@ -362,12 +397,48 @@ Example:
     "layout_type": "Text + Data Emphasis",
     "title": "Market Growth",
     "content": "Healthcare AI market experiencing unprecedented expansion\\n• 45% compound annual growth rate (2023-2028)\\n• $20B total addressable market\\n• 500+ active startups globally\\n• Major investments from tech giants",
-    "visual_notes": "Oversized '45%' in black on right side, thin vertical divider line, growth arrow graphic"
+    "visual_notes": "Oversized '45%' in black on right side, thin vertical divider line, growth arrow graphic",
+    "figure_id": 0,
+    "figure_usage": "primary"
   }},
   ...
 ]
 """
         
+        # Add figures section if available
+        if use_extracted_images and extracted_figures:
+            figures_info = self._format_figures_for_prompt(extracted_figures)
+            planning_prompt += f"""
+
+AVAILABLE FIGURES FROM PDF:
+{figures_info}
+
+FIGURE SELECTION STRATEGY:
+You can assign figures to slides, but be STRATEGIC and SELECTIVE:
+
+Selection Criteria:
+- ONLY assign figures that directly support or enhance the slide's core message
+- Each figure should add unique value - avoid repetitive or similar figures
+- If multiple figures are assigned to ONE slide, they must be COMPLEMENTARY (showing different aspects)
+- Quality over quantity - it's better to use 2-3 perfect matches than force many mediocre ones
+
+Assignment Rules:
+- Set figure_ids to an array of indices (0-based) of relevant figures, e.g., [0, 2] or null if no figures needed
+- You can assign MULTIPLE figures to one slide if they show complementary aspects (e.g., [7, 8] for related charts)
+- Set figure_usage to "primary" if figures are the main visual elements (e.g., key diagrams, critical data)
+- Set figure_usage to "reference" if figures provide supporting context (e.g., supplementary charts)
+- Match figures to slides based on caption content relevance to slide topic
+- NOT every slide needs figures - only use when they genuinely enhance understanding
+
+Quality Checks:
+- Do these figures directly illustrate the slide's main point?
+- Are these figures different enough from already-assigned figures?
+- If assigning multiple figures to one slide, do they show complementary aspects (not redundant)?
+- Would the slide be significantly better WITH these figures than without?
+- If you're unsure, leave figure_ids as null
+"""
+        
+
         response = self.claude.messages.create(
             model="claude-sonnet-4-5-20250929",
             max_tokens=8000,
@@ -413,12 +484,30 @@ Example:
                 except:
                     raise e
             else:
-                raise
+                raise e
         
+        # Validate figure assignments if figures were provided
+        if extracted_figures and len(extracted_figures) > 0:
+            slides_with_figures = [bp for bp in blueprints if bp.get('figure_ids') and len(bp.get('figure_ids', [])) > 0]
+            if len(slides_with_figures) == 0:
+                logger.error(f"❌ VALIDATION FAILED: {len(extracted_figures)} figures were extracted but NONE were assigned to slides!")
+                logger.error(f"This indicates the figure selection prompt is not working correctly.")
+                raise ValueError(f"No figures assigned in blueprint despite {len(extracted_figures)} figures available")
+            else:
+                logger.info(f"✅ Figure assignment validation passed: {len(slides_with_figures)} slides assigned figures")
+        
+
         return blueprints
     
-    def _generate_slide_image(self, blueprint, style_settings="", style_ref=None):
-        """Generate single slide image with Gemini"""
+    def _generate_slide_image(self, blueprint, style_settings="", style_ref=None, extracted_figures=None):
+        """Generate single slide image with Gemini
+        
+        Args:
+            blueprint: Slide blueprint with content and layout
+            style_settings: Theme style settings
+            style_ref: Reference image for style consistency
+            extracted_figures: List of extracted figures from PDF (optional)
+        """
         
         # Build text prompt with style settings
         prompt = self._build_prompt(blueprint, style_settings, has_reference=bool(style_ref))
@@ -431,6 +520,47 @@ Example:
             # Convert bytes to PIL Image for Google GenAI
             ref_image = Image.open(io.BytesIO(style_ref))
             content_parts.append(ref_image)
+        
+        # Add figures if assigned in blueprint
+        if extracted_figures and blueprint.get('figure_ids') is not None:
+            figure_ids = blueprint['figure_ids']
+            if isinstance(figure_ids, list) and len(figure_ids) > 0:
+                usage = blueprint.get('figure_usage', 'primary')
+                loaded_figures = []
+                
+                for fig_id in figure_ids:
+                    if 0 <= fig_id < len(extracted_figures):
+                        try:
+                            # Load figure image from PlotInfo (has image_data as bytes)
+                            fig_data = extracted_figures[fig_id].image_data
+                            if fig_data:
+                                figure_image = Image.open(io.BytesIO(fig_data))
+                                content_parts.append(figure_image)
+                                loaded_figures.append(fig_id)
+                            else:
+                                logger.warning(f"  ⚠️  Figure {fig_id} has no image data, skipping")
+                        except Exception as e:
+                            logger.warning(f"  ⚠️  Error loading Figure {fig_id}: {e}")
+                    else:
+                        logger.warning(f"  ⚠️  Figure {fig_id} out of range (0-{len(extracted_figures)-1})")
+                
+                # Update prompt if any figures were loaded
+                if loaded_figures:
+                    if usage == 'primary':
+                        if len(loaded_figures) == 1:
+                            prompt += "\n\nINCLUDE THE PROVIDED FIGURE as the main visual element. Integrate it seamlessly into the slide design while maintaining the overall theme and style."
+                        else:
+                            prompt += f"\n\nINCLUDE THE {len(loaded_figures)} PROVIDED FIGURES as the main visual elements. Integrate them seamlessly into the slide design while maintaining the overall theme and style. Arrange them in a complementary layout."
+                    elif usage == 'reference':
+                        if len(loaded_figures) == 1:
+                            prompt += "\n\nREFERENCE THE PROVIDED FIGURE in your design as supporting visual content alongside other elements."
+                        else:
+                            prompt += f"\n\nREFERENCE THE {len(loaded_figures)} PROVIDED FIGURES in your design as supporting visual content alongside other elements."
+                    
+                    # Update content_parts with modified prompt
+                    content_parts[0] = prompt
+                    
+                    logger.info(f"  📊 Using Figures {loaded_figures} ({usage})")
         
         # Generate image using Google GenAI client
         response = self.genai_client.models.generate_content(

@@ -1,0 +1,84 @@
+2025-12-13 22:41:10,465 - opencanvas.main - INFO - 🚀 Starting generation from: https://arxiv.org/pdf/2412.06769
+2025-12-13 22:41:10,465 - opencanvas.main - INFO - 📄 Output format: image
+2025-12-13 22:41:10,466 - opencanvas.main - INFO - 🎨 Using image generation mode
+2025-12-13 22:41:10,561 - opencanvas.generators.topic_generator - INFO - Loaded generation prompt
+  🔑 API key loaded successfully (length: 108)
+2025-12-13 22:41:10,637 - opencanvas.image_validation.image_validator - INFO - Image validation pipeline initialized successfully
+2025-12-13 22:41:10,638 - opencanvas.generators.topic_generator - INFO - ✅ Image validation pipeline initialized
+2025-12-13 22:41:10,641 - opencanvas.generators.topic_generator - INFO - Evolution tool pipeline imported successfully
+2025-12-13 22:41:10,641 - opencanvas.evolution.core.tool_pipeline - INFO - 🔧 Tool Pipeline initialized
+2025-12-13 22:41:10,643 - opencanvas.evolution.core.tool_pipeline - INFO - 📦 Loaded 0 tools from iteration 1
+2025-12-13 22:41:10,643 - opencanvas.generators.topic_generator - INFO -   Total tools in pipeline: 0
+2025-12-13 22:41:10,643 - opencanvas.generators.topic_generator - INFO - ✅ Evolution tool pipeline initialized
+2025-12-13 22:41:10,691 - opencanvas.generators.image_presentation_generator - INFO - ✅ Image presentation generator initialized
+2025-12-13 22:41:10,691 - opencanvas.main - INFO - 📄 Detected PDF input: https://arxiv.org/pdf/2412.06769
+2025-12-13 22:41:10,691 - opencanvas.generators.image_presentation_generator - INFO - 🎨 Generating image presentation from PDF: https://arxiv.org/pdf/2412.06769
+2025-12-13 22:41:10,703 - opencanvas.generators.image_presentation_generator - INFO - 📥 Loading PDF...
+2025-12-13 22:41:10,935 - opencanvas.generators.image_presentation_generator - INFO - 📝 Extracting content from PDF...
+2025-12-13 22:41:13,638 - opencanvas.generators.image_presentation_generator - INFO - 📝 Generating blog content from PDF...
+2025-12-13 22:41:40,411 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-13 22:41:40,421 - opencanvas.generators.image_presentation_generator - INFO - ✅ Blog content generated
+2025-12-13 22:41:40,421 - opencanvas.generators.image_presentation_generator - INFO - 🖼️  Extracting images from PDF...
+2025-12-13 22:41:40,421 - opencanvas.generators.pdf_generator - INFO - 🔍 Using Docling for complete figure extraction...
+2025-12-13 22:41:40,428 - opencanvas.utils.docling_extractor - INFO - Initialized Docling extractor with DPI scale: 2.0
+2025-12-13 22:41:40,446 - opencanvas.utils.docling_extractor - INFO - Processing PDF with Docling: /var/folders/5w/wtg_j3q5399_xqx091lfqw8c0000gn/T/tmp04_r2ijq.pdf
+2025-12-13 22:41:40,450 - docling.datamodel.document - INFO - detected formats: [<InputFormat.PDF: 'pdf'>]
+2025-12-13 22:41:40,531 - docling.document_converter - INFO - Going to convert document batch...
+2025-12-13 22:41:40,532 - docling.document_converter - INFO - Initializing pipeline for StandardPdfPipeline with options hash 45e823ad9aa4b6fa53c56667a4a8e97c
+2025-12-13 22:41:40,547 - docling.models.factories.base_factory - INFO - Loading plugin 'docling_defaults'
+2025-12-13 22:41:40,556 - docling.models.factories - INFO - Registered ocr engines: ['easyocr', 'ocrmac', 'rapidocr', 'tesserocr', 'tesseract']
+2025-12-13 22:41:44,916 - docling.utils.accelerator_utils - INFO - Accelerator device: 'mps'
+2025-12-13 22:41:50,962 - docling.utils.accelerator_utils - INFO - Accelerator device: 'mps'
+2025-12-13 22:41:53,931 - docling.utils.accelerator_utils - INFO - Accelerator device: 'mps'
+2025-12-13 22:41:54,950 - docling.models.factories.base_factory - INFO - Loading plugin 'docling_defaults'
+2025-12-13 22:41:54,952 - docling.models.factories - INFO - Registered picture descriptions: ['vlm', 'api']
+2025-12-13 22:41:54,952 - docling.pipeline.base_pipeline - INFO - Processing document tmp04_r2ijq.pdf
+2025-12-13 22:43:16,398 - docling.document_converter - INFO - Finished converting document tmp04_r2ijq.pdf in 95.95 sec.
+2025-12-13 22:43:16,399 - opencanvas.utils.docling_extractor - INFO - Processing figure 1 on page 2
+2025-12-13 22:43:16,438 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page2_fig1 (518x256px)
+2025-12-13 22:43:16,439 - opencanvas.utils.docling_extractor - INFO - Caption: Figure 1 A comparison of Chain of Continuous Thought ( Coconut ) with Chain-of-Thought (CoT). In CoT...
+2025-12-13 22:43:16,439 - opencanvas.utils.docling_extractor - INFO - Processing figure 2 on page 2
+2025-12-13 22:43:16,445 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page2_fig2 (390x252px)
+2025-12-13 22:43:16,445 - opencanvas.utils.docling_extractor - INFO - Caption: In this work we instead explore LLM reasoning in a latent space by introducing a novel paradigm, Coc...
+2025-12-13 22:43:16,445 - opencanvas.utils.docling_extractor - INFO - Processing figure 3 on page 4
+2025-12-13 22:43:16,510 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page4_fig3 (936x393px)
+2025-12-13 22:43:16,510 - opencanvas.utils.docling_extractor - INFO - Caption: Figure 2 Training procedure of Chain of Continuous Thought ( Coconut ). Given training data with lan...
+2025-12-13 22:43:16,511 - opencanvas.utils.docling_extractor - INFO - Processing figure 4 on page 6
+2025-12-13 22:43:16,575 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page6_fig4 (930x356px)
+2025-12-13 22:43:16,576 - opencanvas.utils.docling_extractor - INFO - Caption: Figure 3 The accuracy of final answer (left) and reasoning process (right) of multiple variants of C...
+2025-12-13 22:43:16,576 - opencanvas.utils.docling_extractor - INFO - Processing figure 5 on page 7
+2025-12-13 22:43:16,670 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page7_fig5 (926x407px)
+2025-12-13 22:43:16,670 - opencanvas.utils.docling_extractor - INFO - Caption: Figure 4 A case study of ProsQA. The model trained with CoT hallucinates an edge ( Every yumpus is a...
+2025-12-13 22:43:16,670 - opencanvas.utils.docling_extractor - INFO - Processing figure 6 on page 7
+2025-12-13 22:43:16,714 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page7_fig6 (928x269px)
+2025-12-13 22:43:16,714 - opencanvas.utils.docling_extractor - INFO - Caption: Figure 5 An illustration of the latent search trees. The example is the same test case as in Figure ...
+2025-12-13 22:43:16,714 - opencanvas.utils.docling_extractor - INFO - Processing figure 7 on page 8
+2025-12-13 22:43:16,769 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page8_fig7 (396x277px)
+2025-12-13 22:43:16,769 - opencanvas.utils.docling_extractor - INFO - Caption: Figure 6 Analysis of parallelism in the first two steps of the latent tree search. The three curves ...
+2025-12-13 22:43:16,769 - opencanvas.utils.docling_extractor - INFO - Processing figure 8 on page 8
+2025-12-13 22:43:16,777 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page8_fig8 (393x276px)
+2025-12-13 22:43:16,778 - opencanvas.utils.docling_extractor - INFO - Caption: stage, suggesting a broad exploration of alternative possibilities. In contrast, the second thoughts...
+2025-12-13 22:43:16,778 - opencanvas.utils.docling_extractor - INFO - Processing figure 9 on page 8
+2025-12-13 22:43:16,805 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page8_fig9 (371x251px)
+2025-12-13 22:43:16,805 - opencanvas.utils.docling_extractor - INFO - Caption: These findings underscore the advantage of latent space reasoning. By delaying deterministic decisio...
+2025-12-13 22:43:16,805 - opencanvas.utils.docling_extractor - INFO - Processing figure 10 on page 8
+2025-12-13 22:43:16,824 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page8_fig10 (370x247px)
+2025-12-13 22:43:16,825 - opencanvas.utils.docling_extractor - INFO - Caption: Figure 7 The correlation between the predicted value of correct/incorrect nodes and their heights....
+2025-12-13 22:43:16,825 - opencanvas.utils.docling_extractor - INFO - Processing figure 11 on page 10
+2025-12-13 22:43:16,930 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page10_fig11 (328x211px)
+2025-12-13 22:43:16,930 - opencanvas.utils.docling_extractor - INFO - Caption: Additionally, we experimented with adjusting the hyperparameter c , which controls the number of lat...
+2025-12-13 22:43:16,930 - opencanvas.utils.docling_extractor - INFO - Processing figure 12 on page 10
+2025-12-13 22:43:16,937 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page10_fig12 (328x167px)
+2025-12-13 22:43:16,937 - opencanvas.utils.docling_extractor - INFO - Caption: Figure 8 Efficiency comparison of reasoning space and Coconut with different c ....
+2025-12-13 22:43:16,938 - opencanvas.utils.docling_extractor - INFO - Processing figure 13 on page 10
+2025-12-13 22:43:16,953 - opencanvas.utils.docling_extractor - INFO - Extracted: docling_page10_fig13 (424x363px)
+2025-12-13 22:43:16,954 - opencanvas.utils.docling_extractor - INFO - Caption: Figure 9 Decoding a continuous thought into language tokens in a math word problem. The decoded toke...
+2025-12-13 22:43:16,954 - opencanvas.utils.docling_extractor - INFO - Docling extraction completed: 13 figures
+2025-12-13 22:43:16,956 - opencanvas.utils.docling_extractor - ERROR - Error in Docling extraction: unsupported operand type(s) for /: 'str' and 'str'
+2025-12-13 22:43:16,956 - opencanvas.generators.pdf_generator - INFO - Docling found no figures in PDF
+2025-12-13 22:43:16,957 - opencanvas.generators.image_presentation_generator - INFO - 🔍 Debug: image_captions=<class 'dict'>, plots=<class 'list'>, len(plots)=0
+2025-12-13 22:43:16,957 - opencanvas.generators.image_presentation_generator - INFO - ℹ️  No images extracted from PDF
+2025-12-13 22:43:16,957 - opencanvas.generators.image_presentation_generator - INFO - 🖼️  Generating slide images...
+2025-12-13 22:43:16,957 - opencanvas.generators.image_generator - INFO - 🎨 Starting image-based slide generation...
+2025-12-13 22:43:16,959 - opencanvas.generators.image_generator - INFO - 📁 Output directory: test_output/241206769_20251213_224316/slides
+2025-12-13 22:43:16,959 - opencanvas.generators.image_generator - INFO - 🎨 Style: minimalist
