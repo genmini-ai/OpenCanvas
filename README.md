@@ -71,13 +71,7 @@ opencanvas generate "https://arxiv.org/pdf/2412.06769" --purpose "research semin
 
 ## 📖 Output Modes
 
-### HTML Mode
-- **Output**: Single HTML file with embedded styles
-- **Best for**: Quick presentations, web sharing, easy editing
-- **Features**: Clean layouts, multiple themes, fast generation
-- **Convert to PDF**: `opencanvas convert slides.html`
-
-### Image Mode
+### 🔥 Image Mode
 - **Output**: Individual PNG slides + compiled PDF
 - **Best for**: High-quality visuals, research presentations with figures
 - **Features**: AI-generated designs, automatic figure extraction from PDFs, intelligent figure-to-slide matching
@@ -85,6 +79,12 @@ opencanvas generate "https://arxiv.org/pdf/2412.06769" --purpose "research semin
 - **Requires**: `GEMINI_API_KEY`
 
 **[Learn more about Image Mode →](docs/usage/image-generation.md)**
+
+### HTML Mode
+- **Output**: Single HTML file with embedded styles
+- **Best for**: Quick presentations, web sharing, easy editing
+- **Features**: Clean layouts, multiple themes, fast generation
+- **Convert to PDF**: `opencanvas convert slides.html`
 
 ## 📁 Output Structure
 
