@@ -93,3 +93,6 @@ test_*.py
 
 # Test extraction outputs
 tests/extraction/test_output/
+
+# Research and paper drafts
+research/

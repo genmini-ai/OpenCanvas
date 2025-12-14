@@ -3,18 +3,15 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> AI-powered presentation generation system that creates beautiful HTML slide decks from topics or PDF documents, with automatic quality evaluation and continuous improvement.
+> AI-powered presentation generation from topics or PDFs. Beautiful slides in minutes, not hours.
 
-## ✨ Features
+## ✨ Key Features
 
-- 🎨 **Dual Input Support** - Generate from text topics or PDF documents
-- 🔍 **Smart Research** - Automatic web research when knowledge is insufficient
-- 📊 **AI Evaluation** - Comprehensive quality assessment with Claude, GPT, or Gemini
-- 🎯 **Multiple Themes** - Professional themes for different presentation contexts
-- 🔄 **HTML to PDF** - High-quality PDF conversion with customizable zoom
-- 📁 **Organized Output** - Structured folders with timestamps and source tracking
-- 🚀 **REST API** - Full RESTful interface for programmatic access
-- 🤖 **Self-Evolution** - Autonomous system that improves presentation quality over time
+- 🎨 **Dual Output Modes** - HTML slides or PNG images with Gemini AI
+- 📄 **Flexible Input** - Generate from topics or PDF documents
+- 🎯 **Smart Figure Matching** - Auto-extracts and matches figures to slides (Image mode + PDF)
+- 📊 **Quality Evaluation** - AI-powered assessment and improvement
+- 🚀 **REST API** - Full programmatic access
 
 <div align="center">
 
@@ -31,236 +28,145 @@
 git clone https://github.com/genmini-ai/OpenCanvas.git
 cd OpenCanvas
 pip install -e .
-playwright install chromium
 ```
 
-### Configuration
+### Setup
 
 ```bash
 cp .env.example .env
-# Edit .env with your API keys
+# Add your ANTHROPIC_API_KEY (required for both modes)
+# Add your GEMINI_API_KEY (required for Image mode)
 ```
 
-Required: `ANTHROPIC_API_KEY` (get from [console.anthropic.com](https://console.anthropic.com/))
-Optional: `BRAVE_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`
+Get API keys:
+- Anthropic: [console.anthropic.com](https://console.anthropic.com/)
+- Gemini: [aistudio.google.com](https://aistudio.google.com/)
 
 ### Generate Your First Presentation
 
+**HTML Mode (Default)**
 ```bash
 # From a topic
 opencanvas generate "AI in healthcare" --purpose "academic presentation"
 
 # From a PDF
-opencanvas generate "https://arxiv.org/pdf/2505.20286" --purpose "research seminar"
-
-# Full pipeline (generate + convert + evaluate)
-opencanvas pipeline "quantum computing" --purpose "conference talk" --evaluate
+opencanvas generate "https://arxiv.org/pdf/2412.06769" --purpose "research seminar"
 ```
 
-## 📖 Usage
+![HTML Mode Example](presentation_example.png)
+*HTML mode: Clean, professional slides with embedded styles*
 
-### CLI Commands
-
-#### Generate
+**Image Mode (PNG slides with AI-generated visuals)**
 ```bash
-# Topic-based generation
-opencanvas generate "sustainable energy solutions" \
-  --purpose "corporate presentation" \
-  --theme "natural earth"
+# From a topic
+opencanvas generate "quantum computing" \
+  --output-format image \
+  --purpose "conference talk"
 
-# PDF-based generation (images extracted by default)
-opencanvas generate "paper.pdf" --purpose "conference presentation"
-
-# Disable image extraction
-opencanvas generate "paper.pdf" --no-extract-images
+# From a PDF (with automatic figure extraction & matching)
+opencanvas generate "https://arxiv.org/pdf/2412.06769" \
+  --output-format image \
+  --purpose "research seminar"
 ```
 
-#### Convert to PDF
-```bash
-opencanvas convert output/slides.html \
-  --output presentation.pdf \
-  --zoom 1.5
-```
+![Image Mode Example](docs/images/example_slide_with_figures.png)
+*Image mode: AI-generated slide with automatically extracted and matched figures from research paper*
 
-#### Evaluate Quality
-```bash
-opencanvas evaluate evaluation_folder/
-```
+## 📖 Output Modes
 
-#### Complete Pipeline
-```bash
-opencanvas pipeline "machine learning ethics" \
-  --purpose "academic seminar" \
-  --evaluate \
-  --zoom 1.3
-```
+### HTML Mode
+- **Output**: Single HTML file with embedded styles
+- **Best for**: Quick presentations, web sharing, easy editing
+- **Features**: Clean layouts, multiple themes, fast generation
+- **Convert to PDF**: `opencanvas convert slides.html`
 
-### API Usage
+### Image Mode
+- **Output**: Individual PNG slides + compiled PDF
+- **Best for**: High-quality visuals, research presentations with figures
+- **Features**: AI-generated designs, automatic figure extraction from PDFs, intelligent figure-to-slide matching
+- **Time**: ~3 minutes for 10-12 slides
+- **Requires**: `GEMINI_API_KEY`
 
-Start the API server:
-```bash
-opencanvas api --host 0.0.0.0 --port 8000
-```
-
-Make requests:
-```bash
-curl -X POST "http://localhost:8000/api/v1/generate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "input_source": "AI in healthcare",
-    "purpose": "academic presentation",
-    "theme": "professional blue"
-  }'
-```
-
-**Documentation:** [http://localhost:8000/docs](http://localhost:8000/docs)
-**Full API Guide:** [API_README.md](API_README.md)
+**[Learn more about Image Mode →](docs/usage/image-generation.md)**
 
 ## 📁 Output Structure
 
-OpenCanvas creates organized directories for all outputs:
-
+**HTML Mode:**
 ```
-output/
-└── quantum_computing_20241128_120000/
-    ├── slides/
-    │   ├── quantum_computing_slides.html
-    │   └── quantum_computing_presentation.pdf
-    ├── evaluation/
-    │   └── quantum_computing_evaluation.json
-    └── sources/
-        ├── source_content.txt          # For topic-based
-        └── source.pdf                  # For PDF-based
+output/topic_20241213_225914/
+├── slides/
+│   └── slides.html          # Single HTML file
+└── sources/
+    └── source_content.txt
 ```
 
-## ⚙️ Configuration
-
-### Environment Variables
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `ANTHROPIC_API_KEY` | ✅ | - | Claude API key (generation) |
-| `BRAVE_API_KEY` | ❌ | - | Web search API key |
-| `GEMINI_API_KEY` | ❌ | - | Gemini API key (evaluation) |
-| `OPENAI_API_KEY` | ❌ | - | OpenAI API key (evaluation) |
-| `EVALUATION_PROVIDER` | ❌ | `gemini` | `claude`, `gpt`, or `gemini` |
-| `EVALUATION_MODEL` | ❌ | `gemini-2.5-flash` | Model for evaluation |
-| `DEFAULT_THEME` | ❌ | `professional blue` | Presentation theme |
-| `DEFAULT_ZOOM` | ❌ | `1.2` | PDF zoom factor |
-
-### Available Themes
-
-- `professional blue` - Clean corporate design
-- `clean minimalist` - Simple elegant layout
-- `natural earth` - Warm earth tones
-- `modern contemporary` - Trendy cutting-edge
-- `warm earth tones` - Cozy approachable
-- `bold high contrast` - High-impact design
-
-Full list: See [themes.py](src/opencanvas/shared/themes.py)
-
-## 🧪 Testing
-
-```bash
-# Run full test suite
-python run_tests.py
-
-# Light mode (faster)
-python run_tests.py light
-
-# Specific tests
-python run_tests.py topic  # Topic generation only
-python run_tests.py pdf    # PDF generation only
+**Image Mode:**
 ```
-
-## 🤖 Evolution System
-
-OpenCanvas includes an autonomous improvement system that learns from evaluation results:
-
-```bash
-# Run evolution cycle
-opencanvas evolve --max-iterations 3 --improvement-threshold 0.15
+output/topic_20241213_225914/
+├── slides/
+│   ├── slide_001.png
+│   ├── slide_002.png
+│   └── ...
+├── extracted_images/        # (PDF input only)
+│   ├── figure_1.png
+│   └── figure_captions.json
+├── sources/
+│   ├── blog_content.txt
+│   └── slide_blueprints.json
+└── presentation.pdf         # Auto-compiled
 ```
-
-The system automatically:
-- Evaluates presentation quality
-- Identifies improvement opportunities
-- Evolves prompts and generates new tools
-- Tracks performance improvements
-
-**Learn more:** [docs/architecture/evolution-system.md](docs/architecture/evolution-system.md)
 
 ## 📚 Documentation
 
-- **[Installation Guide](docs/installation.md)** - Detailed setup instructions
-- **[CLI Reference](docs/usage/cli.md)** - Complete command reference
-- **[API Guide](API_README.md)** - REST API documentation
-- **[Architecture](docs/architecture/overview.md)** - System design
-- **[Contributing](CONTRIBUTING.md)** - How to contribute
-- **[Examples](examples/)** - Usage examples
+- **[Installation Guide](docs/installation.md)** - Detailed setup
+- **[CLI Reference](docs/usage/cli.md)** - All commands
+- **[Image Mode Guide](docs/usage/image-generation.md)** - Figure matching & PNG slides
+- **[API Guide](API_README.md)** - REST API
+- **[Evolution System](docs/architecture/evolution-system.md)** - Auto-improvement
 
-## 🔧 Troubleshooting
+## 🎯 Common Use Cases
 
-### Common Issues
-
-**"opencanvas command not found"**
 ```bash
-pip install -e .
-which opencanvas
-```
+# HTML: Quick presentation from topic
+opencanvas generate "machine learning basics" --purpose "lecture"
 
-**"ANTHROPIC_API_KEY is required"**
-```bash
-cat .env | grep ANTHROPIC_API_KEY
-```
+# HTML: Research paper to slides
+opencanvas generate "paper.pdf" --purpose "seminar"
 
-**Playwright not available**
-```bash
-playwright install chromium
-# Or use selenium
-opencanvas convert slides.html --method selenium
-```
+# Image: High-quality presentation with figures
+opencanvas generate "paper.pdf" \
+  --output-format image \
+  --purpose "conference talk"
 
-**Web research not working**
-```bash
-# Add BRAVE_API_KEY to .env for web research
-# Without it, generation uses only Claude's knowledge
+# Complete pipeline with evaluation
+opencanvas pipeline "research topic" --purpose "conference" --evaluate
 ```
-
-More troubleshooting: [docs/troubleshooting.md](docs/troubleshooting.md)
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-### Development Setup
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ```bash
+# Development setup
 git clone https://github.com/genmini-ai/OpenCanvas.git
 cd OpenCanvas
 pip install -r requirements-all.txt
-playwright install chromium
-```
-
-### Running Tests
-
-```bash
 python run_tests.py
-pytest tests/
 ```
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## 🙏 Built With
 
-Built with:
 - [Anthropic Claude](https://www.anthropic.com/) - AI generation
-- [Playwright](https://playwright.dev/) - Browser automation
-- [FastAPI](https://fastapi.tiangolo.com/) - REST API framework
-- [Brave Search](https://brave.com/search/api/) - Web research
+- [Google Gemini](https://ai.google.dev/) - Image generation
+- [Docling](https://github.com/DS4SD/docling) - Figure extraction
+- [FastAPI](https://fastapi.tiangolo.com/) - REST API
 
 ---
 
-**Star this repo** if you find it useful! ⭐
+**⭐ Star this repo** if you find it useful!
+
+**📚 [Full Documentation](docs/)** | **🐛 [Report Issues](https://github.com/genmini-ai/OpenCanvas/issues)** | **💬 [Discussions](https://github.com/genmini-ai/OpenCanvas/discussions)**

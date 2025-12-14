@@ -90,22 +90,18 @@ class PDFGenerator(BaseGenerator):
                 image_captions, extracted_images_dir, plots = self.docling_extractor.extract_from_pdf_data(
                     pdf_data, output_dir
                 )
-                
-                if image_captions:
-                    logger.info(f"✅ Docling extracted {len(image_captions)} complete figures")
-                    return image_captions, extracted_images_dir, plots
-                else:
-                    logger.info("Docling found no figures, falling back to pdfplumber")
-            
-            # Fallback to original fragmented extraction
-            logger.info("📋 Falling back to pdfplumber fragmented extraction...")
-            return self._extract_with_pdfplumber_fallback(pdf_data, output_dir)
-            
+                    
+            if plots:
+                logger.info(f"✅ Docling extracted {len(plots)} complete figures")
+                return image_captions, extracted_images_dir, plots
+            else:
+                logger.info("Docling found no figures in PDF")
+                return {}, None, []
+        
         except Exception as e:
-            logger.error(f"Error in image extraction: {e}")
-            # Always fallback to original method if there's any error
-            logger.info("🔄 Error occurred, using pdfplumber fallback...")
-            return self._extract_with_pdfplumber_fallback(pdf_data, output_dir)
+            logger.error(f"Error in Docling extraction: {e}")
+            return {}, None, []
+
     
     def _try_docling_extraction(self) -> bool:
         """

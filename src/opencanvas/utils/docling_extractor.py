@@ -107,9 +107,13 @@ class DoclingImageExtractor:
                     logger.info("No figures found by Docling")
                     return {}, None, []
                 
+                # Ensure output_dir is a Path object
+                if isinstance(output_dir, str):
+                    output_dir = Path(output_dir)
+                
                 # Create extracted_images directory
                 extracted_images_dir = output_dir / "extracted_images"
-                extracted_images_dir.mkdir(exist_ok=True)
+                extracted_images_dir.mkdir(parents=True, exist_ok=True)
                 
                 # Convert to format expected by pdf_generator.py
                 image_captions = {}
@@ -127,34 +131,74 @@ class DoclingImageExtractor:
                     relative_path = f"../extracted_images/{image_filename}"
                     
                     # Build image_captions dict (expected by pdf_generator.py)
+                    # Ensure width/height are integers to prevent division errors
+                    try:
+                        width_int = int(figure.width) if figure.width else None
+                        height_int = int(figure.height) if figure.height else None
+                    except (ValueError, TypeError):
+                        width_int = None
+                        height_int = None
+                    
                     image_captions[figure.figure_id] = {
                         'caption': figure.caption,
                         'path': relative_path,
                         'dimensions': figure.dimensions,
-                        'width': figure.width,
-                        'height': figure.height,
+                        'width': width_int,
+                        'height': height_int,
                         'error': None
                     }
                     
-                    # Build PlotInfo for compatibility
+                    # Build PlotInfo for compatibility (ensure numeric types)
+                    try:
+                        width_val = int(figure.width) if figure.width else None
+                        height_val = int(figure.height) if figure.height else None
+                        coords = (
+                            float(figure.bounding_box['left']),
+                            float(figure.bounding_box['top']),
+                            float(figure.bounding_box['right']),
+                            float(figure.bounding_box['bottom'])
+                        )
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Error converting figure dimensions for {figure.figure_id}: {e}")
+                        width_val = None
+                        height_val = None
+                        coords = (0, 0, 0, 0)
+                    
                     plot_info = PlotInfo(
                         plot_id=figure.figure_id,
                         page_number=figure.page_number,
                         image_data=figure.image_data,
-                        coordinates=(
-                            figure.bounding_box['left'],
-                            figure.bounding_box['top'],
-                            figure.bounding_box['right'],
-                            figure.bounding_box['bottom']
-                        ),
+                        coordinates=coords,
                         caption=figure.caption,
-                        width=figure.width,
-                        height=figure.height,
+                        width=width_val,
+                        height=height_val,
                         dimensions=figure.dimensions
                     )
                     plots_list.append(plot_info)
                     
                     logger.info(f"Extracted figure: {figure.figure_id} -> {image_path} ({figure.dimensions})")
+                
+                # Save caption metadata for debugging/verification (non-critical)
+                try:
+                    metadata = {
+                        "total_figures": len(docling_figures),
+                        "figures": [
+                            {
+                                "index": i,
+                                "figure_id": fig.figure_id,
+                                "page_number": fig.page_number,
+                                "caption": fig.caption,
+                                "dimensions": fig.dimensions
+                            }
+                            for i, fig in enumerate(docling_figures)
+                        ]
+                    }
+                    metadata_path = extracted_images_dir / "figure_captions.json"
+                    with open(metadata_path, 'w', encoding='utf-8') as f:
+                        json.dump(metadata, f, indent=2, ensure_ascii=False)
+                    logger.info(f"Saved caption metadata to: {metadata_path}")
+                except Exception as meta_error:
+                    logger.warning(f"Failed to save caption metadata (non-critical): {meta_error}")
                 
                 logger.info(f"Docling extracted {len(image_captions)} complete figures")
                 return image_captions, extracted_images_dir, plots_list
@@ -165,7 +209,9 @@ class DoclingImageExtractor:
                     os.unlink(temp_pdf_path)
                     
         except Exception as e:
+            import traceback
             logger.error(f"Error in Docling extraction: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return {}, None, []
     
     def extract_figures_from_pdf(self, pdf_path: str) -> List[DoclingFigure]:

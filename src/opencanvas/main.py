@@ -59,7 +59,9 @@ Examples:
     gen_parser.add_argument('--purpose', default=Config.DEFAULT_PURPOSE, help='Purpose of presentation')
     gen_parser.add_argument('--theme', default=Config.DEFAULT_THEME, help='Visual theme')
     gen_parser.add_argument('--output-dir', default=str(Config.OUTPUT_DIR), help='Output directory')
+    gen_parser.add_argument('--output-format', choices=['html', 'image'], default='html', help='Output format: html (default) or image (PNG slides + PDF)')
     gen_parser.add_argument('--no-extract-images', action='store_true', help='Disable image extraction from PDF (PDF input only)')
+    gen_parser.add_argument('--no-use-extracted-images', dest='use_extracted_images', action='store_false', default=True, help='Disable using extracted PDF figures in slides (image format only)')
     
     # Convert command  
     conv_parser = subparsers.add_parser('convert', help='Convert HTML presentation to PDF')
@@ -152,6 +154,7 @@ Examples:
 def handle_generate(args, logger):
     """Handle generate command"""
     logger.info(f"🚀 Starting generation from: {args.input}")
+    logger.info(f"📄 Output format: {args.output_format}")
     
     # Check if we have the required API key for generation
     if not Config.ANTHROPIC_API_KEY:
@@ -159,6 +162,63 @@ def handle_generate(args, logger):
         logger.error("Please set ANTHROPIC_API_KEY environment variable or add it to your .env file")
         return 1
     
+    # Image format requires GEMINI_API_KEY
+    if args.output_format == 'image' and not Config.GEMINI_API_KEY:
+        logger.error("GEMINI_API_KEY is required for image generation")
+        logger.error("Please set GEMINI_API_KEY environment variable or add it to your .env file")
+        return 1
+    
+    # Route to image generation if requested
+    if args.output_format == 'image':
+        from opencanvas.generators.image_presentation_generator import ImagePresentationGenerator
+        from pathlib import Path
+        
+        logger.info("🎨 Using image generation mode")
+        generator = ImagePresentationGenerator(
+            anthropic_key=Config.ANTHROPIC_API_KEY,
+            gemini_key=Config.GEMINI_API_KEY,
+            brave_api_key=Config.BRAVE_API_KEY
+        )
+        
+        # Detect if input is PDF or topic
+        is_pdf = False
+        if args.input.startswith(('http://', 'https://')) and 'pdf' in args.input.lower():
+            is_pdf = True
+        elif Path(args.input).exists() and Path(args.input).suffix.lower() == '.pdf':
+            is_pdf = True
+        
+        if is_pdf:
+            logger.info(f"📄 Detected PDF input: {args.input}")
+            result = generator.generate_from_pdf(
+                pdf_source=args.input,
+                purpose=args.purpose,
+                theme=args.theme,
+                output_dir=args.output_dir,
+                extract_images=not args.no_extract_images,
+                use_extracted_images=args.use_extracted_images
+            )
+        else:
+            logger.info(f"📝 Detected topic input: {args.input}")
+            result = generator.generate_from_topic(
+                topic=args.input,
+                purpose=args.purpose,
+                theme=args.theme,
+                output_dir=args.output_dir
+            )
+        
+        if result:
+            print(f"✅ Generated successfully!")
+            print(f"📁 Slides directory: {result['slides_dir']}")
+            print(f"📊 Total slides: {len(result['slide_paths'])}")
+            print(f"📄 PDF file: {result['pdf_path']}")
+            if 'extracted_images' in result:
+                print(f"🖼️  Extracted images: {result['extracted_images']['dir']}")
+            return 0
+        else:
+            print("❌ Image generation failed")
+            return 1
+    
+    # Default HTML generation
     router = GenerationRouter(
         api_key=Config.ANTHROPIC_API_KEY,
         brave_api_key=Config.BRAVE_API_KEY

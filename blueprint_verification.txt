@@ -1,0 +1,21 @@
+2025-12-13 22:56:40,066 - opencanvas.main - INFO - 🚀 Starting generation from: https://arxiv.org/pdf/2412.06769
+2025-12-13 22:56:40,066 - opencanvas.main - INFO - 📄 Output format: image
+2025-12-13 22:56:40,070 - opencanvas.main - INFO - 🎨 Using image generation mode
+2025-12-13 22:56:40,165 - opencanvas.generators.topic_generator - INFO - Loaded generation prompt
+  🔑 API key loaded successfully (length: 108)
+2025-12-13 22:56:40,240 - opencanvas.image_validation.image_validator - INFO - Image validation pipeline initialized successfully
+2025-12-13 22:56:40,240 - opencanvas.generators.topic_generator - INFO - ✅ Image validation pipeline initialized
+2025-12-13 22:56:40,243 - opencanvas.generators.topic_generator - INFO - Evolution tool pipeline imported successfully
+2025-12-13 22:56:40,243 - opencanvas.evolution.core.tool_pipeline - INFO - 🔧 Tool Pipeline initialized
+2025-12-13 22:56:40,244 - opencanvas.evolution.core.tool_pipeline - INFO - 📦 Loaded 0 tools from iteration 1
+2025-12-13 22:56:40,244 - opencanvas.generators.topic_generator - INFO -   Total tools in pipeline: 0
+2025-12-13 22:56:40,244 - opencanvas.generators.topic_generator - INFO - ✅ Evolution tool pipeline initialized
+2025-12-13 22:56:40,293 - opencanvas.generators.image_presentation_generator - INFO - ✅ Image presentation generator initialized
+2025-12-13 22:56:40,293 - opencanvas.main - INFO - 📄 Detected PDF input: https://arxiv.org/pdf/2412.06769
+2025-12-13 22:56:40,294 - opencanvas.generators.image_presentation_generator - INFO - 🎨 Generating image presentation from PDF: https://arxiv.org/pdf/2412.06769
+2025-12-13 22:56:40,305 - opencanvas.generators.image_presentation_generator - INFO - 📥 Loading PDF...
+2025-12-13 22:56:40,518 - opencanvas.generators.image_presentation_generator - INFO - 📝 Extracting content from PDF...
+2025-12-13 22:56:42,865 - opencanvas.generators.image_presentation_generator - INFO - 📝 Generating blog content from PDF...
+2025-12-13 22:57:08,137 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-13 22:57:08,147 - opencanvas.generators.image_presentation_generator - INFO - ✅ Blog content generated
+2025-12-13 22:57:08,149 - opencanvas.main - ERROR - Command failed: local variable 'os' referenced before assignment
