@@ -46,6 +46,9 @@ opencanvas generate "AI in healthcare" --purpose "academic presentation"
 opencanvas generate "https://arxiv.org/pdf/2412.06769" --purpose "research seminar"
 ```
 
+![HTML Mode Example](presentation_example.png)
+*HTML mode: Clean, professional slides with embedded styles*
+
 **Image Mode (PNG slides with AI-generated visuals)**
 ```bash
 # From a topic
@@ -59,21 +62,23 @@ opencanvas generate "https://arxiv.org/pdf/2412.06769" \
   --purpose "research seminar"
 ```
 
-![Example Slide with Extracted Figures](docs/images/example_slide_with_figures.png)
-*Image mode: Slide automatically generated with extracted figures from research paper*
+![Image Mode Example](docs/images/example_slide_with_figures.png)
+*Image mode: AI-generated slide with automatically extracted and matched figures from research paper*
 
 ## 📖 Output Modes
 
 ### HTML Mode
 - **Output**: Single HTML file with embedded styles
 - **Best for**: Quick presentations, web sharing, easy editing
+- **Features**: Clean layouts, multiple themes, fast generation
 - **Convert to PDF**: `opencanvas convert slides.html`
 
 ### Image Mode
 - **Output**: Individual PNG slides + compiled PDF
-- **Best for**: High-quality visuals, research presentations
-- **Features**: AI-generated designs, automatic figure extraction from PDFs
+- **Best for**: High-quality visuals, research presentations with figures
+- **Features**: AI-generated designs, automatic figure extraction from PDFs, intelligent figure-to-slide matching
 - **Time**: ~3 minutes for 10-12 slides
+- **Requires**: `GEMINI_API_KEY`
 
 **[Learn more about Image Mode →](docs/usage/image-generation.md)**
 
