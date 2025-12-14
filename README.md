@@ -7,14 +7,11 @@
 
 ## ✨ Key Features
 
-- 🎨 **Generate from Topics or PDFs** - Text input or research papers
-- 🖼️ **Image Mode** - PNG slides with Gemini AI + automatic PDF
-- 🎯 **Smart Figure Matching** - Automatically extracts and matches figures to slides
+- 🎨 **Dual Output Modes** - HTML slides or PNG images with Gemini AI
+- 📄 **Flexible Input** - Generate from topics or PDF documents
+- 🎯 **Smart Figure Matching** - Auto-extracts and matches figures to slides (Image mode + PDF)
 - 📊 **Quality Evaluation** - AI-powered assessment and improvement
 - 🚀 **REST API** - Full programmatic access
-
-![Example Slide with Extracted Figures](docs/images/example_slide_with_figures.png)
-*Slide automatically generated with extracted figures from research paper*
 
 ## 🚀 Quick Start
 
@@ -30,8 +27,8 @@ pip install -e .
 
 ```bash
 cp .env.example .env
-# Add your ANTHROPIC_API_KEY (required)
-# Add your GEMINI_API_KEY (for image mode)
+# Add your ANTHROPIC_API_KEY (required for both modes)
+# Add your GEMINI_API_KEY (required for Image mode)
 ```
 
 Get API keys:
@@ -40,50 +37,97 @@ Get API keys:
 
 ### Generate Your First Presentation
 
+**HTML Mode (Default)**
 ```bash
 # From a topic
 opencanvas generate "AI in healthcare" --purpose "academic presentation"
 
-# From a research paper (with automatic figure extraction)
+# From a PDF
+opencanvas generate "https://arxiv.org/pdf/2412.06769" --purpose "research seminar"
+```
+
+**Image Mode (PNG slides with AI-generated visuals)**
+```bash
+# From a topic
+opencanvas generate "quantum computing" \
+  --output-format image \
+  --purpose "conference talk"
+
+# From a PDF (with automatic figure extraction & matching)
 opencanvas generate "https://arxiv.org/pdf/2412.06769" \
   --output-format image \
   --purpose "research seminar"
-
-# Complete pipeline with evaluation
-opencanvas pipeline "quantum computing" --purpose "conference talk" --evaluate
 ```
 
-## 📖 Documentation
+![Example Slide with Extracted Figures](docs/images/example_slide_with_figures.png)
+*Image mode: Slide automatically generated with extracted figures from research paper*
+
+## 📖 Output Modes
+
+### HTML Mode
+- **Output**: Single HTML file with embedded styles
+- **Best for**: Quick presentations, web sharing, easy editing
+- **Convert to PDF**: `opencanvas convert slides.html`
+
+### Image Mode
+- **Output**: Individual PNG slides + compiled PDF
+- **Best for**: High-quality visuals, research presentations
+- **Features**: AI-generated designs, automatic figure extraction from PDFs
+- **Time**: ~3 minutes for 10-12 slides
+
+**[Learn more about Image Mode →](docs/usage/image-generation.md)**
+
+## 📁 Output Structure
+
+**HTML Mode:**
+```
+output/topic_20241213_225914/
+├── slides/
+│   └── slides.html          # Single HTML file
+└── sources/
+    └── source_content.txt
+```
+
+**Image Mode:**
+```
+output/topic_20241213_225914/
+├── slides/
+│   ├── slide_001.png
+│   ├── slide_002.png
+│   └── ...
+├── extracted_images/        # (PDF input only)
+│   ├── figure_1.png
+│   └── figure_captions.json
+├── sources/
+│   ├── blog_content.txt
+│   └── slide_blueprints.json
+└── presentation.pdf         # Auto-compiled
+```
+
+## 📚 Documentation
 
 - **[Installation Guide](docs/installation.md)** - Detailed setup
 - **[CLI Reference](docs/usage/cli.md)** - All commands
-- **[Image Generation](docs/usage/image-generation.md)** - Figure matching & PNG slides
+- **[Image Mode Guide](docs/usage/image-generation.md)** - Figure matching & PNG slides
 - **[API Guide](API_README.md)** - REST API
 - **[Evolution System](docs/architecture/evolution-system.md)** - Auto-improvement
-- **[Examples](examples/)** - Usage examples
 
 ## 🎯 Common Use Cases
 
 ```bash
-# Academic presentation from paper
-opencanvas generate "paper.pdf" --output-format image --purpose "seminar"
+# HTML: Quick presentation from topic
+opencanvas generate "machine learning basics" --purpose "lecture"
 
-# Corporate presentation
-opencanvas generate "quarterly results" --purpose "board meeting" --theme "professional blue"
+# HTML: Research paper to slides
+opencanvas generate "paper.pdf" --purpose "seminar"
 
-# Conference talk with evaluation
+# Image: High-quality presentation with figures
+opencanvas generate "paper.pdf" \
+  --output-format image \
+  --purpose "conference talk"
+
+# Complete pipeline with evaluation
 opencanvas pipeline "research topic" --purpose "conference" --evaluate
-```
-
-## 📁 Output
-
-```
-output/
-└── topic_20241213_225914/
-    ├── slides/              # PNG slides or HTML
-    ├── extracted_images/    # Figures from PDFs
-    ├── sources/             # Source content & blueprints
-    └── presentation.pdf     # Final PDF
 ```
 
 ## 🤝 Contributing
