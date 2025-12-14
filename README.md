@@ -13,6 +13,13 @@
 - 📊 **Quality Evaluation** - AI-powered assessment and improvement
 - 🚀 **REST API** - Full programmatic access
 
+<div align="center">
+
+![presentation example](presentation_example.png)
+
+**Example presentation generated from:** *Training Large Language Models to Reason in a Continuous Latent Space https://arxiv.org/pdf/2412.06769*
+
+</div>
 ## 🚀 Quick Start
 
 ### Installation
