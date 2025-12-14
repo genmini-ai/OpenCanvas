@@ -13,13 +13,6 @@
 - 📊 **Quality Evaluation** - AI-powered assessment and improvement
 - 🚀 **REST API** - Full programmatic access
 
-<div align="center">
-
-![presentation example](presentation_example.png)
-
-**Example presentation generated from:** *Training Large Language Models to Reason in a Continuous Latent Space https://arxiv.org/pdf/2412.06769*
-
-</div>
 ## 🚀 Quick Start
 
 ### Installation
@@ -69,6 +62,9 @@ opencanvas generate "AI in healthcare" --purpose "academic presentation"
 opencanvas generate "https://arxiv.org/pdf/2412.06769" --purpose "research seminar"
 ```
 
+![HTML Mode Example](docs/images/html_mode_example.png)
+*HTML mode: Clean, professional slides with embedded styles*
+
 ## 📖 Output Modes
 
 ### 🔥 Image Mode
@@ -85,6 +81,7 @@ opencanvas generate "https://arxiv.org/pdf/2412.06769" --purpose "research semin
 - **Best for**: Quick presentations, web sharing, easy editing
 - **Features**: Clean layouts, multiple themes, fast generation
 - **Convert to PDF**: `opencanvas convert slides.html`
+
 
 ## 📁 Output Structure
 
