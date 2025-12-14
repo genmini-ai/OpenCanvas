@@ -13,13 +13,6 @@
 - 📊 **Quality Evaluation** - AI-powered assessment and improvement
 - 🚀 **REST API** - Full programmatic access
 
-<div align="center">
-
-![presentation example](presentation_example.png)
-
-**Example presentation generated from:** *Training Large Language Models to Reason in a Continuous Latent Space https://arxiv.org/pdf/2412.06769*
-
-</div>
 ## 🚀 Quick Start
 
 ### Installation
@@ -44,19 +37,7 @@ Get API keys:
 
 ### Generate Your First Presentation
 
-**HTML Mode (Default)**
-```bash
-# From a topic
-opencanvas generate "AI in healthcare" --purpose "academic presentation"
-
-# From a PDF
-opencanvas generate "https://arxiv.org/pdf/2412.06769" --purpose "research seminar"
-```
-
-![HTML Mode Example](presentation_example.png)
-*HTML mode: Clean, professional slides with embedded styles*
-
-**Image Mode (PNG slides with AI-generated visuals)**
+**🔥 Image Mode (PNG slides with AI-generated visuals)**
 ```bash
 # From a topic
 opencanvas generate "quantum computing" \
@@ -72,15 +53,21 @@ opencanvas generate "https://arxiv.org/pdf/2412.06769" \
 ![Image Mode Example](docs/images/example_slide_with_figures.png)
 *Image mode: AI-generated slide with automatically extracted and matched figures from research paper*
 
+**HTML Mode (Default)**
+```bash
+# From a topic
+opencanvas generate "AI in healthcare" --purpose "academic presentation"
+
+# From a PDF
+opencanvas generate "https://arxiv.org/pdf/2412.06769" --purpose "research seminar"
+```
+
+![HTML Mode Example](docs/images/html_mode_example.png)
+*HTML mode: Clean, professional slides with embedded styles*
+
 ## 📖 Output Modes
 
-### HTML Mode
-- **Output**: Single HTML file with embedded styles
-- **Best for**: Quick presentations, web sharing, easy editing
-- **Features**: Clean layouts, multiple themes, fast generation
-- **Convert to PDF**: `opencanvas convert slides.html`
-
-### Image Mode
+### 🔥 Image Mode
 - **Output**: Individual PNG slides + compiled PDF
 - **Best for**: High-quality visuals, research presentations with figures
 - **Features**: AI-generated designs, automatic figure extraction from PDFs, intelligent figure-to-slide matching
@@ -88,6 +75,13 @@ opencanvas generate "https://arxiv.org/pdf/2412.06769" \
 - **Requires**: `GEMINI_API_KEY`
 
 **[Learn more about Image Mode →](docs/usage/image-generation.md)**
+
+### HTML Mode
+- **Output**: Single HTML file with embedded styles
+- **Best for**: Quick presentations, web sharing, easy editing
+- **Features**: Clean layouts, multiple themes, fast generation
+- **Convert to PDF**: `opencanvas convert slides.html`
+
 
 ## 📁 Output Structure
 
