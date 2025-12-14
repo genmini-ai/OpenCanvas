@@ -44,19 +44,7 @@ Get API keys:
 
 ### Generate Your First Presentation
 
-**HTML Mode (Default)**
-```bash
-# From a topic
-opencanvas generate "AI in healthcare" --purpose "academic presentation"
-
-# From a PDF
-opencanvas generate "https://arxiv.org/pdf/2412.06769" --purpose "research seminar"
-```
-
-![HTML Mode Example](presentation_example.png)
-*HTML mode: Clean, professional slides with embedded styles*
-
-**Image Mode (PNG slides with AI-generated visuals)**
+**🔥 Image Mode (PNG slides with AI-generated visuals)**
 ```bash
 # From a topic
 opencanvas generate "quantum computing" \
@@ -71,6 +59,15 @@ opencanvas generate "https://arxiv.org/pdf/2412.06769" \
 
 ![Image Mode Example](docs/images/example_slide_with_figures.png)
 *Image mode: AI-generated slide with automatically extracted and matched figures from research paper*
+
+**HTML Mode (Default)**
+```bash
+# From a topic
+opencanvas generate "AI in healthcare" --purpose "academic presentation"
+
+# From a PDF
+opencanvas generate "https://arxiv.org/pdf/2412.06769" --purpose "research seminar"
+```
 
 ## 📖 Output Modes
 
