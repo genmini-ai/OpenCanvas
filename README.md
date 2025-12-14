@@ -42,12 +42,12 @@ Get API keys:
 # From a topic
 opencanvas generate "quantum computing" \
   --output-format image \
-  --purpose "conference talk"
+  --theme minimalist
 
 # From a PDF (with automatic figure extraction & matching)
 opencanvas generate "https://arxiv.org/pdf/2412.06769" \
   --output-format image \
-  --purpose "research seminar"
+  --theme minimalist
 ```
 
 ![Image Mode Example](docs/images/example_slide_with_figures.png)
@@ -56,10 +56,10 @@ opencanvas generate "https://arxiv.org/pdf/2412.06769" \
 **HTML Mode (Default)**
 ```bash
 # From a topic
-opencanvas generate "AI in healthcare" --purpose "academic presentation"
+opencanvas generate "AI in healthcare" --theme minimalist
 
 # From a PDF
-opencanvas generate "https://arxiv.org/pdf/2412.06769" --purpose "research seminar"
+opencanvas generate "https://arxiv.org/pdf/2412.06769" --theme minimalist
 ```
 
 ![HTML Mode Example](docs/images/html_mode_example.png)
