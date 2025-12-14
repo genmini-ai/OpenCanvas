@@ -1,0 +1,60 @@
+2025-12-14 11:51:52,173 - opencanvas.main - INFO - 🚀 Starting generation from: AI in healthcare
+2025-12-14 11:51:52,173 - opencanvas.main - INFO - 📄 Output format: html
+2025-12-14 11:51:52,273 - opencanvas.generators.topic_generator - INFO - Loaded generation prompt
+  🔑 API key loaded successfully (length: 108)
+2025-12-14 11:51:52,492 - opencanvas.image_validation.image_validator - INFO - Image validation pipeline initialized successfully
+2025-12-14 11:51:52,492 - opencanvas.generators.topic_generator - INFO - ✅ Image validation pipeline initialized
+2025-12-14 11:51:52,496 - opencanvas.generators.topic_generator - INFO - Evolution tool pipeline imported successfully
+2025-12-14 11:51:52,496 - opencanvas.evolution.core.tool_pipeline - INFO - 🔧 Tool Pipeline initialized
+2025-12-14 11:51:52,498 - opencanvas.evolution.core.tool_pipeline - INFO - 📦 Loaded 0 tools from iteration 1
+2025-12-14 11:51:52,498 - opencanvas.generators.topic_generator - INFO -   Total tools in pipeline: 0
+2025-12-14 11:51:52,498 - opencanvas.generators.topic_generator - INFO - ✅ Evolution tool pipeline initialized
+2025-12-14 11:51:52,515 - opencanvas.generators.router - INFO - Starting generation with router
+2025-12-14 11:51:52,515 - opencanvas.generators.router - INFO - Input: AI in healthcare
+2025-12-14 11:51:52,515 - opencanvas.generators.router - INFO - Purpose: conference talk
+2025-12-14 11:51:52,515 - opencanvas.generators.router - INFO - Theme: professional blue
+2025-12-14 11:51:52,515 - opencanvas.generators.router - INFO - Detected topic text: AI in healthcare...
+2025-12-14 11:51:52,515 - opencanvas.generators.router - INFO - Routing to topic generator
+2025-12-14 11:51:52,515 - opencanvas.generators.router - WARNING - Image extraction is only available for PDF inputs
+2025-12-14 11:51:52,515 - opencanvas.generators.topic_generator - INFO - 🚀 Starting topic-based presentation generation...
+2025-12-14 11:51:52,515 - opencanvas.generators.topic_generator - INFO - 📝 User text: AI in healthcare
+2025-12-14 11:51:52,515 - opencanvas.generators.topic_generator - INFO - 🎯 Purpose: conference talk
+2025-12-14 11:51:52,515 - opencanvas.generators.topic_generator - INFO - 🎨 Theme: professional blue
+2025-12-14 11:51:52,516 - opencanvas.generators.topic_generator - INFO - 📂 Topic slug: ai_in_healthcare
+2025-12-14 11:51:52,516 - opencanvas.generators.topic_generator - INFO - 📁 Output directory: test_output
+2025-12-14 11:51:52,516 - opencanvas.generators.topic_generator - INFO - 
+🧠 Assessing knowledge depth...
+2025-12-14 11:51:54,351 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-14 11:51:54,361 - opencanvas.generators.topic_generator - INFO - 📊 Knowledge assessment: SUFFICIENT
+2025-12-14 11:51:54,361 - opencanvas.generators.topic_generator - INFO - ✅ Sufficient knowledge available. Proceeding without additional research.
+2025-12-14 11:51:54,361 - opencanvas.generators.topic_generator - INFO - 
+📖 Generating educational blog content...
+2025-12-14 11:52:20,506 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-14 11:52:20,509 - opencanvas.generators.topic_generator - INFO - 🎭 Creating HTML slide deck...
+2025-12-14 11:52:20,509 - opencanvas.generators.topic_generator - INFO - 📡 Using streaming for slide generation...
+2025-12-14 11:52:21,136 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-14 11:52:59,414 - opencanvas.generators.topic_generator - INFO - 📝 Generated 11000 characters...
+2025-12-14 11:53:26,321 - opencanvas.generators.topic_generator - INFO - 📝 Generated 18000 characters...
+2025-12-14 11:53:45,495 - opencanvas.generators.topic_generator - INFO - 📝 Generated 24000 characters...
+2025-12-14 11:54:10,488 - opencanvas.generators.topic_generator - INFO - ✅ Completed generation: 32327 characters
+2025-12-14 11:54:10,489 - opencanvas.generators.topic_generator - INFO - 🖼️ Validating and fixing images...
+2025-12-14 11:54:10,677 - opencanvas.image_validation.image_validator - INFO - Processed slide 1/1 in 0.19s
+2025-12-14 11:54:10,678 - opencanvas.image_validation.image_validator - INFO - Image validation completed: 0 images replaced in 0.19s
+2025-12-14 11:54:10,678 - opencanvas.generators.topic_generator - INFO - ✅ Image validation complete: all images valid
+2025-12-14 11:54:10,678 - opencanvas.generators.topic_generator - INFO - 📁 Organizing output files...
+2025-12-14 11:54:10,679 - opencanvas.utils.file_utils - INFO - 📄 Saved HTML: test_output/20251214_115152/slides/presentation.html
+2025-12-14 11:54:10,679 - opencanvas.utils.file_utils - INFO - 📄 Saved source content: test_output/20251214_115152/sources/source_content.txt
+2025-12-14 11:54:10,679 - opencanvas.generators.topic_generator - INFO - 🌐 Opening slides in browser...
+2025-12-14 11:54:11,593 - opencanvas.generators.base - INFO - Opened in browser: test_output/20251214_115152/slides/presentation.html
+2025-12-14 11:54:11,594 - opencanvas.generators.topic_generator - INFO - 
+✅ Presentation generation complete!
+2025-12-14 11:54:11,594 - opencanvas.generators.topic_generator - INFO - 🧠 Knowledge assessment: SUFFICIENT
+2025-12-14 11:54:11,597 - opencanvas.generators.topic_generator - INFO - 🖼️ Image validation: All 5 images valid
+2025-12-14 11:54:11,601 - opencanvas.generators.topic_generator - INFO - 
+📁 Organized files:
+2025-12-14 11:54:11,608 - opencanvas.generators.topic_generator - INFO - 📁 Base folder: test_output/20251214_115152
+🌐 HTML slides: presentation.html
+📝 Source content: source_content.txt
+✅ Generated successfully!
+📁 HTML file: test_output/20251214_115152/slides/presentation.html
+🔍 Research performed: False

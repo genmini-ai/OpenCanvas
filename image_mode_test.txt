@@ -1,0 +1,112 @@
+2025-12-14 11:55:08,195 - opencanvas.main - INFO - 🚀 Starting generation from: AI in healthcare
+2025-12-14 11:55:08,195 - opencanvas.main - INFO - 📄 Output format: image
+2025-12-14 11:55:08,196 - opencanvas.main - INFO - 🎨 Using image generation mode
+2025-12-14 11:55:08,308 - opencanvas.generators.topic_generator - INFO - Loaded generation prompt
+  🔑 API key loaded successfully (length: 108)
+2025-12-14 11:55:08,374 - opencanvas.image_validation.image_validator - INFO - Image validation pipeline initialized successfully
+2025-12-14 11:55:08,374 - opencanvas.generators.topic_generator - INFO - ✅ Image validation pipeline initialized
+2025-12-14 11:55:08,377 - opencanvas.generators.topic_generator - INFO - Evolution tool pipeline imported successfully
+2025-12-14 11:55:08,377 - opencanvas.evolution.core.tool_pipeline - INFO - 🔧 Tool Pipeline initialized
+2025-12-14 11:55:08,379 - opencanvas.evolution.core.tool_pipeline - INFO - 📦 Loaded 0 tools from iteration 1
+2025-12-14 11:55:08,379 - opencanvas.generators.topic_generator - INFO -   Total tools in pipeline: 0
+2025-12-14 11:55:08,379 - opencanvas.generators.topic_generator - INFO - ✅ Evolution tool pipeline initialized
+2025-12-14 11:55:08,430 - opencanvas.generators.image_presentation_generator - INFO - ✅ Image presentation generator initialized
+2025-12-14 11:55:08,430 - opencanvas.main - INFO - 📝 Detected topic input: AI in healthcare
+2025-12-14 11:55:08,430 - opencanvas.generators.image_presentation_generator - INFO - 🎨 Generating image presentation from topic: AI in healthcare
+2025-12-14 11:55:08,430 - opencanvas.generators.image_presentation_generator - INFO - 📝 Generating blog content...
+2025-12-14 11:55:09,439 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-14 11:55:09,448 - opencanvas.generators.image_presentation_generator - INFO - 📊 Knowledge assessment: SUFFICIENT
+2025-12-14 11:55:30,342 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-14 11:55:30,345 - opencanvas.generators.image_presentation_generator - INFO - ✅ Blog content generated
+2025-12-14 11:55:30,345 - opencanvas.generators.image_presentation_generator - INFO - 🖼️  Generating slide images...
+2025-12-14 11:55:30,346 - opencanvas.generators.image_generator - INFO - 🎨 Starting image-based slide generation...
+2025-12-14 11:55:30,347 - opencanvas.generators.image_generator - INFO - 📁 Output directory: test_output/ai_in_healthcare_20251214_115530/slides
+2025-12-14 11:55:30,347 - opencanvas.generators.image_generator - INFO - 🎨 Style: minimalist
+2025-12-14 11:56:20,334 - httpx - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2025-12-14 11:56:20,336 - opencanvas.generators.image_generator - INFO - 📋 Planned 12 slides
+2025-12-14 11:56:20,337 - opencanvas.generators.image_generator - INFO - 💾 Saved blog content: blog_content.txt
+2025-12-14 11:56:20,337 - opencanvas.generators.image_generator - INFO - 💾 Saved blueprints: slide_blueprints.json
+2025-12-14 11:56:20,337 - opencanvas.generators.image_generator - INFO - 💾 Saved style settings: style_settings.txt
+2025-12-14 11:56:20,337 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 1/12...
+2025-12-14 11:56:20,338 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 11:56:34,812 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 11:56:35,128 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 11:56:35,686 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_001.png
+2025-12-14 11:56:35,686 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-14 11:56:50,691 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 2/12...
+2025-12-14 11:56:50,691 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 11:57:07,620 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 11:57:07,860 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 11:57:08,379 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_002.png
+2025-12-14 11:57:08,379 - opencanvas.generators.image_generator - INFO - ✨ Captured Slide 2 as style anchor
+2025-12-14 11:57:08,379 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-14 11:57:23,382 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 3/12...
+2025-12-14 11:57:23,382 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 11:57:42,472 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 11:57:42,786 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 11:57:43,182 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_003.png
+2025-12-14 11:57:43,182 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-14 11:57:58,183 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 4/12...
+2025-12-14 11:57:58,184 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 11:58:18,738 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 11:58:19,081 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 11:58:19,646 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_004.png
+2025-12-14 11:58:19,646 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-14 11:58:34,651 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 5/12...
+2025-12-14 11:58:34,653 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 11:58:52,886 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 11:58:53,209 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 11:58:53,558 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_005.png
+2025-12-14 11:58:53,558 - opencanvas.generators.image_generator - INFO - ⏸️  Extra wait after 5 slides: 30s...
+2025-12-14 11:59:23,563 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 6/12...
+2025-12-14 11:59:23,564 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 11:59:40,810 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 11:59:41,133 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 11:59:41,653 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_006.png
+2025-12-14 11:59:41,653 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-14 11:59:56,659 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 7/12...
+2025-12-14 11:59:56,660 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 12:00:15,651 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 12:00:15,992 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 12:00:16,486 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_007.png
+2025-12-14 12:00:16,486 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-14 12:00:31,490 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 8/12...
+2025-12-14 12:00:31,491 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 12:00:48,291 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 12:00:48,514 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 12:00:49,050 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_008.png
+2025-12-14 12:00:49,050 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-14 12:01:04,055 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 9/12...
+2025-12-14 12:01:04,056 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 12:01:20,813 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 12:01:21,148 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 12:01:21,694 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_009.png
+2025-12-14 12:01:21,695 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-14 12:01:36,700 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 10/12...
+2025-12-14 12:01:36,700 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 12:01:55,160 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 12:01:55,422 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 12:01:55,868 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_010.png
+2025-12-14 12:01:55,868 - opencanvas.generators.image_generator - INFO - ⏸️  Extra wait after 5 slides: 30s...
+2025-12-14 12:02:25,869 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 11/12...
+2025-12-14 12:02:25,870 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 12:02:50,471 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 12:02:50,799 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 12:02:51,241 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_011.png
+2025-12-14 12:02:51,241 - opencanvas.generators.image_generator - INFO - ⏸️  Waiting 15s to respect rate limits...
+2025-12-14 12:03:06,246 - opencanvas.generators.image_generator - INFO - 🖼️  Generating slide 12/12...
+2025-12-14 12:03:06,247 - google_genai.models - INFO - AFC is enabled with max remote calls: 10.
+2025-12-14 12:03:23,573 - httpx - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent "HTTP/1.1 200 OK"
+2025-12-14 12:03:23,881 - google_genai.models - INFO - AFC remote call 1 is done.
+2025-12-14 12:03:24,226 - opencanvas.generators.image_generator - INFO - 💾 Saved: slide_012.png
+2025-12-14 12:03:24,226 - opencanvas.generators.image_generator - INFO - ✅ All 12 slides generated and saved!
+2025-12-14 12:03:24,226 - opencanvas.generators.image_presentation_generator - INFO - 📄 Converting slides to PDF...
+2025-12-14 12:03:24,226 - opencanvas.generators.image_generator - INFO - 📄 Converting 12 slides to PDF...
+2025-12-14 12:03:25,136 - opencanvas.generators.image_generator - INFO - ✅ PDF created: test_output/ai_in_healthcare_20251214_115530/presentation.pdf
+2025-12-14 12:03:25,137 - opencanvas.generators.image_presentation_generator - INFO - ✅ Image presentation complete!
+2025-12-14 12:03:25,137 - opencanvas.generators.image_presentation_generator - INFO - 📁 Output: test_output/ai_in_healthcare_20251214_115530/slides
+2025-12-14 12:03:25,137 - opencanvas.generators.image_presentation_generator - INFO - 📄 PDF: test_output/ai_in_healthcare_20251214_115530/presentation.pdf
+✅ Generated successfully!
+📁 Slides directory: test_output/ai_in_healthcare_20251214_115530/slides
+📊 Total slides: 12
+📄 PDF file: test_output/ai_in_healthcare_20251214_115530/presentation.pdf
